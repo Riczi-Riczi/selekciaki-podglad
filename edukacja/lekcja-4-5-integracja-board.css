@@ -1,0 +1,3916 @@
+/* ═══════════════════════════════════════════════════════════════════
+   TABLICA ŚLEDZTWA v03 — warstwa wizualna
+   Ładowana WYŁĄCZNIE przy ?boardPreview=1 (board-boot.js).
+
+   Struktura:
+     .bd-board  → boki: spokojny gradient ściany (#e9c186 → #e8bf84)
+       .bd-frame → kadr o proporcjach planszy
+         .bd-scene          ← transform kamery (translate + scale)
+           .bd-scene__bg    ← pusta tablica korkowa
+           svg.bd-thread    ← czerwona nić (węzły = pineski)
+           .bd-notes        ← kartki (pineska tylko przy „Pilne!")
+           .bd-pols         ← polaroidy + ich pineski
+     .bd-chapterlay → strona rozdziału: korek po bokach, centralna jasna
+       powierzchnia (JEDEN scrollbar — scrolluje cała warstwa)
+       .bd-page > .bd-sheetfx (pusty punkt rozszerzenia pod parallax)
+               > .bd-page__in (bar / grid / foot)
+       dialog.bd-dialog → modal filmu YouTube
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root{
+  --bd-thread:#c0201f;          /* narracyjna nić śledztwa (nie jest stanem UI) */
+  --bd-paper:#fdfdfb;
+  --bd-ink:#1a1f1a;
+  --bd-wall-l:#e9c186;
+  --bd-wall-r:#e8bf84;
+  --sheet-opacity:.88;          /* przezroczystość centralnej strony */
+  --bd-z:200;
+
+  /* ═══ SEMANTYKA KOLORU — każdy kolor ma jedno, stałe znaczenie ═══
+     A. GO      ciemna zieleń — główne rozpoczęcie działania („Rozpocznij śledztwo")
+     B. NEXT    bursztyn — przejście do następnego etapu (CTA, Play, wybrany tryb)
+     C. AUX     zielona obwódka — działania pomocnicze („Wróć do tablicy")
+     D. WARN    czerwień — WYŁĄCZNIE błąd / ostrzeżenie / stan zablokowany
+     E. INFO    błękit — oszczędnie, stan informacyjny (tu: pierścień fokusu) */
+  --bd-go:#244b32;
+  --bd-go-hover:#193a27;
+  --bd-go-ink:#f4faf2;
+
+  --bd-next:#f4b21b;
+  --bd-next-hover:#d99800;
+  --bd-next-ink:#1a2e12;
+
+  --bd-aux:#2c4a2c;
+  --bd-aux-bg:rgba(255,255,255,.55);
+
+  --bd-warn:#b3261e;            /* zarezerwowany — patrz raport 34 */
+  --bd-info:#7db8ff;
+}
+
+body.bd-on{ overflow:hidden; }
+body.bd-on > footer, body.bd-on > .hud,
+body.bd-on > .scrollmeter, body.bd-on > .progress,
+body.bd-on > .audio-panel, body.bd-on > .preview-flag{
+  visibility:hidden; pointer-events:none;
+}
+/* `main` znika CAŁKOWICIE, nie tylko wizualnie: przy `visibility:hidden`
+   klocki zachowują geometrię, więc obserwator widoczności ze starej lekcji
+   zaliczał jako „odwiedzone" bloki, których uczeń w tablicy jeszcze nie
+   widział (np. K05 tuż po wejściu do P03). Klocki przeniesione do rozdziału
+   nie są już dziećmi `main`, więc ta reguła ich nie dotyczy. */
+body.bd-on > main{ display:none; }
+body.bd-chapter{ overflow:hidden; }
+
+.bd-root{
+  position:fixed; inset:0; z-index:var(--bd-z);
+  background:#0d1512; color:var(--bd-paper);
+  font-family:'Satoshi', system-ui, sans-serif; overflow:hidden;
+}
+.bd-root[hidden]{ display:none !important; }
+[hidden]{ display:none !important; }
+
+.bd-layer{ position:absolute; inset:0; display:grid; place-items:center; }
+.bd-layer[hidden]{ display:none !important; }
+.bd-sr{ position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  border:0; clip:rect(0 0 0 0); overflow:hidden; white-space:nowrap; }
+
+/* ═══════════ przyciski ═══════════ */
+/* domyślny .bd-btn = B (NEXT): przejście do następnego etapu */
+.bd-btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:44px; min-width:44px; padding:11px 22px;
+  font:inherit; font-weight:700; font-size:15px;
+  color:var(--bd-next-ink); background:var(--bd-next); border:2px solid var(--bd-next);
+  border-radius:999px; cursor:pointer; text-decoration:none;
+  transition:background-color .18s ease, border-color .18s ease;
+}
+.bd-btn:hover{ background:var(--bd-next-hover); border-color:var(--bd-next-hover); }
+/* na ciemnym tle (plakat startowy, kontrolki intro) — kontrast, nie semantyka */
+.bd-btn--ghost{ background:rgba(13,21,18,.55); color:#f8fcf6; border-color:rgba(248,252,246,.55); }
+.bd-btn--ghost:hover{ background:rgba(13,21,18,.72); border-color:#f8fcf6; }
+/* C (AUX): działania pomocnicze — zielona obwódka */
+.bd-btn--dark{ background:var(--bd-aux-bg); color:var(--bd-aux); border-color:var(--bd-aux); }
+.bd-btn--dark:hover{ background:var(--bd-aux); color:var(--bd-go-ink); border-color:var(--bd-aux); }
+.bd-btn--sm{ min-height:44px; padding:9px 16px; font-size:13.5px; }
+/* E (INFO): pierścień fokusu — jedyne stałe użycie błękitu */
+.bd-btn:focus-visible{ outline:3px solid var(--bd-info); outline-offset:3px; }
+
+/* ═══════════ 1. PLAKAT STARTOWY ═══════════ */
+.bd-start{ background:#0d1512; }
+.bd-start__poster{ position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; filter:brightness(.42) saturate(.9); }
+.bd-start__inner{ position:relative; z-index:2; text-align:center;
+  max-width:min(92vw, 760px); padding:24px 24px 96px; }
+.bd-start__kicker{ font-family:'Cabinet Grotesk', system-ui, sans-serif;
+  font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:#f2b127; margin-bottom:10px; }
+.bd-start__title{ font-family:'Cabinet Grotesk', system-ui, sans-serif;
+  font-weight:800; line-height:1.04; text-wrap:balance;
+  font-size:clamp(28px, 5.2vw, 60px); margin-bottom:14px; }
+.bd-start__lead{ font-size:clamp(14px,1.6vw,18px); line-height:1.6; opacity:.9; }
+.bd-start__actions{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:24px; }
+
+.bd-formal{
+  position:absolute; left:0; right:0; bottom:0; z-index:3;
+  display:flex; align-items:center; justify-content:center; gap:clamp(10px,2vw,26px);
+  flex-wrap:wrap; padding:10px clamp(12px,3vw,28px);
+  background:rgba(8,14,11,.74); backdrop-filter:blur(6px);
+  border-top:1px solid rgba(182,213,170,.18);
+}
+.bd-formal__logos{ display:flex; align-items:center; gap:clamp(10px,1.6vw,20px);
+  padding:6px 14px; background:#fdfdfb; border-radius:10px; }
+.bd-formal img{ height:clamp(24px,2.8vw,34px); width:auto; display:block; }
+.bd-formal__text{ font-size:clamp(10px,1.1vw,12px); line-height:1.45; max-width:52ch; opacity:.85; }
+
+/* ═══════════ 2. INTRO ═══════════ */
+.bd-video{ background:#000; }
+.bd-video__el{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; }
+.bd-video__ui{ position:absolute; right:14px; bottom:14px; z-index:6; pointer-events:auto;
+  display:flex; gap:8px; flex-wrap:wrap; }
+.bd-freeze{ position:absolute; inset:0; z-index:4; width:100%; height:100%;
+  object-fit:cover; opacity:0; transition:opacity .18s linear;
+  pointer-events:none;   /* nawet przy opacity:0 przykrywał ekran i zjadał kliknięcia */ }
+.bd-freeze.is-on{ opacity:1; }
+
+/* ═══════════ 3. TABLICA + SCENA ═══════════ */
+/* Boki: spokojny gradient ściany dopasowany do skrajnych pikseli grafiki —
+   przejście kadr ↔ wypełnienie ma być niewidoczne także przy 2560 px.
+   ŻADNEJ rozmytej kopii obrazu. */
+.bd-board{
+  display:grid; place-items:center; overflow:hidden;
+  background:linear-gradient(90deg, var(--bd-wall-l) 0%, var(--bd-wall-r) 100%);
+}
+.bd-frame{
+  position:relative;
+  /* Szerokość i wysokość kadru ustawia JS (sizeFrame) w PIKSELACH,
+     z realnych wymiarów warstwy tablicy. Wcześniejsze formuły na %/vw/dvh
+     zawodziły zależnie od środowiska (auto-kolumna grida, headless) i kadr
+     bywał szerszy niż okno — prawa kolumna polaroidów była ucięta. */
+  aspect-ratio:var(--bd-ar, 16/9);   /* zapas na wypadek braku JS */
+  overflow:hidden;               /* kamera nie wypuszcza sceny poza kadr */
+}
+.bd-scene{
+  position:absolute; inset:0;
+  backface-visibility:hidden;
+}
+.bd-scene__bg{
+  position:absolute; inset:0;
+  background-image:var(--bd-board-img);
+  background-size:100% 100%; background-position:center;
+}
+
+/* nić */
+.bd-thread{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
+.bd-thread path{
+  fill:none; stroke:var(--bd-thread); stroke-width:3; stroke-linecap:round; stroke-linejoin:round;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));
+  transition:stroke .3s ease, filter .3s ease;
+}
+.bd-thread path.is-live{
+  stroke:#ff3b30;
+  filter:drop-shadow(0 0 6px rgba(255,80,60,.85)) drop-shadow(0 1px 2px rgba(0,0,0,.5));
+}
+
+/* wspólne pozycjonowanie elementów sceny (dane z konfiguracji) */
+.bd-note, .bd-pol{
+  position:absolute;
+  left:calc(var(--x) * 1%); top:calc(var(--y) * 1%);
+  width:calc(var(--w) * 1%);
+  transform:translate(-50%,-50%) rotate(calc(var(--rot) * 1deg));
+}
+
+/* PINESKA — kontener na punkcie mocowania (= węzeł nici); opcjonalna */
+.bd-pinwrap{
+  position:absolute;
+  left:calc(var(--px) * 1%); top:calc(var(--py) * 1%);
+  width:calc(var(--pw) * 1%);
+  transform:translate(-50%,-58%);
+  opacity:0; transition:opacity .4s ease;
+  pointer-events:none; z-index:3;
+}
+.bd-pinwrap.is-in{ opacity:1; }
+.bd-pinwrap img{
+  display:block; width:100%; height:auto;
+  filter:drop-shadow(0 3px 5px rgba(0,0,0,.5));
+}
+
+/* kartki — dekoracja (te z taśmą nie mają pineski) */
+.bd-notes{ position:absolute; inset:0; pointer-events:none; }
+.bd-note{ opacity:0; transition:opacity .5s ease; }
+.bd-note.is-in{ opacity:1; }
+.bd-note__img{ width:100%; height:auto; display:block;
+  filter:drop-shadow(0 6px 12px rgba(0,0,0,.32)); }
+
+/* polaroidy */
+.bd-pols{ position:absolute; inset:0; }
+.bd-pol{
+  padding:0; margin:0; border:0; background:none; cursor:pointer;
+  font:inherit; color:inherit; text-align:center;
+  opacity:0; transition:opacity .45s ease;
+}
+.bd-pol.is-in{ opacity:1; animation:bdPin .5s cubic-bezier(.2,1.5,.4,1) both; }
+@keyframes bdPin{
+  0%  { transform:translate(-50%,-58%) rotate(calc(var(--rot) * 1deg)) scale(1.07); }
+  60% { transform:translate(-50%,-49%) rotate(calc(var(--rot) * 1deg)) scale(.99); }
+  100%{ transform:translate(-50%,-50%) rotate(calc(var(--rot) * 1deg)) scale(1); }
+}
+
+.bd-pol__card{
+  position:relative; display:block; background:var(--bd-paper);
+  padding:5.5% 5.5% 0; border-radius:2px;
+  box-shadow:0 10px 22px rgba(0,0,0,.42), 0 2px 4px rgba(0,0,0,.3);
+}
+.bd-pol__photo{ position:relative; display:block; width:100%; aspect-ratio:1/1;
+  overflow:hidden; background:#e9e6df; }
+.bd-pol__img, .bd-pol__video{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;
+}
+.bd-pol{ container-type:inline-size; }   /* podpis skaluje się z KARTĄ, nie z oknem */
+/* awaria grafiki po ponowieniu: ramka zostaje z neutralnym tłem — polaroid
+   nadal działa jako przycisk tropu i utrzymuje układ tablicy */
+.bd-pol--bezfoto .bd-pol__photo{ background:
+  linear-gradient(135deg, #efe9df 0%, #e0d9cb 100%); }
+.bd-pol__cap{
+  display:block; padding:7% 4% 9%;
+  font-family:'Cabinet Grotesk', system-ui, sans-serif; font-weight:700; color:var(--bd-ink);
+  font-size:clamp(7.5px, 9cqw, 13.5px); line-height:1.15;
+  overflow-wrap:break-word; hyphens:auto;
+}
+.bd-pol__status{ display:block; margin-top:.35em; font-family:'Satoshi', system-ui, sans-serif;
+  font-weight:500; font-size:.78em; color:#6a7568; }
+
+.bd-pol[data-state="locked"] .bd-pol__card{ filter:saturate(.45) brightness(.82); }
+.bd-pol[data-state="locked"]{ cursor:default; }
+.bd-pol[data-state="active"] .bd-pol__card{
+  box-shadow:0 0 0 3px rgba(242,177,39,.9), 0 14px 30px rgba(0,0,0,.5);
+  animation:bdPulse 2.4s ease-in-out infinite;
+}
+@keyframes bdPulse{
+  0%,100%{ box-shadow:0 0 0 3px rgba(242,177,39,.85), 0 14px 30px rgba(0,0,0,.5); }
+  50%    { box-shadow:0 0 0 7px rgba(242,177,39,.35), 0 14px 30px rgba(0,0,0,.5); }
+}
+.bd-pol[data-state="completed"] .bd-pol__card{ box-shadow:0 0 0 3px rgba(120,180,110,.85), 0 12px 26px rgba(0,0,0,.45); }
+.bd-pol:focus-visible{ outline:none; }
+.bd-pol:focus-visible .bd-pol__card{ outline:4px solid #7db8ff; outline-offset:4px; }
+.bd-pol.is-open .bd-pol__card{ animation:none; box-shadow:0 18px 40px rgba(0,0,0,.55); }
+
+/* pasek tablicy (nad sceną i nad stroną rozdziału — jak we wzorcu) */
+.bd-boardbar{
+  position:absolute; left:0; right:0; top:0; z-index:30;
+  display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+  padding:10px 14px;
+  pointer-events:none;
+}
+.bd-boardbar[hidden]{ display:none !important; }
+/* pasek tablicy należy do widoku tablicy — przy otwartym rozdziale nachodził
+   na jego własny pasek („Trop 3 z 9", „Wróć do tablicy"), a na telefonie
+   zasłaniał numer tropu */
+body.bd-chapter .bd-boardbar{ display:none !important; }
+.bd-boardbar__actions{ pointer-events:auto; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.bd-boardbar__title{ font-family:'Cabinet Grotesk', system-ui, sans-serif;
+  font-size:clamp(11px,1.3vw,14px); letter-spacing:.16em; text-transform:uppercase;
+  color:#f8fcf6; background:rgba(8,14,11,.62); padding:6px 12px; border-radius:8px; }
+/* „Pomiń animację" siedziało wcześniej na dole-środku pola tablicy i lądowało
+   na polaroidach, kartkach i nici. Teraz jest zwykłym elementem stałego
+   klastra kontrolek u góry — poza transformowaną sceną i poza polem tablicy. */
+.bd-polui{ display:flex; }
+.bd-polui[hidden]{ display:none !important; }
+.bd-polui .bd-btn{ min-height:44px; min-width:44px; }
+.bd-boardbar{ padding-top:max(10px, env(safe-area-inset-top)); }
+@media (max-width: 640px){
+  /* na wąskim ekranie kontrolki układają się w kolumnę, żeby nie schodzić
+     poniżej 44 px ani nie wychodzić poza bezpieczny obszar */
+  .bd-boardbar{ padding-inline:max(10px, env(safe-area-inset-left))
+                              max(10px, env(safe-area-inset-right)); }
+  .bd-boardbar__actions{ flex-direction:column; align-items:flex-end; gap:6px; }
+}
+
+/* ═══════════ 4. STRONA ROZDZIAŁU (storyboard klatka 5) ═══════════ */
+/* Jedna warstwa przewijania: scrolluje .bd-chapterlay. Boki = korek
+   (powiększona tekstura tablicy), centrum = jasna strona bez obrotu. */
+.bd-chapterlay{
+  position:absolute; inset:0; z-index:20;
+  overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
+  background:#8a5a2e;
+  opacity:0; transition:opacity .32s ease;
+  --bd-bar-h:64px;                 /* nadpisywane pomiarem z JS (syncBarHeight) */
+}
+.bd-chapterlay.is-on{ opacity:1; }
+.bd-chapterlay--instant{ transition:none; }
+
+/* DEKORACYJNA WARSTWA KORKA — rodzeństwo arkusza, nigdy jego rodzic
+   (transform na przodku unieruchomiłby sticky w pasku nawigacyjnym).
+   Jedyny element poruszany przy przewijaniu; treść pozostaje nieruszona. */
+.bd-parallax-bg{
+  position:fixed; inset:-40px 0;
+  background:#8a5a2e var(--bd-board-img) 50% 42% / 320% auto;
+  pointer-events:none; z-index:0;
+  will-change:transform;
+}
+
+.bd-page{
+  position:relative; z-index:1;      /* nad warstwą korka */
+  width:min(77vw, 1240px);
+  margin-inline:auto;
+  min-height:100%;
+  background:rgba(255,252,247,var(--sheet-opacity));
+  backdrop-filter:blur(2px) saturate(.7);
+  -webkit-backdrop-filter:blur(2px) saturate(.7);
+  box-shadow:0 0 44px rgba(43,24,6,.35);
+  color:var(--bd-ink);
+}
+/* żaden element strony nie może rozpychać kadru w poziomie */
+.bd-page, .bd-page *, .bd-page *::before, .bd-page *::after{ box-sizing:border-box; }
+.bd-page__bar > *, .bd-page__grid > *, .bd-page__foot > *{ min-width:0; }
+.bd-page img, .bd-page video, .bd-page iframe{ max-width:100%; }
+/* Punkt rozszerzenia pod przyszły parallax/scrollytelling:
+   nieinteraktywna, przycinana warstwa dekoracyjna. Elementy trafią tu
+   z atrybutami data-parallax-speed / -axis / -range / -mobile.
+   Teraz celowo pusta. */
+.bd-sheetfx{
+  position:absolute; inset:0; z-index:0;
+  overflow:hidden; pointer-events:none;
+}
+.bd-page__in{
+  position:relative; z-index:1;
+  display:flex; flex-direction:column; min-height:100dvh;
+  padding:clamp(52px,6vh,72px) clamp(20px,3.4vw,56px) clamp(14px,2vh,24px);
+}
+
+.bd-page__bar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  margin-bottom:clamp(14px,2.4vh,30px);
+}
+
+/* ── PASEK PRZYKLEJONY (rozdział z dwiema scenami) ──
+   Sticky działa względem .bd-chapterlay — między paskiem a kontenerem
+   przewijania NIE MOŻE pojawić się przodek z overflow ani transform. */
+.bd-chapterlay--scenes .bd-page__bar{
+  position:sticky; top:0; z-index:6;
+  margin:0; padding:clamp(10px,1.6vh,16px) clamp(20px,3.4vw,56px);
+  background:rgba(251,248,240,.94);
+  backdrop-filter:blur(8px) saturate(1.05);
+  -webkit-backdrop-filter:blur(8px) saturate(1.05);
+  border-bottom:1px solid rgba(62,96,52,.14);
+}
+
+/* ── SCENY ROZDZIAŁU ──
+   Wysokość „ekran minus pasek" — inaczej strzałka z dołu sceny A
+   wypadałaby pod krawędzią pierwszego kadru. svh chroni przed paskiem
+   przeglądarki na telefonie. */
+.bd-chscene{
+  display:flex; align-items:center;
+  min-height:calc(100svh - var(--bd-bar-h));
+  min-height:calc(100dvh - var(--bd-bar-h));
+  padding:clamp(18px,3vh,40px) clamp(20px,3.4vw,56px);
+}
+.bd-chscene__in{ width:100%; }
+.bd-chscene--brief{ border-top:1px solid rgba(62,96,52,.14); }
+/* jednorazowe wejście sceny B (IntersectionObserver dodaje .is-in) */
+.bd-chscene--brief{ opacity:.85; transform:translateY(14px);
+  transition:opacity .42s ease-out, transform .42s ease-out; }
+.bd-chscene--brief.is-in{ opacity:1; transform:none; }
+
+/* karta filmu w scenie A: centralnie, w obu układach */
+.bd-chscene--film .bd-evidence{
+  width:100%; max-width:min(78%, 560px); margin:clamp(16px,2.4vh,28px) auto 0;
+}
+/* w widoku tablicy zastępuje go wskaźnik ze strzałką */
+.bd-chapterlay--scenes #k02-seen{ display:none; }
+
+/* ── WSKAŹNIK „PRZEJDŹ DO ODPRAWY" ── */
+.bd-arrowwrap{ margin:clamp(18px,3vh,34px) 0 0; text-align:center; }
+.bd-arrow{
+  display:inline-flex; flex-direction:column; align-items:center; gap:4px;
+  min-height:44px; min-width:44px; padding:10px 22px;
+  font:inherit; font-weight:700; font-size:15px;
+  color:var(--bd-next-ink); background:var(--bd-next);
+  border:2px solid var(--bd-next); border-radius:999px; cursor:pointer;
+  box-shadow:0 8px 20px rgba(43,24,6,.22);
+  transition:background-color .18s ease, border-color .18s ease;
+}
+.bd-arrow[hidden]{ display:none !important; }
+.bd-arrow:hover{ background:var(--bd-next-hover); border-color:var(--bd-next-hover); }
+.bd-arrow:focus-visible{ outline:3px solid var(--bd-info); outline-offset:3px; }
+.bd-arrow__ico{ width:22px; height:22px; animation:bdArrow 1.9s ease-in-out infinite; }
+@keyframes bdArrow{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(4px); } }
+.bd-page__crumb{ font-family:'Cabinet Grotesk',system-ui,sans-serif; font-size:12px;
+  letter-spacing:.16em; text-transform:uppercase; color:#7a8577;
+  overflow-wrap:break-word; max-width:100%; }   /* może się zawinąć, nigdy uciąć */
+.bd-page__actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+/* dwie kolumny: treść + dowód (desktop), jedna kolumna (mobile) */
+.bd-page__grid{
+  flex:1; display:grid; gap:clamp(20px,3.4vw,56px); align-items:center;
+  grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+}
+.bd-page__main{ text-align:center; }
+
+.bd-evidence{ position:relative; width:100%; margin:0; transform:none; }
+.bd-evidence__media{
+  position:relative; display:block; background:#fff; padding:3.5%;
+  border-radius:4px; box-shadow:0 16px 38px rgba(43,24,6,.28);
+}
+.bd-evidence__media img{ display:block; width:100%; aspect-ratio:1/1; object-fit:cover; }
+.bd-evidence__cap{ display:block; padding:10px 4px 0; font-size:12.5px; color:#7a8577;
+  font-family:'Cabinet Grotesk',system-ui,sans-serif; letter-spacing:.06em; }
+
+/* przycisk Play na ilustracji detektywa (P02) — B (NEXT) */
+.bd-play{
+  position:absolute; left:50%; top:50%;
+  width:clamp(72px,7vw,96px); aspect-ratio:1/1;
+  transform:translate(-50%,-50%);
+  display:grid; place-items:center;
+  background:var(--bd-next); color:var(--bd-next-ink);
+  border:3px solid #fdfdfb; border-radius:50%;
+  cursor:pointer;
+  box-shadow:0 10px 30px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.35);
+  transition:transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.bd-play svg{ width:46%; height:46%; fill:currentColor; margin-left:6%; }
+.bd-play:hover{ transform:translate(-50%,-50%) scale(1.07);
+  background:var(--bd-next-hover);
+  box-shadow:0 14px 36px rgba(0,0,0,.5); }
+.bd-play:focus-visible{ outline:4px solid var(--bd-info); outline-offset:4px; }
+
+/* pasek formalny: logo SELEKT → logo WFOŚiGW → tekst w 3 wierszach */
+.bd-page__foot{
+  display:flex; align-items:center; justify-content:center;
+  gap:clamp(18px,3.4vw,44px); flex-wrap:wrap;
+  margin-top:clamp(24px,3.6vh,42px); padding-top:clamp(16px,2.2vh,26px);
+  padding-bottom:clamp(6px,1.2vh,14px);
+  border-top:1px solid rgba(62,96,52,.18);
+}
+.bd-foot__logo{ display:flex; align-items:center; }
+.bd-foot__logo img{ width:auto; display:block; }
+/* Etap 6B.5 — znaki dwa razy większe, z balansem koła i prostokąta.
+   Pliki mają różny udział atramentu w ramce: znak SELEKT wypełnia 91%
+   wysokości, znak WFOŚiGW tylko 51,5% (szerokie przezroczyste marginesy
+   w pliku). Równa wysokość ramek dałaby więc znaki o różnej wadze
+   optycznej. Wysokości dobrane tak, żeby ZMIERZONY ślad atramentu trzymał
+   proporcję ze stopki dyplomu 6B.2 (koło do prostokąta jak 1,85 do 1)
+   i żeby oba znaki urosły dwukrotnie wobec stanu sprzed korekty
+   (ramka 48 px → ślad 44 px i 25 px). */
+.bd-foot__logo--selekt img{ height:clamp(68px,6.8vw,96px); }
+.bd-foot__logo--wfos img{ height:clamp(65px,6.5vw,92px);
+  /* Plik znaku WFOŚiGW jest przycięty przez sąsiednią treść: w kolumnach
+     1136–1138 (na 1139 szerokości) siedzą ścięte fragmenty liter z szerszej
+     kompozycji. Przy znaku 48 px dawało to 0,3 px i nikt tego nie widział;
+     po powiększeniu do 92 px robi się z tego kropkowana kreska obok napisu
+     POZNAŃ. Docinamy 0,8% prawej krawędzi — sam znak kończy się na kolumnie
+     1007, więc do właściwej treści zostaje 123 px zapasu. Pliku klienta nie
+     ruszamy; docelowo prosimy o wersję bez obcych fragmentów. */
+  clip-path: inset(0 0.8% 0 0);
+}
+.bd-foot__text{ font-size:clamp(14px,1.05vw,15px); line-height:1.5; color:#4d5a4a; text-align:left; }
+
+/* przeniesiona treść klocków wewnątrz strony */
+.bd-page__main .scene{ min-height:0; padding:0; display:block; background:none; color:var(--bd-ink); }
+.bd-page__main .scene + .scene{ margin-top:clamp(22px,3vw,40px);
+  padding-top:clamp(18px,2.6vw,30px); border-top:1px solid rgba(62,96,52,.14); }
+.bd-page__main .kicker{ color:#b98a1e; letter-spacing:.2em; }
+.bd-page__main .lead{ color:#26401f; font-size:clamp(30px,3.6vw,58px); line-height:1.04;
+  margin-inline:auto; max-width:14ch; text-wrap:balance; }
+.bd-page__main .body-text{ color:#33402f; font-size:clamp(15px,1.15vw,18px);
+  max-width:52ch; margin-inline:auto; }
+.bd-page__main .note{ color:#6a7568; max-width:52ch; margin-inline:auto; }
+/* ── przyciski w treści rozdziału ──
+   domyślnie B (NEXT) — „Zobacz początek sprawy", „Film obejrzany…" */
+.bd-page__main .btn{
+  margin-top:clamp(16px,2.4vw,28px);
+  background:var(--bd-next); border-color:var(--bd-next); color:var(--bd-next-ink);
+  transition:background-color .18s ease, border-color .18s ease;
+}
+.bd-page__main .btn:hover{
+  filter:none;                                    /* zamiast rozjaśniania — jawny odcień */
+  background:var(--bd-next-hover); border-color:var(--bd-next-hover);
+}
+/* A (GO) — jedyne główne rozpoczęcie działania w tym zakresie */
+.bd-page__main #k03 .btn{
+  background:var(--bd-go); border-color:var(--bd-go); color:var(--bd-go-ink);
+}
+.bd-page__main #k03 .btn:hover{ background:var(--bd-go-hover); border-color:var(--bd-go-hover); }
+.bd-page__main .btn:focus-visible{ outline:3px solid var(--bd-info); outline-offset:3px; }
+
+/* ── karty trybu czytania (K03) ──
+   cała karta klikalna (label), radio po PRAWEJ, wybrana = bursztyn (B),
+   niewybrane = spokojna zielonoszara obwódka */
+.bd-page__main .audio-modes{ max-width:520px; margin-inline:auto; }
+.bd-page__main .audio-modes legend{ color:#4d5a4a; }
+.bd-page__main .audio-mode{
+  gap:14px; align-items:center; text-align:left;
+  border-color:rgba(62,96,52,.32); background:rgba(255,255,255,.5);
+  transition:border-color .18s ease, background-color .18s ease;
+}
+.bd-page__main .audio-mode input{ order:2; margin:0 0 0 auto; accent-color:var(--bd-next); }
+.bd-page__main .audio-mode > span{ order:1; min-width:0; }
+.bd-page__main .audio-mode:hover{ border-color:var(--bd-aux); }
+.bd-page__main .audio-mode__name{ color:#26401f; font-size:15px; }
+.bd-page__main .audio-mode__desc{ color:#4d5a4a; opacity:1; font-size:13.5px; }
+.bd-page__main .audio-mode:has(input:checked){
+  border-color:var(--bd-next); background:rgba(244,178,27,.14);
+}
+.bd-page__main .audio-mode:has(input:focus-visible){
+  outline:3px solid var(--bd-info); outline-offset:2px;
+}
+
+/* nagłówek ogniskowany programowo (po „Film obejrzany") — obwódka tylko z klawiatury */
+.bd-page [tabindex="-1"]:focus:not(:focus-visible){ outline:none; }
+.bd-page__main .trail, .bd-page__main .chapter__bg, .bd-page__main .bg-trail{ display:none; }
+.bd-page__main .ph{ display:none; }                       /* bez placeholderów na stronie */
+.bd-page__main .lk-footer__logos, .bd-page__main .note[style]{ display:none; }
+.bd-page__main .scene__grid{ display:block; }
+
+/* ═══════════ 5. MODAL FILMU ═══════════ */
+.bd-dialog{
+  margin:auto;                 /* reset lekcji zeruje margin — bez tego dialog nie centruje */
+  /* szerokość ograniczona też wysokością okna (telefon poziomo):
+     kadr 16:9 + pasek (~64px) muszą się mieścić w viewportcie */
+  width:min(94vw, 1080px, calc((100dvh - 80px) * 1.7778));
+  padding:0; border:0; border-radius:14px;
+  background:#101713; color:#f8fcf6; overflow:hidden;
+  box-shadow:0 30px 90px rgba(0,0,0,.6);
+}
+.bd-dialog::backdrop{ background:rgba(8,10,8,.74); backdrop-filter:blur(3px); }
+.bd-dialog__bar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:10px 12px 10px 18px;
+}
+.bd-dialog__title{ font-family:'Cabinet Grotesk',system-ui,sans-serif;
+  font-size:14px; letter-spacing:.08em; }
+.bd-dialog__frame{ position:relative; aspect-ratio:16/9; background:#000; }
+.bd-dialog__frame iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+
+/* ═══════════ RESPONSYWNOŚĆ ═══════════ */
+@media (max-width: 900px){
+  /* kompaktowy „Odtwórz intro ponownie": prawy górny róg, cel ≥44 px,
+     strona rozdziału zaczyna się PONIŻEJ niego (padding-top), więc nic nie przykrywa */
+  .bd-boardbar{ padding:6px 8px; }
+  .bd-boardbar__title{ display:none; }
+  .bd-boardbar .bd-btn--sm{ min-height:44px; padding:8px 12px; font-size:12px; }
+  .bd-formal{ gap:8px; padding:8px 10px; }
+  .bd-formal__text{ font-size:10px; }
+
+  .bd-page{ width:min(94vw, 1240px); }          /* wąski pasek korka po bokach */
+  .bd-page__in{ padding-top:64px; }
+  /* pasek strony: breadcrumb w pełnej szerokości (zawija się), akcje w osobnym rzędzie */
+  .bd-page__bar{ flex-direction:column; align-items:stretch; gap:8px; }
+  .bd-page__crumb{ padding-right:150px; }       /* omija przycisk intro w rogu */
+  .bd-page__actions{ justify-content:flex-start; }
+
+  /* Kompaktowy pasek sticky (N3/B): jeden rząd, sam numer tropu.
+     Dawny `padding-top:52px` omijał kontrolkę „Odtwórz intro ponownie" —
+     ale ona w widoku tropu jest ukryta PODWÓJNIE (body.bd-chapter w CSS
+     i `hidden` z JS przy zmianie warstwy), więc rezerwa była martwa,
+     a belka zjadała 127 px (15% ekranu 390×844) i spychała treść. */
+  .bd-chapterlay--scenes .bd-page__bar{
+    flex-direction:row; align-items:center; gap:8px;
+    padding:5px 12px;
+  }
+  .bd-chapterlay--scenes .bd-crumb__t{ display:none; }
+  .bd-chapterlay--scenes .bd-page__crumb{ padding-right:0; font-size:11px; }
+  /* Etap A5 — naprawa regresji z A3. Trzeci przycisk (Audio) nie mieścił się
+     w jednym rzędzie: przy oknie 390 px rząd kończył się na 421 px, więc
+     „Wróć do tablicy" wyjeżdżało poza ekran, a rozdział dostawał poziomy
+     scroll. Dotyczyło WSZYSTKICH tropów z animacją (P02–P05); Trop 1 z dwoma
+     przyciskami mieścił się i dlatego pomiar w raporcie 75 tego nie pokazał.
+     Dwie zmiany: etykieta trybu znika (zostaje „Audio”, stan niosą ikona
+     i aria-label), a `wrap` pozwala rzędowi złamać się na drugą linię, gdy
+     i to nie wystarczy — zamiast wypychać treść poza kadr. Pola dotykowe
+     bez zmian. */
+  .bd-audiobtn__tryb{ display:none; }
+  .bd-chapterlay--scenes .bd-page__actions{ justify-content:flex-end; flex:none; flex-wrap:wrap; }
+  .bd-chapterlay--scenes .bd-page__actions .bd-btn{
+    padding:8px 10px; font-size:11.5px; letter-spacing:.02em;
+  }
+  .bd-chscene{ padding-inline:16px; }
+  .bd-chscene--film .bd-evidence{ max-width:min(88%, 360px); }
+
+  /* Najwęższe ekrany (320 px): nawet po skróceniu etykiety trzy akcje mają
+     374 px, więc jednorzędowa belka kompaktowa przestaje być wykonalna —
+     „Wróć do tablicy" wyjeżdżałoby poza kadr. Wracamy tu do układu
+     dwurzędowego (ten sam, który Trop 1 ma na każdej szerokości): okruszek
+     w pierwszym rzędzie, akcje w drugim, wyrównane do prawej. Belka rośnie
+     o jeden rząd, ale `syncBarHeight` mierzy ją realnie, więc treść sceny
+     nie chowa się pod nią. Pola dotykowe zostają 44 px. */
+  @media (max-width: 360px){
+    .bd-chapterlay--scenes .bd-page__bar{
+      flex-direction:column; align-items:stretch; gap:6px;
+    }
+    .bd-chapterlay--scenes .bd-page__actions{
+      justify-content:flex-end; flex-wrap:wrap; flex:0 0 auto; max-width:100%;
+    }
+  }
+
+  /* KLUCZOWA POPRAWKA: .bd-page__grid dziedziczy `flex:1` z reguły bazowej
+     (dla desktopu, gdzie ma sens) — w kolumnie flex .bd-page__in ten wiersz
+     rozciągał się na całą wolną wysokość ekranu, a `align-items:center`
+     odsuwał treść (CTA) i dowód od siebie o setki pikseli. Na mobile wiersze
+     mają wynikać z wysokości treści, bez rozciągania. */
+  .bd-page__grid{
+    flex:none;
+    grid-template-columns:1fr;
+    grid-auto-rows:max-content;
+    align-content:start;
+    align-items:start;
+    gap:clamp(24px,6vw,40px);
+  }
+  .bd-page__aside{ width:100%; max-width:min(78vw, 360px); margin-inline:auto; }
+  .bd-evidence{ max-width:100%; }
+  /* dowód przeniesiony PRZEZ JS w miejsce placeholdera filmu (P02, mobile):
+     wyśrodkowany, z bezpiecznym maksimum szerokości, nigdy poza krawędź strony */
+  .bd-page__main .bd-evidence{ max-width:min(80vw, 420px); margin-inline:auto; }
+  .bd-play{ width:clamp(56px,16vw,72px); }
+  /* Wąski ekran: znaki OBOK SIEBIE w jednym rzędzie, tekst pod nimi.
+     Kolumna (znak pod znakiem) przy powiększonych znakach z 6B.5 robiła
+     stopkę na pół ekranu; rząd mieści się nawet na 320 px — pomiar:
+     68 + 18 + 148 = 234 px przy 261 px szerokości kartki. */
+  .bd-page__foot{ flex-direction:row; flex-wrap:wrap; justify-content:center;
+    gap:12px 18px; text-align:center;
+    margin-top:clamp(24px,4vh,40px); }          /* odstęp 24–40 px nad stopką */
+  .bd-foot__text{ text-align:center; flex-basis:100%; margin-top:2px; }
+}
+@media (max-width: 560px){
+  .bd-start__inner{ padding-bottom:120px; }
+  .bd-video__ui{ right:8px; bottom:max(8px, env(safe-area-inset-bottom)); }
+  .bd-video__ui .bd-btn{ padding:9px 14px; font-size:13px; }
+}
+
+/* ═══════════ REDUCED MOTION ═══════════ */
+@media (prefers-reduced-motion: reduce){
+  .bd-scene{ transition:none !important; }
+  .bd-pol, .bd-note, .bd-pinwrap{ transition:none; }
+  .bd-pol.is-in{ animation:none; }
+  .bd-pol[data-state="active"] .bd-pol__card{ animation:none; }
+  .bd-freeze{ transition:none; }
+  .bd-thread path{ transition:none; }
+  .bd-chapterlay{ transition:none; }
+  .bd-play{ transition:none; }
+  .bd-sheetfx{ display:none; }        /* warstwa dekoracyjna znika przy RM */
+  /* paralaksa i wejście sceny B wyłączone; obie sceny od razu widoczne */
+  .bd-parallax-bg{ transform:none !important; }
+  .bd-chscene--brief{ opacity:1; transform:none; transition:none; }
+  .bd-arrow{ transition:none; }
+  .bd-arrow__ico{ animation:none; }
+}
+
+/* ═══════════ P03 — ROZDZIAŁ SZEŚCIOSCENOWY (gra K04 + diagram EMKA) ═══════════
+   Gra jest PRZENIESIONYM węzłem #k04 z działającym osadzeniem Genially —
+   strona nie tworzy drugiego iframe'a ani modala. */
+
+/* teksty własne #k04 (nagłówek, wprowadzenie) ustępują scenie 1 silnika,
+   ale pozostają nietknięte w scrollowanej wersji lekcji */
+.bd-chapterlay #k04 > .kicker,
+.bd-chapterlay #k04 > .lead,
+.bd-chapterlay #k04 > .body-text{ display:none; }
+.bd-chapterlay #k04{ padding:0; margin:0; }
+.bd-chapterlay #k04 .note{ color:#4d5a4a; max-width:60ch; margin-inline:auto; }
+
+/* nagłówki i teksty scen budowanych przez silnik */
+.bd-scene__kicker{ font-family:'Cabinet Grotesk',system-ui,sans-serif;
+  font-size:12px; letter-spacing:.2em; text-transform:uppercase;
+  color:#b98a1e; text-align:center; margin-bottom:.6em; }
+.bd-scene__title{ font-family:'Cabinet Grotesk',system-ui,sans-serif;
+  color:#26401f; font-size:clamp(28px,3.4vw,52px); line-height:1.04;
+  text-align:center; text-wrap:balance; margin:0 auto .6em; max-width:18ch; }
+.bd-scene__text{ color:#33402f; font-size:clamp(15px,1.15vw,18px); line-height:1.6;
+  max-width:56ch; margin:0 auto 1em; text-align:center; }
+.bd-scene__text--do{ font-weight:700; color:#26401f; }
+.bd-scene__cta{ text-align:center; margin-top:clamp(18px,2.6vh,30px); }
+.bd-scene__hint{ text-align:center; color:#7a8577; font-size:14px;
+  margin-top:clamp(16px,2.4vh,28px); }
+.bd-scene__src{ text-align:center; color:#7a8577; font-size:12px; margin-top:18px; }
+.bd-chscene__in--narrow{ max-width:760px; margin-inline:auto; }
+.bd-gamecta{ text-align:center; margin:clamp(18px,2.6vh,30px) 0 0; }
+
+/* panel postępu przeniesiony do sceny gry (pole litery P) */
+.bd-chapterlay #progress-panel{
+  visibility:visible !important; position:static; margin:clamp(20px,3vh,34px) auto 0;
+  max-width:560px; background:rgba(255,255,255,.55);
+  border:1px solid rgba(62,96,52,.18); border-radius:16px; padding:16px 18px;
+}
+.bd-chapterlay #progress-panel .progress__title{ color:#26401f; font-size:15px; }
+.bd-chapterlay #progress-panel .progress__counter{ color:#4d5a4a; }
+
+/* Diagram EMKA. Układ promienisty z siedmioma odwracanymi kartami
+   (`.mdo-cards` / `.mdo-card`) zastąpiono w Etapie 1C jednym obrazem bez linii
+   z warstwą SVG — reguły tamtego układu usunięto, bo ich elementy już nie
+   powstają. Aktualne style: sekcja „ETAP 1C" niżej w tym arkuszu. */
+.bd-chscene--diagram .bd-chscene__in{ max-width:1040px; margin-inline:auto; }
+
+@media (max-width: 900px){
+  .bd-scene__title{ font-size:clamp(24px,7vw,34px); }
+  .bd-chapterlay #progress-panel{ max-width:100%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ETAP 1 — KOREKTA SKALI I SCROLLYTELLINGU P02–P03
+   Nadpisuje wcześniejsze reguły: większe elementy, mniej pustki,
+   wyśrodkowana gra, offset przewijania pod sticky paskiem.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* offset przewijania — sticky pasek nie może przykrywać początku sceny */
+.bd-chscene{ scroll-margin-top: calc(var(--bd-bar-h, 64px) + 12px); }
+
+/* ── P02-A: film jako główny bohater sceny ── */
+.bd-chscene--film .bd-evidence{
+  max-width:min(68%, 860px, 66vh);      /* ~1,5× względem poprzednich 560 px */
+  margin-inline:auto;
+}
+.bd-chscene--film .bd-scene__title,
+.bd-chscene--film .lead,
+.bd-chapterlay--scenes .bd-chscene--film .bd-page__main .lead{
+  font-size:clamp(30px, 3.6vw, 56px); line-height:1.04; margin-bottom:.4em;
+}
+.bd-chscene--film .body-text,
+.bd-chscene--film .bd-scene__text{
+  font-size:clamp(16px, 1.45vw, 22px); line-height:1.55; max-width:62ch;
+}
+/* mniej pustki nad i pod filmem */
+.bd-chscene--film{ padding-block:clamp(14px,2.2vh,28px); }
+.bd-chscene--film .bd-evidence{ margin-top:clamp(12px,1.8vh,22px); }
+.bd-chscene--film .bd-evidence__cap{ padding-top:8px; }
+
+/* ── P02-B: czytelność odprawy ── */
+.bd-chscene--brief .lead,
+.bd-chscene--brief .bd-scene__title{
+  font-size:clamp(30px, 3.8vw, 58px); line-height:1.04; max-width:18ch;
+}
+.bd-chscene--brief .body-text{
+  font-size:clamp(16px, 1.45vw, 22px); line-height:1.6;
+  max-width:66ch;                        /* 60–70 znaków w wierszu */
+}
+/* w HTML lekcji panel ma inline max-width:460px (wąska kolumna starego układu);
+   w rozdziale tablicy potrzebuje pełnej szerokości odprawy — stąd !important */
+.bd-page__main .audio-modes{ max-width:min(92%, 880px) !important; margin-inline:auto; }
+.bd-page__main .audio-modes legend{ font-size:clamp(14px,1.2vw,17px); margin-bottom:10px; }
+.bd-page__main .audio-mode{
+  padding:clamp(14px,1.8vw,22px) clamp(16px,2vw,26px);
+  gap:clamp(14px,1.8vw,22px); border-radius:18px;
+}
+.bd-page__main .audio-modes{ gap:clamp(10px,1.4vh,16px); }
+.bd-page__main .audio-mode input{ width:24px; height:24px; }
+.bd-page__main .audio-mode__name{ font-size:clamp(16px,1.3vw,20px); }
+.bd-page__main .audio-mode__desc{ font-size:clamp(13.5px,1.05vw,16px); line-height:1.45; }
+.bd-page__main #k03 .btn{
+  min-height:58px; padding:16px 38px; font-size:clamp(16px,1.3vw,19px);
+}
+
+/* ── P03: gra Genially wyśrodkowana i powiększona ──
+   #k04 ma style inline (max-width/margin) z wersji scrollowanej — w tablicy
+   nadpisujemy je, nie ruszając HTML-a wspólnego dla obu wariantów. */
+.bd-chapterlay #k04 .genially{
+  max-width:min(86%, 1180px) !important;
+  margin:clamp(14px,2vh,24px) auto !important;
+}
+.bd-chapterlay #k04 .genially__box{ width:100%; }
+.bd-chapterlay--p03 .bd-chscene--game .bd-page__main{ text-align:center; }
+.bd-chapterlay #k04 .note{ text-align:center; }
+
+/* CTA bezpośrednio pod grą — zawsze widoczne, nie zasłania gry */
+.bd-gamecta{ margin-top:clamp(14px,2vh,24px); }
+.bd-gamecta .bd-btn{ min-height:56px; padding:15px 34px; font-size:clamp(15px,1.2vw,18px); }
+
+/* ── Panel postępu: instrukcja i czytelne pola ── */
+.bd-proghint{
+  margin:6px 0 14px; color:#4d5a4a; font-size:15px; line-height:1.5; text-align:center;
+}
+/* .progress ma w lekcji width:min(280px,86vw) i ciemne tło panelu bocznego —
+   w arkuszu rozdziału potrzebuje pełnej szerokości i jasnej skóry */
+.bd-chapterlay #progress-panel{
+  width:min(100%, 720px) !important; max-width:720px; padding:20px 22px;
+  background:rgba(255,255,255,.62); border-color:rgba(62,96,52,.18);
+  box-shadow:none; color:var(--bd-ink);
+}
+.bd-chapterlay #progress-panel .progress__body{ width:100%; }
+.bd-chapterlay #progress-panel .progress__slots{
+  display:flex; justify-content:center; gap:clamp(10px,1.6vw,18px); flex-wrap:wrap;
+  list-style:none; padding:0; margin:0;
+}
+.bd-chapterlay #progress-panel .prog__slot{
+  width:60px; height:60px; display:grid; place-items:center;
+  border:2px dashed rgba(62,96,52,.4); border-radius:14px; background:rgba(255,255,255,.6);
+}
+.bd-chapterlay #progress-panel .prog__slot:has(.prog__input:not([hidden])){
+  border-style:solid; border-color:var(--bd-next); background:rgba(244,178,27,.14);
+}
+.bd-chapterlay #progress-panel .prog__input{
+  width:44px; height:44px; text-align:center; font-size:22px; font-weight:700;
+  border:0; background:none; color:#26401f; text-transform:uppercase;
+}
+.bd-chapterlay #progress-panel .prog__input:focus-visible{
+  outline:3px solid var(--bd-info); outline-offset:2px; border-radius:8px;
+}
+.bd-chapterlay #progress-panel .prog__check{ font-size:24px; color:#2c7a3d; }
+.bd-chapterlay #progress-panel .progress__counter{ text-align:center; margin-top:12px; }
+
+/* ══ ETAP 1B-A: pierwszy ekran P03 — tekst obok kwadratowej gry ══
+   Gra Genially ma proporcje 1:1 (`.genially__box{aspect-ratio:1/1}`), więc
+   w pionowej kompozycji „duży tytuł nad grą" kwadrat o szerokości 78–85%
+   arkusza nie mieści się w jednym kadrze — na 1440×900 zabrakłoby ~300 px.
+   Dwie kolumny wykorzystują szerokość, której kwadrat i tak nie zajmuje. */
+.bd-p03open{ display:grid; gap:clamp(18px,2.4vw,40px); align-items:center; }
+.bd-p03open__text > *:first-child{ margin-top:0; }
+.bd-p03open__game{ min-width:0; }
+.bd-p03open__foot{ margin-top:clamp(16px,2.2vh,28px); }
+
+@media (min-width: 1280px){
+  /* kolumna tekstu ma dolny limit czytelności, reszta szerokości idzie na grę */
+  .bd-p03open{ grid-template-columns:minmax(320px, 0.68fr) minmax(0, 1.32fr); }
+  .bd-chscene--game .bd-chscene__in{ max-width:1320px; }
+  .bd-p03open__text .bd-scene__title{ font-size:clamp(30px,2.5vw,46px); text-align:left; }
+  .bd-p03open__text .bd-scene__text,
+  .bd-p03open__text .bd-scene__kicker{ text-align:left; margin-inline:0; max-width:42ch; }
+  /* kwadrat jest największym elementem sceny, ale na niskim oknie ustępuje
+     wysokości: limit trzyma całą kompozycję tekst + gra w pierwszym kadrze */
+  .bd-chapterlay #k04 .genially{ max-width:100% !important; margin:0 !important; }
+  .bd-chapterlay #k04 .genially__box{
+    width:min(100%, calc(100svh - var(--bd-bar-h, 64px) - 190px)) !important;
+    margin-inline:auto;
+  }
+}
+
+/* ── P04: gra kuchenna jest szeroka (16:9), więc jedna kolumna na pełną
+   szerokość arkusza; treść niesie przeniesiony klocek K06, bez bocznego
+   polaroidu dowodu i bez stopki formalnej ── */
+.bd-p03open--wide{ grid-template-columns:1fr !important; }
+.bd-chapterlay--p04 .bd-page__grid,
+.bd-chapterlay--p04 .bd-page__aside,
+.bd-chapterlay--p04 .bd-page__foot{ display:none; }
+.bd-chapterlay--p04 #k06 .frame{
+  width:100%; max-width:min(96%, 1180px) !important;
+  margin:clamp(14px,2vh,24px) auto !important;
+}
+.bd-chapterlay--p04 #k06 .frame__box{ width:100%; }
+.bd-chapterlay--p04 #k06 > .kicker,
+.bd-chapterlay--p04 #k06 > .lead,
+.bd-chapterlay--p04 #k06 > .body-text{ text-align:center; margin-inline:auto; }
+.bd-chapterlay--p04 #k06 > .body-text{ max-width:66ch; font-size:clamp(18px,1.3vw,22px);
+  line-height:1.5; }
+/* tytuł kuchni w JEDNEJ linii na desktopie (krótki — mieści się bez zmniejszania) */
+@media (min-width: 1024px){
+  .bd-chapterlay--p04 #k06 > .lead{ white-space:nowrap; max-width:none; }
+}
+/* Status ramki jest komunikatem dla czytnika ekranu — w tablicy nie zabiera
+   miejsca pod grą, ale zostaje w drzewie dostępności (Etap A5: ta sama reguła
+   co przy Genially, tylko klasa nowa). */
+.bd-chapterlay--p04 #k06 .frame__status{
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0;
+}
+.bd-chapterlay--p04 #k06 .note{ text-align:center; margin-top:12px; }
+/* skórę i pola panelu postępu opisuje wspólna reguła `.bd-chapterlay
+   #progress-panel` niżej — obowiązuje w każdym rozdziale z grą */
+
+/* poniżej 1280 px: jedna kolumna, tytuł i opis nad grą */
+@media (max-width: 1279.98px){
+  .bd-p03open{ grid-template-columns:1fr; }
+  .bd-p03open__text{ max-width:66ch; margin-inline:auto; }
+  .bd-chapterlay #k04 .genially{ max-width:92% !important; margin:0 auto !important; }
+}
+
+/* w rozdziale tablicy narrację niesie lewa kolumna — własny nagłówek i opis
+   klocka K04 byłyby dosłownym powtórzeniem tuż obok siebie */
+.bd-chapterlay #k04 > .kicker,
+.bd-chapterlay #k04 > .lead,
+.bd-chapterlay #k04 > .body-text{ display:none; }
+
+/* status ładowania gry zostaje dla czytników ekranu (rola „status"),
+   ale nie dubluje wizualnie polecenia z panelu postępu */
+.bd-chapterlay #k04 .genially__status{
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0;
+}
+.bd-chapterlay #k04 .note{ text-align:center; margin-top:12px; }
+
+/* ══ ETAP 1D: przypięta scena dowodu — JEDNA kompozycja wg makiety ══
+   Nadtytuł, tytuł i oba akapity stoją NIERUCHOMO u góry kadru, pod nimi duża
+   animacja. Scroll steruje wyłącznie klatkami — tekst nie jest transformowany.
+   Wysokość animacji jest ADAPTACYJNA: wynika z miejsca, które zostaje w kadrze
+   po tekście (flex `min-height:0` + `object-fit:contain`), więc na wysokim
+   ekranie animacja rośnie, a na niskim ustępuje tekstowi — nigdy odwrotnie. */
+.bd-chscene--proof{ padding-block:0; min-height:auto; overflow-x:clip; }
+/* GEOMETRIA (Etap 1E): sekcja jest kontenerem flex, więc runway kurczył się
+   do szerokości zawartości (960 px canvasu) i stał przy lewej krawędzi —
+   oś sceny uciekała o (zawartość−arkusz)/2, przy 1920 px o 84 px. Pełna
+   szerokość przywraca wspólną oś tytułu, akapitów, animacji i przycisku. */
+.bd-pinrunway{ width:100%;
+  height:calc((100svh - var(--bd-bar-h, 64px)) * 4.5); }
+.bd-pinstage{
+  position:sticky; top:var(--bd-bar-h, 64px);
+  height:calc(100svh - var(--bd-bar-h, 64px));
+  display:grid;                       /* fazy nakładają się w jednej komórce */
+  padding-block:clamp(10px,2vh,24px);
+  /* wejście CAŁEJ kompozycji: fade + małe przesunięcie, jednorazowo */
+  opacity:0; transform:translate3d(0,20px,0);
+  transition:opacity .5s ease, transform .5s cubic-bezier(.2,.7,.3,1);
+}
+.bd-chscene--proof.is-in .bd-pinstage{ opacity:1; transform:none; }
+
+/* ── FAZY jednej sceny (Etap 1E) ──
+   Dowód+zlew i diagram zajmują tę samą przestrzeń kadru; przejście to
+   subtelny crossfade z rozsunięciem 18 px, skalą 0,985 i rozmyciem ≤3 px —
+   „cyfrowe przejście w aktach sprawy", nie efekt science-fiction. */
+.bd-faza{ grid-area:1 / 1; min-height:0; min-width:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:clamp(10px,1.6vh,20px);
+  transition:opacity .38s ease, transform .38s cubic-bezier(.2,.7,.3,1),
+    filter .38s ease;
+}
+.bd-faza--dowod .bd-proof__text{ transition:inherit; }
+.bd-faza--diag{ opacity:0; transform:translate3d(0,18px,0) scale(.985);
+  pointer-events:none; visibility:hidden; }
+.bd-faza--diag[hidden]{ display:none !important; }
+.bd-pinstage.is-diag .bd-faza--dowod{
+  opacity:0; filter:blur(3px); pointer-events:none;
+}
+.bd-pinstage.is-diag .bd-faza--dowod .bd-proof__text{ transform:translate3d(0,-18px,0) scale(.985); }
+.bd-pinstage.is-diag .bd-faza--dowod .bd-proof__anim{ transform:translate3d(0,18px,0) scale(.985);
+  transition:opacity .38s ease, transform .38s cubic-bezier(.2,.7,.3,1); }
+.bd-pinstage.is-diag .bd-faza--diag{
+  opacity:1; transform:none; pointer-events:auto; visibility:visible;
+}
+#bd-diagram-host-pin{ width:100%; }
+@media (prefers-reduced-motion: reduce){
+  .bd-faza, .bd-faza--dowod .bd-proof__text,
+  .bd-pinstage.is-diag .bd-faza--dowod .bd-proof__anim{
+    transition:opacity .18s ease; transform:none !important; filter:none !important;
+  }
+}
+
+/* tekst: minima twarde — tytuł ≥40 px, treść ≥20 px na desktopie; gdy brakuje
+   miejsca, zmniejsza się ANIMACJA (flex), nigdy font */
+.bd-proof__text{ flex:0 0 auto; text-align:center; max-width:900px;
+  padding-inline:clamp(14px,2vw,28px); }
+.bd-proof__text .bd-scene__title{
+  font-size:clamp(40px, 3.4vw, 64px); line-height:1.12; margin-block:6px 14px; }
+.bd-proof__text .bd-scene__text{
+  font-size:clamp(20px, 1.35vw, 24px); line-height:1.45; max-width:56ch;
+  margin-inline:auto; }
+.bd-proof__text .bd-scene__text + .bd-scene__text{ margin-top:10px; }
+
+/* animacja: bierze CAŁĄ resztę wysokości kadru; szerokość wynika z proporcji
+   materiału — nic nie jest przycinane. FLEX, nie grid: w auto-wierszu grida
+   `max-height:100%` canvasu nie ma się względem czego policzyć (wiersz mierzy
+   się zawartością — cyrkularnie), a w kontenerze flex o rozstrzygniętej
+   wysokości procent działa i animacja realnie ustępuje tekstowi. */
+.bd-proof__anim{ flex:1 1 auto; min-height:0; width:min(94%, 1180px);
+  display:flex; align-items:center; justify-content:center; }
+.bd-seq__frame,
+.bd-seq__canvas{
+  display:block; width:auto; height:auto; max-width:100%; max-height:100%;
+  object-fit:contain;
+  background:none; box-shadow:none; border:0; border-radius:0;
+}
+.bd-seq__frame[hidden]{ display:none !important; }
+
+/* reduced motion: bez przypinania i bez scrubu — naturalna kolejność czytania */
+.bd-chscene--proof.is-static{ padding-block:clamp(24px,4vh,56px); }
+.bd-chscene--proof.is-static .bd-pinrunway{ height:auto; }
+.bd-chscene--proof.is-static .bd-pinstage{ position:static; height:auto;
+  display:block; opacity:1; transform:none; transition:none; }
+.bd-chscene--proof.is-static .bd-proof__anim{ margin:clamp(16px,3vh,32px) auto 0;
+  min-height:auto; }
+.bd-chscene--proof.is-static .bd-seq__frame{ max-height:none; width:100%; }
+@media (prefers-reduced-motion: reduce){
+  .bd-pinstage{ opacity:1; transform:none; transition:none; }
+}
+
+/* ══ ETAP 1D: diagram — dwa układy nad wspólnym mapowaniem ══
+   O wyborze decyduje JS (szerokość kontenera rozdziału, próg w konfiguracji);
+   CSS opisuje oba układy, JS przełącza atrybut [hidden]. */
+
+/* wspólny wrapper treści diagramu — przenoszony między sekcją a fazą */
+.mdo-tresc{ position:relative; width:100%; text-align:center; }
+.mdo-tresc__intro{ margin-inline:auto; }
+/* instrukcja i licznik w OSOBNYCH wierszach (Etap 1F) — pigułka postępu
+   nie jest przyklejona do zdania instrukcji */
+.mdo-brama__hint{ color:#4d5a4a; font-size:clamp(13.5px,1.05vw,15px);
+  text-align:center; margin:8px auto 0; }
+.mdo-brama{ display:flex; justify-content:center; margin:6px auto 0; }
+.mdo-brama__licznik{ display:inline-block; font-weight:700; color:#26401f;
+  font-size:clamp(15px,1.2vw,17px);
+  padding:3px 14px; border:1.5px solid rgba(62,96,52,.35); border-radius:999px;
+  background:rgba(255,255,255,.55); }
+.mdo-tresc.is-complete .mdo-brama__licznik{ border-color:var(--bd-go);
+  background:rgba(36,75,50,.10); }
+/* fallback przy awarii grafiki karty: tekstowa etykieta zamiast obrazka */
+.mdo-fallback{ margin:0; padding:14px; font-weight:700; color:#26401f;
+  font-size:15px; text-align:center; }
+/* w fazie przypiętej nagłówek musi być zwarty — o przypięciu i tak decyduje
+   realny pomiar, ale ciaśniejsza typografia daje kartom więcej miejsca */
+.mdo-tresc.is-ciasna .bd-scene__kicker{ margin-block:0 2px; }
+.mdo-tresc.is-ciasna .mdo-tresc__title{ font-size:clamp(26px,1.8vw,32px); margin-block:0 3px; }
+.mdo-tresc.is-ciasna .mdo-tresc__intro{ font-size:15px; line-height:1.3; max-width:none; margin-block:0; }
+.mdo-tresc.is-ciasna .mdo-brama{ margin-block:2px 0; }
+/* źródło jako nakładka na dolnej krawędzi kompozycji (środek jest wolny:
+   karty PSZOK i „nie wiem" kończą się przy 38% i zaczynają przy 77% szer.),
+   dzięki czemu nie zabiera wysokości kadru w trybie przypiętym */
+/* lewy dolny róg kompozycji jest wolny (karta PSZOK zaczyna się przy ~20%
+   szerokości) — podpis nie zabiera wysokości i nie koliduje z kartami */
+.mdo-tresc.is-ciasna .bd-scene__src{ position:absolute; left:10px; bottom:2px;
+  transform:none; margin:0; font-size:10.5px; text-align:left; max-width:22ch; }
+
+/* ── A. DESKTOP: zatwierdzony układ promienisty (diagram z liniami) ── */
+.mdo-stage{ position:relative; width:100%; max-width:min(96%, 1180px);
+  margin:clamp(20px,3vh,36px) auto 0; aspect-ratio:1/1; }
+.mdo-tresc.is-ciasna .mdo-stage{ margin-block:clamp(6px,1.2vh,12px) 0; }
+/* w trybie przypiętym przybliżamy proporcje ORYGINALNEGO modułu (karta 22%
+   przy pełnej warstwie): 20,5% przy inset 3% daje ten sam stosunek karty do
+   przestrzeni, więc siatka pozycji nie wprowadza nachodzeń, a realny rozmiar
+   karty przekracza próg 156 px z rozstrzygnięcia 1 */
+/* dolna grupa kart wyżej (Etap 1F): większy dolny inset zdejmuje nawis
+   kart poza scenę, przez który wypadały pod dolną krawędź kadru */
+.mdo-tresc.is-ciasna .mdo-cards{ inset:2.5% 3% 8%; }
+.mdo-tresc.is-ciasna .mdo-diagram{ inset:14%; }
+.mdo-tresc.is-ciasna .mdo-card{ width:20.5%; }
+/* mikrorozsunięcia po kompresji warstwy (Etap 1F): dwie pary kart stykały
+   się krawędziami o 3 px — margines przesuwa kartę bez dotykania siatki
+   pozycji i bez konfliktu z transformem animacji pulsu */
+.mdo-tresc.is-ciasna .mdo-card[data-card="olej-papierem"]{ margin:8px 0 0 -12px; }
+.mdo-tresc.is-ciasna .mdo-card[data-card="inne-sposoby"]{ margin-left:-7px; }
+.mdo-stage[hidden]{ display:none !important; }
+
+/* puls NIEODKRYTYCH kart: kolejno, subtelna skala; po pierwszej interakcji
+   spokojniej; po 7/7 koniec (Etap 1E) */
+@keyframes mdo-puls-karta{
+  0%, 100%{ transform:translate(-50%,-50%) scale(1); }
+  50%{ transform:translate(-50%,-50%) scale(1.03); }
+}
+.mdo-tresc:not(.is-touched):not(.is-complete) .mdo-card:not(.is-flipped){
+  animation:mdo-puls-karta 1.9s ease-in-out infinite;
+  animation-delay:calc(var(--mdo-i, 0) * .28s);
+}
+.mdo-tresc.is-touched:not(.is-complete) .mdo-card:not(.is-flipped){
+  animation:mdo-puls-karta 3.4s ease-in-out infinite;
+  animation-delay:calc(var(--mdo-i, 0) * .5s);
+}
+.mdo-tresc.is-complete .mdo-card,
+.mdo-card.is-flipped{ animation:none !important; }
+@media (prefers-reduced-motion: reduce){
+  .mdo-card{ animation:none !important; }
+}
+/* karty na skrajnych promieniach wystawały poza scenę — oba układy zawężone
+   względem środka (patrz raport 39), geometria promienista bez zmian */
+.mdo-cards{ position:absolute; inset:5%; }
+.mdo-diagram{ position:absolute; inset:16%; display:grid; place-items:center; }
+.mdo-diagram__img{ width:100%; height:auto; display:block; }
+.mdo-card{ position:absolute; left:calc(var(--mdo-x)); top:calc(var(--mdo-y));
+  width:19%; aspect-ratio:5/7; transform:translate(-50%,-50%);
+  cursor:pointer; perspective:900px; background:none; border:0; padding:0; }
+.mdo-card__inner{ position:relative; display:block; width:100%; height:100%;
+  transform-style:preserve-3d; transition:transform .5s cubic-bezier(.2,.7,.3,1); }
+.mdo-card.is-flipped .mdo-card__inner{ transform:rotateY(180deg); }
+.mdo-card__face{ position:absolute; inset:0; display:grid; place-items:center;
+  backface-visibility:hidden; border-radius:10px; overflow:hidden;
+  box-shadow:0 8px 20px rgba(43,24,6,.22); }
+.mdo-card__face--front{ background:rgb(var(--mdo-pastel)); }
+.mdo-card__face--back{ transform:rotateY(180deg); background:#fff; }
+.mdo-card__face--back img{ width:100%; height:100%; object-fit:contain; padding:6%; }
+.mdo-card__hand{ width:38%; height:auto; opacity:.75; }
+.mdo-card:focus-visible{ outline:3px solid var(--bd-info); outline-offset:4px; border-radius:12px; }
+
+/* ── B. KOMPAKT: baza bez linii + wycinki 1:1 na wspólnym płótnie ── */
+.mdo-kompakt{ width:100%; max-width:640px; margin-inline:auto; }
+.mdo-kompakt[hidden]{ display:none !important; }
+.mdo-kompakt__stage{ position:relative; width:100%; }
+.mdo-kompakt__baza{ display:block; width:100%; height:auto; }
+.mdo-kompakt__wycinki{ position:absolute; inset:0; }
+/* Każdy wycinek to pełnowymiarowa warstwa nad bazą (pokrycie 1:1 co do
+   piksela). Warstwy leżą jedna na drugiej, więc wskaźnik obsługuje JS:
+   hit-test po kanale alfa wycinków (`pointer-events:none` na przyciskach),
+   a klawiatura działa normalnie — Tab ogniskuje przyciski w kolejności
+   dokumentu, Enter/spacja aktywują je mimo wyłączonych zdarzeń wskaźnika. */
+.mdo-wyc{ position:absolute; inset:0; display:block; width:100%; height:100%;
+  margin:0; padding:0; background:none; border:0; cursor:pointer;
+  pointer-events:none; }
+.mdo-kompakt__wycinki{ cursor:pointer; }
+.mdo-wyc img{ display:block; width:100%; height:100%; object-fit:contain;
+  transition:filter .18s ease, transform .18s cubic-bezier(.2,.7,.3,1); }
+.mdo-wyc:focus{ outline:none; }
+.mdo-wyc:focus-visible img{ filter:drop-shadow(0 0 0 var(--bd-info))
+  drop-shadow(0 0 6px var(--bd-info)); }
+.mdo-wyc.is-active img{
+  filter:brightness(1.12) drop-shadow(0 6px 10px rgba(43,24,6,.30));
+  transform:translateY(-3px) scale(1.02);   /* uniesienie warstwy, nie rastra bazy */
+}
+.mdo-wyc.is-seen:not(.is-active) img{ filter:brightness(1.04); }
+
+/* pulsowanie PO KOLEI przed pierwszym wyborem; koniec po interakcji */
+@keyframes mdo-puls{
+  0%, 88%, 100%{ filter:brightness(1); }
+  94%{ filter:brightness(1.14); }
+}
+.mdo-kompakt:not(.is-touched) .mdo-wyc img{
+  animation:mdo-puls 9.8s ease-in-out infinite;
+  animation-delay:calc(var(--mdo-i) * 1.4s);
+}
+.mdo-kompakt.is-touched .mdo-wyc img{ animation:none; }
+
+/* karta kompaktu w STAŁYM slocie pod diagramem (Etap 1F, wg makiety) —
+   zarezerwowana wysokość = zero skoków układu; bez modala i przyciemniania */
+.mdo-kslot{
+  position:relative; display:grid; place-items:center;
+  min-height:clamp(190px, 27svh, 240px);
+  margin:clamp(8px,1.4svh,14px) auto 0;
+}
+.mdo-kslot__hint{ margin:0; text-align:center; color:#4d5a4a;
+  font-size:clamp(13.5px,3.6vw,15px); max-width:30ch; }
+.mdo-kslot__karta{
+  position:relative; width:clamp(210px, 62vw, 240px);
+  background:#fff; border-radius:14px; padding:10px 10px 8px;
+  box-shadow:0 8px 22px rgba(43,24,6,.20);
+}
+.mdo-kslot__karta[hidden]{ display:none !important; }
+.mdo-kslot__close{
+  position:absolute; top:-10px; right:-10px; z-index:2;
+  display:grid; place-items:center; width:44px; height:44px;
+  font:inherit; font-size:17px; font-weight:700; color:var(--bd-aux);
+  background:#fff; border:2px solid var(--bd-aux); border-radius:50%;
+  cursor:pointer; box-shadow:0 4px 10px rgba(43,24,6,.18);
+}
+.mdo-kslot__close:focus-visible{ outline:3px solid var(--bd-info); outline-offset:2px; }
+.mdo-fig{ margin:0; width:100%; display:grid; place-items:center; }
+.mdo-fig[hidden]{ display:none !important; }
+.mdo-fig img{ width:100%; max-width:220px; max-height:clamp(150px,22svh,205px);
+  object-fit:contain; height:auto; display:block; border-radius:10px; }
+/* koniec pulsowania wycinków po komplecie odkryć */
+.mdo-tresc.is-complete .mdo-wyc img{ animation:none !important; }
+
+/* ── typografia kompaktu wg makiety (Etap 1F): zwarty nagłówek, diagram
+   ~32–35svh, wszystko wyżej — bez martwej przestrzeni pod paskiem ── */
+.mdo-tresc.is-komp .bd-scene__kicker{ margin-block:0 2px; font-size:12px; }
+.mdo-tresc.is-komp .mdo-tresc__title{ font-size:clamp(24px,6.6vw,30px);
+  line-height:1.12; margin-block:0 6px; }
+.mdo-tresc.is-komp .mdo-tresc__intro{ font-size:clamp(14px,3.8vw,15.5px);
+  line-height:1.4; margin-block:0; }
+.mdo-tresc.is-komp .mdo-brama__hint{ margin-top:6px; }
+.mdo-tresc.is-komp .mdo-kompakt{ max-width:none; }
+.mdo-tresc.is-komp .mdo-kompakt__stage{
+  width:min(100%, calc(35svh * 1.5)); margin-inline:auto;   /* baza 1200×800 → 3:2 */
+}
+.mdo-tresc.is-komp .bd-scene__src{ margin-top:clamp(6px,1.2svh,12px);
+  font-size:11px; text-align:center; }
+
+/* pas finałowy 7/7: tytuł+opis po lewej, CTA po prawej; pionowo na wąskich */
+.bd-final{ display:flex; align-items:center; justify-content:space-between;
+  gap:clamp(14px,2.4vw,32px); max-width:1040px; margin-inline:auto;
+  text-align:left; }
+.bd-final__txt{ min-width:0; }
+.bd-final__title{ text-align:left; margin-block:0 8px; }
+.bd-final__txt .bd-scene__text{ text-align:left; margin:0; max-width:56ch; }
+.bd-final__cta{ margin:0; flex:0 0 auto; }
+@media (min-width: 1200px){
+  .bd-final__title{ white-space:nowrap; }
+}
+@media (max-width: 760px){
+  .bd-final{ flex-direction:column; align-items:center; text-align:center;
+    gap:12px; }
+  .bd-final__title{ text-align:center; white-space:normal; }
+  .bd-final__txt .bd-scene__text{ text-align:center; margin-inline:auto; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .mdo-card__inner{ transition:none; }
+  .mdo-wyc img{ transition:none; animation:none !important; }
+  .mdo-wyc.is-active img{ transform:none; }
+}
+
+/* ── Diagram: szersza scena i podpis źródła pod kompozycją ── */
+.bd-chscene--diagram .bd-chscene__in{ max-width:1240px; }
+.bd-chscene--diagram .bd-scene__text{ max-width:72ch; }
+.bd-scene__src{ text-align:right; max-width:1180px; margin:14px auto 0; }
+@media (min-width: 1200px){
+  .bd-chscene--diagram .bd-scene__title{ white-space:nowrap; max-width:none; }
+}
+
+/* ── Bez pustych obszarów: sceny krótkie nie rozpychają się na cały ekran ── */
+.bd-chscene--kitchen{ min-height:auto; padding-block:clamp(28px,6vh,72px); }
+.bd-chscene--diagram{ min-height:auto; padding-block:clamp(24px,4vh,56px); }
+
+/* diagram i trop kuchenny wchodzą łagodnie, bez pustej przestrzeni przed nimi;
+   wysokość sceny jest stabilna, bo przesuwamy tylko o kilkanaście pikseli */
+.bd-chscene--diagram .bd-chscene__in,
+.bd-chscene--kitchen .bd-chscene__in{
+  opacity:0; transform:translate3d(0,18px,0);
+  transition:opacity .5s ease, transform .5s cubic-bezier(.2,.7,.3,1);
+}
+.bd-chscene--diagram.is-in .bd-chscene__in,
+.bd-chscene--kitchen.is-in .bd-chscene__in{ opacity:1; transform:none; }
+@media (prefers-reduced-motion: reduce){
+  .bd-chscene--diagram .bd-chscene__in,
+  .bd-chscene--kitchen .bd-chscene__in{ opacity:1; transform:none; transition:none; }
+}
+
+@media (max-width: 900px){
+  .bd-chscene--film .bd-evidence{ max-width:min(88%, 420px); }
+  .bd-chapterlay #k04 .genially{ max-width:100% !important; margin:14px 0 !important; }
+  .bd-page__main .audio-modes{ max-width:100% !important; }
+
+  /* Scena zlewu na telefonie (Etap 1F): domyślnie PEŁNY pin — nadtytuł,
+     tytuł, tekst i pierwszy kadr animacji razem pod paskiem (jak desktop,
+     ta sama siatka faz). Minima: tytuł 32 px, tekst 18 px. */
+  .bd-pinrunway{ height:calc((100svh - var(--bd-bar-h, 64px)) * 3.2); }
+  .bd-proof__text{ max-width:100%; }
+  .bd-proof__text .bd-scene__title{ font-size:clamp(32px, 8.5vw, 40px); }
+  .bd-proof__text .bd-scene__text{ font-size:clamp(18px, 4.6vw, 20px); }
+  .bd-mob-pin .bd-pinstage{ padding-block:10px; }
+  .bd-mob-pin .bd-faza{ gap:10px; }
+  .bd-mob-pin .bd-seq__frame, .bd-mob-pin .bd-seq__canvas{ max-width:100%; }
+  /* WARIANT ZAPASOWY: od N3/A telefon dostaje pin ZAWSZE (decyzja
+     użytkownika), więc te reguły są martwe — zostają wyłącznie jako
+     asekuracja na wypadek, gdyby gałąź JS ustawiająca .bd-mob-pin nie
+     zdążyła wystartować. Zachowanie z 1D: tekst płynie, sticky animacja. */
+  .bd-chapterlay:not(.bd-mob-pin) .bd-pinstage{ position:static; height:100%;
+    display:block; opacity:1; transform:none; transition:none; padding-block:14px; }
+  .bd-chapterlay:not(.bd-mob-pin) .bd-faza--dowod{ display:block; height:auto; }
+  .bd-chapterlay:not(.bd-mob-pin) .bd-proof__anim{ position:sticky;
+    top:calc(var(--bd-bar-h, 64px) + 8px); width:100%; min-height:0; }
+  .bd-chapterlay:not(.bd-mob-pin) .bd-seq__frame,
+  .bd-chapterlay:not(.bd-mob-pin) .bd-seq__canvas{ width:100%;
+    max-height:calc(100svh - var(--bd-bar-h, 64px) - 20px); }
+
+  .bd-scene__src{ text-align:center; }
+
+  /* P04 na telefonie (Etap 1E): zwarty nagłówek i treść, gra/link/panel/
+     przycisk przesunięte wyżej przez zdjęcie pionowych odstępów; tytuł
+     maks. 2 wiersze, bez zmniejszania poniżej minimum czytelności */
+  .bd-chapterlay--p04 #k06 > .kicker{ margin-block:0 4px; }
+  .bd-chapterlay--p04 #k06 > .lead{ font-size:clamp(30px,8vw,38px);
+    line-height:1.12; margin-block:0 8px; text-wrap:balance; }
+  .bd-chapterlay--p04 #k06 > .body-text{ font-size:clamp(18px,4.7vw,20px);
+    line-height:1.45; margin-block:0 10px; }
+  .bd-chapterlay--p04 #k06 .genially{ margin:8px 0 !important; }
+  .bd-chapterlay--p04 #k06 .note{ margin-top:6px; font-size:13px; }
+  .bd-chapterlay--p04 #progress-panel{ margin-top:12px; padding:14px 14px; }
+  .bd-chapterlay--p04 .bd-gamecta{ margin-top:10px; }
+  .bd-chapterlay--p04 .bd-chscene--game{ padding-block:10px 20px; }
+
+  .bd-chapterlay #progress-panel .prog__slot{ width:52px; height:52px; }
+  /* w lekcji panel zwija się na telefonie do pływającej pigułki; w scenie gry
+     pola liter mają być widoczne od razu, bez dodatkowego kliknięcia */
+  .bd-chapterlay #progress-panel .progress__toggle{ display:none !important; }
+  .bd-chapterlay #progress-panel .progress__body{
+    display:block !important; width:100%; margin:0; padding:0;
+    background:none; border:none;
+  }
+}
+
+/* ═══════════ P05 „SPRAWA OLEJU — OLEJOMAT" (Etap 2B: scena K07) ═══════════
+   Rozdział sceniczny bez bocznej kolumny: przeniesiony klocek #k07 z układanką
+   w iframie. Tekst wyśrodkowany jak w P04, ramka na szerokość arkusza. */
+.bd-chapterlay--p05 .bd-chscene--k07 .bd-chscene__in{
+  max-width:1180px; margin-inline:auto;
+}
+.bd-chapterlay--p05 #k07 > .kicker,
+.bd-chapterlay--p05 #k07 > .lead,
+.bd-chapterlay--p05 #k07 > .body-text{ text-align:center; margin-inline:auto; }
+.bd-chapterlay--p05 #k07 > .body-text{ max-width:66ch;
+  font-size:clamp(18px,1.3vw,22px); line-height:1.5; }
+.bd-chapterlay--p05 #k07 .frame{
+  width:100%; max-width:min(96%,1100px); margin:18px auto 0;
+}
+.bd-chapterlay--p05 #k07 .frame__status{ text-align:center; }
+.bd-chapterlay--p05 #k07 .note{ text-align:center; margin-top:10px; }
+.bd-chapterlay--p05 .bd-chscene--k07{ padding-block:clamp(14px,2.4vh,32px); }
+
+/* kontrolowany koniec dostępnego zakresu — reuse pasa finałowego z P03 */
+.bd-chapterlay--p05 .bd-chscene--p05koniec{
+  min-height:auto; padding-block:clamp(28px,6vh,72px);
+  border-top:1px solid rgba(62,96,52,.14);
+}
+.bd-chapterlay--p05 .bd-chscene--p05koniec[hidden]{ display:none; }
+
+@media (max-width: 700px){
+  .bd-chapterlay--p05 .bd-chscene--k07{ padding-inline:12px; }
+  .bd-chapterlay--p05 #k07 > .kicker{ margin-block:0 4px; }
+  .bd-chapterlay--p05 #k07 > .lead{ font-size:clamp(30px,8vw,38px);
+    line-height:1.12; margin-block:0 8px; text-wrap:balance; }
+  .bd-chapterlay--p05 #k07 > .body-text{ font-size:clamp(18px,4.7vw,20px);
+    line-height:1.45; margin-block:0 10px; }
+  .bd-chapterlay--p05 #k07 .frame{ max-width:100%; margin-top:10px; }
+  .bd-chapterlay--p05 #k07 .note{ margin-top:6px; font-size:13px; }
+}
+
+/* ═══════════ P05 FAZA A — WPROWADZENIE DO OLEJOMATU (Etap 2B.1) ═══════════
+   Runway wyznacza długość scrubu; scena sticky pod paskiem. Kompozycja:
+   desktop dwie kolumny (tekst | maszyna), telefon pionowo. Butelką steruje
+   silnik (transform w px z geometrii układu) — CSS daje tylko bazę. */
+.bd-chapterlay--p05 .bd-chscene--olejomat{
+  display:block; min-height:auto; padding:0;
+}
+.bd-olejomat-runway{ position:relative; height:260svh; height:260dvh; }
+.bd-olejomat-stage{
+  position:sticky; top:var(--bd-bar-h);
+  height:calc(100svh - var(--bd-bar-h));
+  height:calc(100dvh - var(--bd-bar-h));
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  overflow:hidden;
+}
+.bd-olejomat__grid{
+  display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,0.95fr);
+  align-items:center; gap:clamp(18px,3.4vw,56px);
+  width:100%; max-width:1180px;
+  padding-inline:clamp(20px,3.4vw,56px);
+}
+.bd-olejomat__txt .bd-scene__title{ text-align:left; margin-block:6px 12px; }
+.bd-olejomat__txt .bd-scene__kicker{ text-align:left; }
+.bd-olejomat__txt .bd-scene__text{
+  text-align:left; margin:0; max-width:54ch;
+  font-size:clamp(18px,1.35vw,22px); line-height:1.55;
+}
+.bd-olejomat__audio{ margin:16px 0 0; }
+.bd-olejomat__wiz{ position:relative; display:flex; justify-content:center; }
+.bd-olejomat__maszyna{
+  height:min(72vh,640px); width:auto; max-width:100%;
+  filter:drop-shadow(0 18px 30px rgba(0,0,0,.28));
+  user-select:none;
+}
+.bd-olejomat__butelka{
+  position:absolute; left:0; top:0;
+  width:clamp(150px,46%,300px); height:auto;
+  transform:translate3d(-200vw,-200vh,0);   /* poza kadrem do czasu 1. rysunku */
+  transform-origin:center;
+  filter:drop-shadow(0 14px 26px rgba(0,0,0,.30));
+  will-change:transform,opacity;
+  pointer-events:none; user-select:none;
+}
+.bd-olejomat__hint{
+  position:absolute; left:50%; bottom:clamp(10px,2.4vh,26px);
+  transform:translateX(-50%);
+  margin:0; font-size:14px; letter-spacing:.4px; opacity:.62;
+  transition:opacity .3s ease;
+  pointer-events:none;
+}
+/* ── PRAWDZIWY CROSSFADE FAZA A → K07 (Etap 2B.2) ──
+   Sekcja K07 podchodzi pod kadr o jego wysokość (zmienną ustawia silnik;
+   0 w trybie statycznym/RM). Widocznością, stop-klatką i wygaszeniem sceny
+   steruje wyłącznie silnik z jednego postępu scrolla — bez przejść CSS,
+   bez IntersectionObservera i bez pionowego wjazdu. */
+.bd-chapterlay--p05 #bd-scene-k07{
+  margin-top:calc(-1 * var(--bd-p05-nakladka, 0px));
+}
+.bd-olejomat-stage{ will-change:opacity; }
+.bd-chapterlay--p05 #bd-scene-k07{ will-change:transform,opacity; }
+
+/* ciasny kadr (telefony poziome/niskie): mniejsza maszyna, zwarty tekst */
+.bd-p05-intro-ciasno .bd-olejomat__maszyna{ height:min(52vh,420px); }
+.bd-p05-intro-ciasno .bd-olejomat__txt .bd-scene__text{ font-size:16px; line-height:1.45; }
+
+/* stan statyczny (prefers-reduced-motion albo kadr zbyt niski na pin):
+   bez runwayu, bez butelki — czytelny stan końcowy w zwykłym przepływie */
+.bd-p05-intro-static .bd-olejomat-runway{ height:auto; }
+.bd-p05-intro-static .bd-olejomat-stage{
+  position:static; height:auto; overflow:visible;
+  padding-block:clamp(24px,4vh,56px);
+}
+.bd-p05-intro-static .bd-olejomat__butelka{ display:none; }
+.bd-p05-intro-static .bd-olejomat__hint{ display:none; }
+.bd-p05-intro-static .bd-olejomat__grid{ opacity:1; }
+
+/* telefon pionowo: jedna kolumna, tekst nad maszyną, bez poziomego scrolla */
+@media (max-width: 760px){
+  .bd-olejomat__grid{
+    grid-template-columns:minmax(0,1fr); gap:14px;
+    padding-inline:16px; justify-items:center;
+  }
+  .bd-olejomat__txt .bd-scene__kicker,
+  .bd-olejomat__txt .bd-scene__title,
+  .bd-olejomat__txt .bd-scene__text{ text-align:center; }
+  .bd-olejomat__txt .bd-scene__text{ font-size:clamp(16px,4.4vw,19px); max-width:34ch; }
+  .bd-olejomat__maszyna{ height:min(38vh,340px); }
+  .bd-olejomat__butelka{ width:clamp(120px,40%,220px); }
+}
+
+/* jedno okno zamiast dwóch: ramka modułu bez własnego chromu w P05 —
+   obudowę daje sama plansza gry (tryb embed chowa tło dokumentu iframe'u) */
+.bd-chapterlay--p05 #k07 .frame{
+  background:none; border-radius:0; overflow:visible;
+}
+.bd-chapterlay--p05 #k07 .frame iframe{ background:transparent; }
+.bd-chapterlay--p05 #k07 .frame.is-loading .frame__box{
+  min-height:220px; border-radius:14px; background:rgba(11,21,18,.06);
+}
+
+/* korekty po pierwszej baterii 2B.1 */
+/* (1) „ciasno" na telefonie pionowym ma ZMNIEJSZAĆ maszynę względem bazy
+   mobilnej (38vh), nie powiększać — inaczej 320×568 wpada w tryb statyczny */
+@media (max-width: 760px){
+  .bd-p05-intro-ciasno .bd-olejomat__maszyna{ height:min(30vh,240px); }
+  .bd-p05-intro-ciasno .bd-olejomat__txt .bd-scene__text{ font-size:15px; line-height:1.4; }
+}
+/* (2) węższe desktopy (~1280): ramka musi przekroczyć próg 901 px szerokości
+   wewnątrz iframe'u, żeby prototyp pokazał poziomą planszę 3×2 jak w legacy */
+.bd-chapterlay--p05 .bd-chscene--k07{ padding-inline:clamp(12px,1.6vw,56px); }
+.bd-chapterlay--p05 #k07 .frame{ max-width:100%; }
+
+/* ═══════════ P04 SCENA 2 — „ZŁAP KROPLE OLEJU" (Etap 2C) ═══════════
+   K08 jako druga obowiązkowa scena tropu kuchni: tekst łączący, przeniesiony
+   blok #k08 z grą w iframe (gra wypełnia ramkę własnym światem — ramka
+   z zaokrągleniem pełni rolę ekranu, bez podwójnego chromu) i finał tropu. */
+.bd-chapterlay--p04 .bd-chscene--k08g{
+  min-height:auto; padding-block:clamp(24px,4vh,56px);
+  border-top:1px solid rgba(62,96,52,.14);
+}
+.bd-chapterlay--p04 .bd-chscene--k08g .bd-chscene__in{
+  max-width:1180px; margin-inline:auto;
+}
+.bd-przejscie{
+  margin:0 auto clamp(14px,2.4vh,24px);
+  max-width:58ch; text-align:center;
+  font-size:clamp(17px,1.35vw,21px); line-height:1.5;
+}
+.bd-chapterlay--p04 #k08 > .kicker,
+.bd-chapterlay--p04 #k08 > .lead,
+.bd-chapterlay--p04 #k08 > .body-text{ text-align:center; margin-inline:auto; }
+.bd-chapterlay--p04 #k08 > .body-text{ max-width:62ch;
+  font-size:clamp(16px,1.2vw,19px); line-height:1.5; }
+.bd-chapterlay--p04 #k08 .frame{
+  width:100%; max-width:min(96%,1000px); margin:16px auto 0;
+}
+.bd-chapterlay--p04 #k08 .frame__status{ text-align:center; }
+.bd-chapterlay--p04 #k08 .note{ text-align:center; margin-top:10px; }
+.bd-p04__panel{ margin-top:clamp(14px,2.4vh,24px); }
+.bd-chapterlay--p04 .bd-chscene--p04koniec{
+  min-height:auto; padding-block:clamp(28px,6vh,72px);
+  border-top:1px solid rgba(62,96,52,.14);
+}
+@media (max-width: 700px){
+  .bd-chapterlay--p04 .bd-chscene--k08g{ padding-inline:12px; }
+  .bd-przejscie{ font-size:16px; }
+  .bd-chapterlay--p04 #k08 > .lead{ font-size:clamp(26px,7vw,34px); line-height:1.12; }
+  .bd-chapterlay--p04 #k08 .frame{ max-width:100%; margin-top:10px; }
+}
+
+/* ═══════════ K09 — SCENA KONTROLI (Etapy 2D / 2D.1) ═══════════
+   JEDNA logika gry, DWIE prezentacje. Tu żyje wyłącznie wariant tablicy:
+   wszystkie reguły układu są zamknięte w `body.bd-on`, więc ?legacy=1
+   zachowuje dotychczasowy wygląd (arkusz lekcji nietknięty).
+
+   Kompozycja (Etap 2D.1, wg zatwierdzonej makiety): ciepłe tło bitmapowe,
+   zielona butelka z lejkiem na neutralnym podeście po lewej, duży obiekt
+   pośrodku, czerwony znak X na takim samym podeście po prawej. Kierunki
+   sterowania bez zmian (strzałka/swipe w lewo = butelka). */
+
+/* ── stara warstwa prezentacji znika w tablicy ── */
+body.bd-on .k09__zone-img,
+body.bd-on .k09__zone-ico,
+body.bd-on .k09__zone-label,
+body.bd-on .k09__fill{ display:none; }
+/* ── elementy sceny pojawiają się wyłącznie tutaj ── */
+body.bd-on .k09sc{ display:flex; }
+body.bd-on .k09sc__tlo{ display:block; }
+body.bd-on .k09sc__strzalka{ display:block; }
+
+/* ── scena: pełna szerokość arkusza, tło jako warstwa pod treścią ── */
+body.bd-on .k09{
+  --k09-glow:transparent;
+  /* wysokość planszy sceny — jedno źródło prawdy; korzysta z niej plansza,
+     obszar produktu i komunikat finałowy (K5.2). Na telefonie plansza
+     przechodzi na `min-height:0` własną regułą w media query. */
+  --k09-scena-h:min(48vh,420px);
+  position:relative;
+  margin-inline:calc(-1 * var(--k09-wyciek, 0px));
+  padding:clamp(14px,2.4vh,30px) clamp(12px,2vw,32px) clamp(12px,2vh,24px);
+  background:none; border:0; border-radius:22px;
+  overflow:hidden;                       /* tło nie wychodzi poza scenę */
+  isolation:isolate;
+}
+.k09sc__tlo{
+  position:absolute; inset:0; z-index:0;
+  /* kolor fallbacku pod grafiką: wolne łącze lub błąd nie zostawiają dziury */
+  background-color:#f3e6d0;
+  background-image:url("../assets/images/lekcja45/09-stacja-kontroli/tlo-desktop.webp");
+  background-size:cover; background-position:center 62%;
+  border-radius:22px;
+  pointer-events:none;
+}
+body.bd-on .k09__board,
+body.bd-on .k09__buttons,
+body.bd-on .k09__feedback,
+body.bd-on .k09__wiecej,
+body.bd-on .k09__done{ position:relative; z-index:1; }
+
+/* ── kompozycja trójkolumnowa, wyrównana do linii podestów ── */
+body.bd-on .k09__board{
+  grid-template-columns:minmax(0,0.92fr) minmax(0,1.16fr) minmax(0,0.92fr);
+  align-items:end;
+  gap:clamp(8px,1.8vw,28px);
+  min-height:var(--k09-scena-h);
+}
+body.bd-on .k09__zone{
+  border:0; background:none; padding:0;
+  display:block; position:relative; text-align:center;
+}
+
+/* ── stanowisko celu: obiekt stoi na podeście ── */
+.k09sc{
+  position:relative;
+  flex-direction:column; align-items:center; justify-content:flex-end;
+}
+.k09sc__obiekt{
+  position:relative; z-index:2;
+  display:block; line-height:0;
+  margin-bottom:-7%;                     /* obiekt wchodzi na blat podestu */
+  transition:transform .32s cubic-bezier(.3,.8,.4,1);
+}
+.k09sc__podest{
+  position:relative; z-index:1;
+  width:min(100%,300px); height:auto; display:block;
+}
+.k09sc__butelka{
+  height:clamp(150px,25vh,250px); width:auto; display:block;
+  filter:drop-shadow(0 10px 16px rgba(0,0,0,.24));
+}
+.k09sc__x{
+  height:clamp(96px,16vh,158px); width:auto; display:block;
+  filter:drop-shadow(0 10px 16px rgba(0,0,0,.22));
+}
+/* nakładka poziomu oleju leży DOKŁADNIE na grafice butelki */
+.k09sc__olej{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  mix-blend-mode:multiply; opacity:.82;
+  pointer-events:none;
+}
+.k09s__olej{ transition:y .5s cubic-bezier(.3,.8,.4,1), height .5s cubic-bezier(.3,.8,.4,1); }
+
+/* ── światło celu: barwa dodawana w CSS, nie w grafice ── */
+.k09sc__swiatlo{
+  position:absolute; left:50%; bottom:2%;
+  width:min(94%,300px); height:34px;
+  transform:translateX(-50%);
+  border-radius:50%;
+  opacity:.75;
+  transition:opacity .3s ease, box-shadow .3s ease, transform .3s ease;
+  pointer-events:none; z-index:0;
+}
+.k09sc--bottle .k09sc__swiatlo{
+  background:radial-gradient(ellipse at 50% 50%, rgba(122,206,110,.75), rgba(122,206,110,0) 70%);
+  /* Poświata rośnie razem z poziomem oleju — ten sam postęp podany drugim,
+     nieobowiązkowym kanałem. `--k09-zebrane` ustawia WYŁĄCZNIE poziomButelki();
+     wartość 0 w fallbacku daje dokładnie dotychczasowy wygląd startowy.
+     Stany `is-armed`, `is-pelna` i `is-zakrecona` mają wyższą specyficzność,
+     więc nadal wygrywają z tą regułą bazową. */
+  box-shadow:0 0 calc(26px + 22px * var(--k09-zebrane, 0))
+             calc(8px + 10px * var(--k09-zebrane, 0)) rgba(122,206,110,.28);
+}
+.k09sc--reject .k09sc__swiatlo{
+  background:radial-gradient(ellipse at 50% 50%, rgba(240,140,90,.72), rgba(240,140,90,0) 70%);
+  box-shadow:0 0 26px 8px rgba(240,140,90,.26);
+}
+
+
+/* ── stan uzbrojenia celu: kolor NIE jest jedynym nośnikiem ──
+   zmienia się też obwódka etykiety, jej skala i cień obiektu */
+body.bd-on .k09__zone.is-armed .k09sc__swiatlo{
+  opacity:1; transform:translateX(-50%) scale(1.12);
+}
+body.bd-on .k09__zone--bottle.is-armed .k09sc__swiatlo{
+  box-shadow:0 0 40px 16px rgba(122,206,110,.55);
+}
+body.bd-on .k09__zone--reject.is-armed .k09sc__swiatlo{
+  box-shadow:0 0 40px 16px rgba(240,140,90,.5);
+}
+body.bd-on .k09__zone.is-armed .k09sc__obiekt{ transform:translateY(-8px) scale(1.04); }
+
+/* ── butelka pełna / zakręcona ── */
+body.bd-on .k09.is-pelna .k09sc--bottle .k09sc__swiatlo{
+  opacity:1; box-shadow:0 0 44px 18px rgba(122,206,110,.5);
+}
+
+/* ── KROK 5: finał zakręcania ──────────────────────────────────────
+   Warstwa klatek leży w TYM SAMYM kadrze 732×882 co grafika butelki,
+   więc `inset:0` załatwia całe wyrównanie — przesunięcie osi korpusu
+   (K3.1) działa na wspólnym rodzicu `.k09sc__obiekt` i obejmuje ją
+   automatycznie. Grafika bazowa zostaje pod spodem jako siatka
+   bezpieczeństwa; nakładka oleju leży nad klatkami, żeby butelka
+   przez cały czas zakręcania pozostała pełna. */
+.k09sc__klatka{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  object-fit:contain; object-position:center;
+  display:none;
+  pointer-events:none;
+  filter:drop-shadow(0 10px 16px rgba(0,0,0,.24));
+}
+body.bd-on .k09.is-finalfilm .k09sc__klatka{ display:block; }
+
+/* Finał świetlny gra ZAWSZE — również wtedy, gdy klatki się nie wczytały.
+   To on niesie komunikat „zamknięte”, a sekwencja jest dodatkiem na wierzchu. */
+body.bd-on .k09.is-zakrecona .k09sc--bottle .k09sc__swiatlo{
+  animation:k09finalSwiatlo 1.5s ease-out 1 both;
+}
+@keyframes k09finalSwiatlo{
+  0%  { opacity:1; transform:translateX(-50%) scale(1);
+        box-shadow:0 0 44px 18px rgba(122,206,110,.5); }
+  38% { opacity:1; transform:translateX(-50%) scale(1.22);
+        box-shadow:0 0 76px 30px rgba(150,226,130,.85); }
+  100%{ opacity:1; transform:translateX(-50%) scale(1.05);
+        box-shadow:0 0 50px 20px rgba(122,206,110,.55); }
+}
+@media (prefers-reduced-motion: reduce){
+  body.bd-on .k09.is-zakrecona .k09sc--bottle .k09sc__swiatlo{
+    animation:none;
+    opacity:1; box-shadow:0 0 50px 20px rgba(122,206,110,.55);
+  }
+}
+
+/* ── obiekt pośrodku: duży, unoszący się, bez karty i ramki ── */
+body.bd-on .k09__stagearea{
+  position:relative;
+  border:0; background:none; padding:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+  gap:8px; min-height:var(--k09-scena-h);
+}
+body.bd-on .k09__object{
+  width:100%; height:clamp(150px,30vh,280px);
+  display:flex; align-items:flex-end; justify-content:center;
+  min-height:0;
+  animation:k09unosi 4.2s ease-in-out infinite;
+  transition:transform .32s cubic-bezier(.3,.8,.4,1), opacity .3s ease;
+}
+body.bd-on .k09__img{
+  width:100%; height:100%; max-width:none; max-height:none;
+  object-fit:contain; object-position:center bottom;
+  filter:drop-shadow(0 14px 22px rgba(0,0,0,.24));
+}
+@keyframes k09unosi{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-10px); } }
+body.bd-on .k09__object.is-dragging{ animation:none; }
+/* poprawny produkt: przechyla się i „wlewa" w stronę butelki (w lewo) */
+body.bd-on .k09__object.is-pouring{
+  animation:none; transform:translateX(-24%) rotate(-34deg) scale(.74); opacity:0;
+}
+/* błędny: krótki ruch w stronę znaku X i powrót */
+body.bd-on .k09__object.is-rejected{ animation:k09odrzut .5s ease-in-out; }
+@keyframes k09odrzut{
+  0%,100%{ transform:none; }
+  35%{ transform:translateX(9%) rotate(5deg); }
+  70%{ transform:translateX(-2%) rotate(-1deg); }
+}
+
+/* ── pigułki: nazwa produktu i licznik zawsze nad scenografią ── */
+body.bd-on .k09__name,
+body.bd-on .k09__counter{ position:relative; z-index:3; }
+body.bd-on .k09__name{
+  margin:0; padding:7px 18px; border-radius:999px;
+  background:rgba(253,253,251,.94);
+  box-shadow:0 3px 10px rgba(43,24,6,.12);
+  font-size:clamp(15px,1.25vw,19px); font-weight:700; text-align:center;
+}
+body.bd-on .k09__counter{
+  margin:0; padding:4px 14px; border-radius:999px;
+  background:rgba(253,253,251,.8);
+  font-size:13px; font-weight:600; opacity:.85;
+}
+
+/* ── strzałki kierunkowe: podpowiedź, nie jedyny nośnik znaczenia ── */
+.k09sc__strzalka{
+  position:absolute; top:38%; width:clamp(56px,7vw,104px); height:auto;
+  opacity:.7; pointer-events:none; z-index:1;
+}
+.k09sc__strzalka--ok{ left:-6%; }
+.k09sc__strzalka--no{ right:-6%; }
+body.bd-on .k09.is-zakrecona .k09sc__strzalka{ opacity:0; }
+
+/* ── reakcja całej sceny na decyzję ── */
+body.bd-on .k09::after{
+  content:""; position:absolute; inset:0; border-radius:22px;
+  background:var(--k09-glow); opacity:0; transition:opacity .3s ease;
+  pointer-events:none; z-index:2;
+}
+body.bd-on .k09.is-ok{ --k09-glow:radial-gradient(ellipse at 22% 62%, rgba(126,200,120,.30), rgba(255,206,90,.14) 55%, transparent 76%); }
+body.bd-on .k09.is-err{ --k09-glow:radial-gradient(ellipse at 78% 58%, rgba(214,110,72,.24), transparent 72%); }
+body.bd-on .k09.is-ok::after, body.bd-on .k09.is-err::after{ opacity:1; }
+
+/* ── przyciski: pełnowymiarowe cele, ale nie dominują nad sceną ── */
+body.bd-on .k09__buttons{ margin-top:clamp(10px,1.8vh,20px); }
+body.bd-on .k09__buttons .btn{
+  min-height:44px; padding:10px 20px; font-size:14px;
+  background:rgba(253,253,251,.92); color:var(--bd-ink);
+  border:2px solid rgba(62,96,52,.32); box-shadow:none;
+}
+body.bd-on .k09__buttons .btn:hover{ border-color:rgba(62,96,52,.6); }
+body.bd-on .k09__feedback{
+  max-width:62ch; margin:10px auto 0;
+  min-height:3.2em;                      /* stałe miejsce — komunikat nie przesuwa sceny */
+  font-size:clamp(15px,1.2vw,17px);
+}
+
+/* ── rozwinięcie: bezpieczne postępowanie z tłuszczami stałymi ── */
+.k09__wiecej{
+  max-width:760px; margin:12px auto 0; padding:14px 18px;
+  background:rgba(255,248,228,.92); border:2px solid rgba(242,178,58,.55);
+  border-radius:16px;
+}
+.k09__wiecej[hidden]{ display:none !important; }
+.k09__wiecej-txt{ margin:0 0 10px; font-size:15px; line-height:1.5; }
+.k09__etapy{
+  display:flex; flex-wrap:wrap; gap:8px 14px;
+  margin:0; padding:0; list-style:none;
+}
+.k09__etap{ display:flex; align-items:center; gap:7px; font-size:13px; line-height:1.3; }
+.k09__etap-ico{ width:28px; height:28px; flex:0 0 auto; }
+.k09__etap-ico svg{ width:100%; height:100%; display:block; }
+@media (prefers-reduced-motion: no-preference){
+  .k09__wiecej:not([hidden]) .k09__etap{ opacity:0; animation:k09etapIn .4s ease-out forwards; }
+  .k09__etap[data-etap="1"]{ animation-delay:.05s; }
+  .k09__etap[data-etap="2"]{ animation-delay:.35s; }
+  .k09__etap[data-etap="3"]{ animation-delay:.65s; }
+  .k09__etap[data-etap="4"]{ animation-delay:.95s; }
+  .k09__etap[data-etap="5"]{ animation-delay:1.25s; }
+}
+@keyframes k09etapIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+
+body.bd-on .k09__done{ margin-top:clamp(10px,1.8vh,20px); }
+.k09__done-txt{
+  margin:0 0 6px; font-size:clamp(18px,1.5vw,22px); font-weight:700;
+  color:#2f7d43; text-align:center;
+}
+
+/* korekta proporcji po pierwszym renderze desktopu (Etap 2D.1):
+   butelka jest głównym wskaźnikiem postępu, więc musi dominować nad
+   podestem — przy poprzedniej skali poziom oleju był nieczytelny */
+.k09sc__butelka{ height:clamp(180px,32vh,300px); }
+.k09sc__x{ height:clamp(112px,20vh,186px); }
+.k09sc__podest{ width:min(86%,258px); }
+.k09sc__swiatlo{ width:min(84%,250px); height:30px; }
+
+/* ═══ KOREKTA K3.2: JEDEN klikalny cel pod każdym podestem ═══
+   Zamiast trzech warstw (nieklikalne etykiety + osobny rząd przycisków)
+   w trybie tablicy zostają WYŁĄCZNIE dwa istniejące przyciski
+   [data-k09] — ułożone w tej samej siatce co scena, więc trafiają
+   dokładnie pod lewy i prawy podest. Kontroler i jego nasłuchy bez zmian;
+   w legacy przyciski zachowują dotychczasowy rząd pod produktem. */
+body.bd-on .k09__buttons{
+  display:grid;
+  grid-template-columns:minmax(0,0.92fr) minmax(0,1.16fr) minmax(0,0.92fr);
+  gap:clamp(8px,1.8vw,28px);
+  margin-top:clamp(6px,1vh,12px);
+  align-items:start;
+}
+body.bd-on .k09__buttons .btn{
+  grid-column:2;                      /* domyślnie środek — nadpisywane niżej */
+  justify-self:center;
+  min-height:44px; min-width:clamp(148px,15vw,220px);
+  padding:11px 22px; border-radius:999px;
+  font-size:clamp(13px,1.05vw,15px); font-weight:700;
+  letter-spacing:.06em; text-transform:uppercase;
+  background:rgba(253,253,251,.94);
+  border:2px solid rgba(62,96,52,.24);
+  box-shadow:0 3px 10px rgba(43,24,6,.12);
+  transition:border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+}
+body.bd-on .k09__buttons [data-k09="bottle"]{ grid-column:1; color:#2c6b32; }
+body.bd-on .k09__buttons [data-k09="reject"]{ grid-column:3; color:#b4503a; }
+body.bd-on .k09__buttons [data-k09="bottle"]:hover{ border-color:#2c6b32; }
+body.bd-on .k09__buttons [data-k09="reject"]:hover{ border-color:#b4503a; }
+body.bd-on .k09__buttons .btn:focus-visible{
+  outline:3px solid #7db8ff; outline-offset:3px;
+}
+body.bd-on .k09__buttons .btn:disabled{ opacity:.5; box-shadow:none; }
+
+/* stan uzbrojenia: podest i JEGO przycisk reagują razem.
+   :has() jest progresywnym ulepszeniem — bez niego uzbrojenie nadal widać
+   na podeście (poświata, uniesienie obiektu), więc informacja nie ginie. */
+body.bd-on .k09:has(.k09__zone--bottle.is-armed) .k09__buttons [data-k09="bottle"],
+body.bd-on .k09:has(.k09__zone--reject.is-armed) .k09__buttons [data-k09="reject"]{
+  transform:scale(1.06);
+}
+body.bd-on .k09:has(.k09__zone--bottle.is-armed) .k09__buttons [data-k09="bottle"]{
+  border-color:#2c6b32; box-shadow:0 5px 16px rgba(44,107,50,.3);
+}
+body.bd-on .k09:has(.k09__zone--reject.is-armed) .k09__buttons [data-k09="reject"]{
+  border-color:#b4503a; box-shadow:0 5px 16px rgba(180,80,58,.3);
+}
+
+/* ═══ K3.1 + K3.3: wyrównanie butelki, wyśrodkowanie sceny, oddech, strzałki ═══ */
+
+/* K3.3.1 — okno sceny na osi kolumny strony (mierzone, nie „na oko") */
+body.bd-on .k09{
+  width:100%; max-width:100%;
+  margin-inline:auto;
+}
+
+/* K3.3.4 — oddech między akapitem wprowadzającym a oknem sceny */
+body.bd-on .k09{ margin-top:clamp(24px,3vh,36px); }
+
+/* K3.1 — OŚ KORPUSU butelki na środku podestu.
+   W kadrze 732×882 korpus zajmuje x≈34–272, więc jego oś (x≈153) leży
+   ~21% szerokości od lewej, a nie na środku kadru (x=366). Różnica 213 px
+   = 29,1% szerokości kadru — o tyle przesuwamy CAŁY kadr w prawo.
+   Reguła działa na wspólnym kontenerze `.k09sc__obiekt`, więc obejmuje też
+   nakładkę oleju ORAZ klatki animacji finału (ten sam kadr) — jedna reguła,
+   nie dwie. Zakrętka i lejek mogą wystawać poza podest. */
+.k09sc--bottle .k09sc__obiekt{
+  transform:translateX(29.1%);
+  margin-bottom:-13%;                  /* dno butelki (y≈864/882) siada na blacie */
+}
+/* uniesienie przy uzbrojeniu nie może kasować wyrównania osi */
+body.bd-on .k09__zone--bottle.is-armed .k09sc__obiekt{
+  transform:translateX(29.1%) translateY(-8px) scale(1.04);
+}
+
+/* K3.3.5 — strzałki jako zatwierdzone grafiki (pełne łuki) */
+.k09sc__strzalka{
+  position:absolute; top:34%;
+  width:clamp(64px,8vw,132px); height:auto;
+  opacity:.92; pointer-events:none; z-index:1;
+}
+.k09sc__strzalka--ok{ left:-10%; }
+.k09sc__strzalka--no{ right:-10%; }
+
+/* K3.3.2 — grafiki celów klikalne (dodatkowo do przycisków).
+   Sam kursor i powiększenie; delegacja kliknięcia jest w silniku rozdziału,
+   a decyzję nadal wykonuje istniejący przycisk [data-k09]. */
+body.bd-on .k09__zone--bottle,
+body.bd-on .k09__zone--reject{ cursor:pointer; }
+body.bd-on .k09__zone--bottle:hover .k09sc__swiatlo,
+body.bd-on .k09__zone--reject:hover .k09sc__swiatlo{ opacity:1; }
+
+/* K3.3.3 — krótszy tytuł ma mieścić się w JEDNEJ linii na desktopie;
+   na wąskim mobile łamanie jest dozwolone (reguła zdjęta w KROKU 4) */
+@media (min-width: 761px){
+  body.bd-on #k09 > .lead{ max-width:none; white-space:nowrap; }
+}
+
+/* ═══════════ K09 — TELEFON (≤760 px) ═══════════
+   Odwrócona kolejność względem desktopu: produkt u góry, oba cele pod nim
+   obok siebie (butelka po lewej — zgodnie z kierunkiem ArrowLeft/swipe).
+   Cała decyzja ma mieścić się w jednym kadrze, bez wewnętrznego scrolla. */
+@media (max-width: 760px){
+  body.bd-on .k09{
+    padding:clamp(10px,1.6vh,18px) 10px clamp(8px,1.4vh,14px);
+    margin-top:clamp(16px,2.4vh,26px);
+  }
+  .k09sc__tlo{
+    background-image:url("../assets/images/lekcja45/09-stacja-kontroli/tlo-mobile.webp");
+    background-position:center 55%;
+  }
+  body.bd-on .k09__board{
+    grid-template-columns:1fr 1fr;
+    grid-template-areas:"stage stage" "bottle reject";
+    align-items:end;
+    gap:clamp(6px,1.4vh,14px) 8px;
+    min-height:0;
+  }
+  body.bd-on .k09__stagearea{ grid-area:stage; min-height:0; gap:6px; }
+  body.bd-on .k09__zone--bottle{ grid-area:bottle; }
+  body.bd-on .k09__zone--reject{ grid-area:reject; }
+
+  body.bd-on .k09__object{ height:clamp(104px,17vh,168px); }
+  body.bd-on .k09__name{ font-size:clamp(14px,3.9vw,17px); padding:5px 14px; }
+  body.bd-on .k09__counter{ font-size:12px; padding:3px 11px; }
+
+  .k09sc__butelka{ height:clamp(104px,17vh,158px); }
+  .k09sc__x{ height:clamp(62px,10vh,96px); }
+  .k09sc__podest{ width:min(94%,168px); }
+  .k09sc__swiatlo{ width:min(92%,160px); height:20px; }
+
+  /* strzałki prowadzą teraz w dół-lewo i w dół-prawo */
+  .k09sc__strzalka{ top:auto; bottom:-10%; width:clamp(44px,13vw,72px); opacity:.85; }
+  .k09sc__strzalka--ok{ left:2%; transform:rotate(38deg); }
+  .k09sc__strzalka--no{ right:2%; transform:rotate(-38deg); }
+
+  /* przyciski nadal pod swoimi podestami — dwie kolumny zamiast trzech */
+  body.bd-on .k09__buttons{
+    grid-template-columns:1fr 1fr; gap:8px; margin-top:clamp(6px,1.2vh,12px);
+  }
+  body.bd-on .k09__buttons [data-k09="bottle"]{ grid-column:1; }
+  body.bd-on .k09__buttons [data-k09="reject"]{ grid-column:2; }
+  body.bd-on .k09__buttons .btn{
+    min-width:0; width:100%; padding:11px 8px;
+    font-size:clamp(11px,3.1vw,13px); letter-spacing:.03em;
+  }
+  body.bd-on .k09__feedback{ min-height:3.6em; font-size:14px; margin-top:8px; }
+  .k09__wiecej{ padding:12px 14px; }
+  .k09__etapy{ gap:6px 10px; }
+  .k09__etap{ font-size:12px; }
+}
+
+/* ── wariant kompaktowy: bardzo niskie ekrany (320×568) ──
+   najpierw tniemy odstępy i skalę dekoracji; produkt i oba cele zostają
+   razem w jednym kadrze, tytuł może wyjść poza aktywny widok */
+@media (max-width: 380px), (max-height: 600px){
+  body.bd-on .k09{ padding:8px 8px 10px; margin-top:14px; }
+  body.bd-on .k09__object{ height:clamp(88px,15vh,124px); }
+  .k09sc__butelka{ height:clamp(84px,14vh,116px); }
+  .k09sc__x{ height:clamp(52px,9vh,74px); }
+  .k09sc__podest{ width:min(96%,132px); }
+  .k09sc__swiatlo{ width:min(94%,126px); height:16px; }
+  .k09sc__strzalka{ width:clamp(36px,11vw,52px); }
+  body.bd-on .k09__feedback{ min-height:3.2em; font-size:13px; }
+  body.bd-on .k09__buttons .btn{ padding:10px 6px; font-size:11px; }
+}
+
+/* ═══════════ REDUCED MOTION ═══════════
+   Znika ruch, zostaje pełna informacja i możliwość ukończenia. */
+@media (prefers-reduced-motion: reduce){
+  body.bd-on .k09__object{ animation:none; }
+  body.bd-on .k09__object.is-pouring{ transform:none; opacity:1; }
+  body.bd-on .k09__object.is-rejected{ animation:none; outline:3px solid #b4503a; outline-offset:4px; }
+  .k09sc__obiekt,
+  .k09sc__swiatlo,
+  .k09sc__etykieta,
+  body.bd-on .k09__buttons .btn,
+  .k09s__olej{ transition:none; }
+  body.bd-on .k09::after{ transition:none; }
+  /* uzbrojenie nadal czytelne: obwódka i poświata bez skalowania */
+  body.bd-on .k09__zone.is-armed .k09sc__swiatlo{ transform:translateX(-50%); }
+  body.bd-on .k09__zone--bottle.is-armed .k09sc__obiekt{ transform:translateX(29.1%); }
+  body.bd-on .k09:has(.k09__zone--bottle.is-armed) .k09__buttons [data-k09="bottle"],
+  body.bd-on .k09:has(.k09__zone--reject.is-armed) .k09__buttons [data-k09="reject"]{ transform:none; }
+}
+
+/* ═══ KOREKTA K4.1 ═══ */
+
+/* 1. Kierunek strzałek: OGON przy produkcie, GROT przy celu.
+   Desktop bez obrotu (zielona wskazuje w lewo = butelka, czerwona w prawo = X).
+   Mobile: produkt jest NAD celami, więc łuki muszą opaść — zielona obraca się
+   w lewo-dół (ujemnie), czerwona w prawo-dół (dodatnio). Poprzednie znaki były
+   odwrócone, przez co oba groty celowały w górę. */
+@media (max-width: 760px){
+  .k09sc__strzalka--ok{ transform:rotate(-45deg); }
+  .k09sc__strzalka--no{ transform:rotate(45deg); }
+}
+
+/* 2. Mniejszy górny odstęp na telefonie — treść startuje wyżej,
+   pasek tropu pozostaje czytelny i klikalny (nie nachodzi na scenę). */
+@media (max-width: 760px){
+  .bd-chapterlay--p05 .bd-chscene--k09{ padding-block:6px 10px; }
+  .bd-chapterlay--p05 .bd-chscene--k09 .bd-przejscie{
+    margin-bottom:8px; font-size:14px; line-height:1.4;
+  }
+  body.bd-on #k09 > .kicker{ margin-block:0 2px; font-size:10px; }
+  body.bd-on #k09 > .lead{ margin-block:0 6px; }
+  body.bd-on #k09 > .body-text{ margin-block:0 4px; font-size:14px; line-height:1.45; }
+  body.bd-on .k09{ margin-top:10px; }
+}
+
+/* ═══ KOREKTA K4.2 — pozycja strzałek na telefonie ═══
+   Ogon startuje przy pigułce licznika, grot kończy tuż nad celem.
+   Po obrocie ±45° GROT leży w dolnym rogu boksa (zielona: lewy-dolny,
+   czerwona: prawy-dolny), więc box przesuwamy tak, by ten róg wypadł
+   nad lejkiem butelki / nad ramieniem X. Znak X stoi niżej niż butelka,
+   dlatego czerwona ma większe zejście. Desktop bez zmian. */
+@media (max-width: 760px){
+  .k09sc__strzalka{
+    top:auto; width:clamp(38px,11vw,58px); opacity:.9;
+  }
+  .k09sc__strzalka--ok{ left:31%; right:auto; bottom:-5%; }
+  .k09sc__strzalka--no{ right:17%; left:auto; bottom:-15%; }
+}
+
+/* K4.2 (poprawka kąta): zielona strzałka ma leżeć bardziej POZIOMO,
+   prowadząc w lewo do lejka butelki — wybrane wzrokowo z wariantów
+   −22° / −30° / −38°. Czerwona bez zmian. */
+@media (max-width: 760px){
+  .k09sc__strzalka--ok{ transform:rotate(-22deg); left:30%; bottom:-12%; }
+}
+
+/* K4.2 (poprawka pozycji): grot zielonej ma być tak samo daleko od LEWEJ
+   ścianki sceny, jak grot czerwonej od PRAWEJ. Pomiar wykazał 103 px vs
+   64 px (390) i 83 vs 51 (320) — zielona wędruje o ~17% szerokości
+   obszaru w lewo, bliżej butelki. */
+@media (max-width: 760px){
+  .k09sc__strzalka--ok{ left:17%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   K5.1 — WARSTWA KLATEK ZASTĘPUJE GRAFIKĘ BAZOWĄ
+
+   Klatki zakręcania mają własną zakrętkę i odstawiony lejek, więc spod
+   nich nie może prześwitywać butelka bazowa (leżąca zakrętka za korpusem)
+   ani nakładka oleju — inaczej na finale widać dwa lejki i dwie zakrętki.
+   Chowamy je przez `visibility`, NIE `display`: `.k09sc__butelka` jest
+   elementem, który nadaje rozmiar całemu kadrowi, a warstwa klatek leży
+   na nim przez `inset:0`. Usunięcie go z układu złożyłoby scenę.
+
+   Siatka bezpieczeństwa zostaje nietknięta: przy błędzie ładowania klasa
+   `is-finalfilm` w ogóle nie powstaje, więc grafika bazowa jest widoczna.
+   ═══════════════════════════════════════════════════════════════════ */
+body.bd-on .k09.is-finalfilm .k09sc__butelka,
+body.bd-on .k09.is-finalfilm .k09sc__olej{ visibility:hidden; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   K5.2 — CHOREOGRAFIA FINAŁU (wyłącznie prezentacja)
+
+   Po ostatniej klatce JS wpina `is-finalscena`. Wtedy: podest z butelką
+   przejeżdża do środka sceny i rośnie, podest z X odjeżdża w prawo i
+   zanika, przyciski gasną, a komunikat `.k09__feedback` — TEN SAM element,
+   z tym samym aria-live — przenosi się na prawą stronę sceny w dużym
+   stylu. Żadnego nowego węzła i żadnej duplikacji treści.
+
+   Wysokość sceny ma jedno źródło prawdy (`--k09-scena-h`, ustawiona wyżej
+   przy definicji planszy), bo komunikat musi trafić w pion butelki, a nie
+   w środek całego klocka — pod sceną są jeszcze przyciski i panel „Gotowe…”.
+   Zmiennej NIE używamy tu do ponownego deklarowania `min-height`: reguła
+   spoza media query nadpisałaby mobilne `min-height:0` i zostawiła pusty
+   pas nad butelką na telefonie.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── ruch: łagodny, jednorazowy, bez odbić ── */
+body.bd-on .k09sc--bottle{
+  transition:transform .72s cubic-bezier(.22,.61,.36,1);
+}
+body.bd-on .k09__zone--reject{
+  transition:opacity .4s ease-out, transform .4s ease-out;
+}
+body.bd-on .k09__buttons,
+body.bd-on .k09__counter{ transition:opacity .4s ease-out; }
+
+/* ── stan końcowy ──
+   Przesunięcie liczone z siatki: kolumny 0.92 / 1.16 / 0.92 dają środek
+   pierwszej kolumny na ~15,3% szerokości planszy, a docelowa oś podestu
+   (wg makiety) leży na ~30%. Różnica ~14,7% szerokości planszy to ~47%
+   szerokości samej kolumny — i w takich jednostkach liczy `translateX`.
+   Transform siedzi na `.k09sc--bottle`, czyli na wspólnym kontenerze
+   podestu, butelki, nakładki oleju i klatek — jeden ruch, zero rozjazdu. */
+body.bd-on .k09.is-finalscena .k09sc--bottle{
+  transform:translateX(47%) scale(1.2);
+  transform-origin:50% 100%;          /* podest zostaje na ziemi */
+}
+body.bd-on .k09.is-finalscena .k09__zone--reject{
+  opacity:0; transform:translateX(45%); pointer-events:none;
+}
+body.bd-on .k09.is-finalscena .k09__buttons{ opacity:0; pointer-events:none; }
+/* licznik „Sprawdzono 11 z 11” znika z kadru — jego treść niesie już panel
+   „Gotowe…”, a makieta finału pokazuje samą butelkę z komunikatem */
+body.bd-on .k09.is-finalscena .k09__counter{ opacity:0; }
+
+/* ── komunikat finałowy: ten sam element, inne miejsce i skala ── */
+body.bd-on .k09.is-finalscena .k09__feedback{
+  position:absolute;
+  left:54%; right:clamp(12px,3vw,40px);
+  top:clamp(14px,2.4vh,30px);         /* równo z górą planszy (padding sceny) */
+  height:var(--k09-scena-h);          /* ta sama wysokość co plansza */
+  min-height:0; margin:0;
+  display:flex; align-items:center;
+  text-align:left; z-index:3;
+  font-size:clamp(19px,2.4vw,34px); line-height:1.22;
+  font-weight:800; letter-spacing:-.01em; color:#2c6b32;
+  animation:k09finalNapis .55s ease-out .2s both;
+}
+@keyframes k09finalNapis{
+  from{ opacity:0; transform:translateX(38px); }
+  to  { opacity:1; transform:none; }
+}
+
+/* ── trzy wersy na desktopie (decyzja użytkownika) ──
+   „Butelka zakręcona.” / „Może jechać” / „do Olejomatu.”.
+   Zdanie przychodzi z modułu sklejone twardymi spacjami, więc łamać się
+   może tylko w tych dwóch miejscach. Wystarczy zwęzić pudełko do
+   najdłuższej sklejki — zachłanne łamanie układa wtedy dokładnie trzy
+   wersy, przy każdym rozmiarze czcionki z clamp() (miara w `em`). */
+@media (min-width: 761px){
+  body.bd-on .k09.is-finalscena .k09__feedback{ max-width:9.4em; }
+}
+
+/* ═══ K5.2 — TELEFON (≤760 px) ═══
+   Ta sama idea, inne rozłożenie: obok butelki nie ma miejsca na zdanie,
+   więc komunikat ląduje POD wyśrodkowanym podestem, a powiększenie jest
+   mniejsze. Siatka mobilna ma dwie kolumny, więc żeby trafić na oś sceny,
+   podest jedzie o połowę własnej szerokości. */
+@media (max-width: 760px){
+  body.bd-on .k09.is-finalscena .k09sc--bottle{
+    transform:translateX(50%) scale(1.1);
+  }
+  /* pusty pas po przyciskach zwinąłby się skokiem — zwijamy go płynnie */
+  body.bd-on .k09__buttons{ max-height:200px; }
+  body.bd-on .k09.is-finalscena .k09__buttons{
+    max-height:0; margin-top:0; overflow:hidden;
+    transition:opacity .4s ease-out,
+               max-height .4s ease-out .1s,
+               margin-top .4s ease-out .1s;
+  }
+  /* komunikat wraca do normalnego przepływu — pod sceną */
+  body.bd-on .k09.is-finalscena .k09__feedback{
+    position:static; height:auto;
+    left:auto; right:auto; top:auto;
+    display:block; text-align:center;
+    margin-top:clamp(6px,1.4vh,14px);
+    font-size:clamp(16px,4.6vw,22px); line-height:1.3;
+  }
+  @keyframes k09finalNapis{
+    from{ opacity:0; transform:translateY(14px); }
+    to  { opacity:1; transform:none; }
+  }
+}
+
+/* ═══ K5.2 — OGRANICZONY RUCH ═══
+   Żadnych przejazdów: końcowa kompozycja pojawia się od razu. */
+@media (prefers-reduced-motion: reduce){
+  body.bd-on .k09sc--bottle,
+  body.bd-on .k09__zone--reject,
+  body.bd-on .k09__buttons,
+  body.bd-on .k09__counter{ transition:none; }
+  body.bd-on .k09.is-finalscena .k09__feedback{
+    animation:none; opacity:1; transform:none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   N3/A — SCENA ZLEWU: PEŁNY PIN NA KAŻDYM TELEFONIE
+
+   Decyzja użytkownika: telefon dostaje model desktopowy — wejście w kadr
+   → przypięcie, scroll scrubuje klatki, crossfade do diagramu w tym samym
+   kadrze. Żeby kompozycja tekst+animacja zmieściła się pod belką również
+   w niskich oknach (prawdziwy telefon traci ~80–150 px na pasek
+   przeglądarki), typografia sceny dostaje DWA stopnie kompaktu wybierane
+   wysokością okna — fonty maleją zamiast wypychać animację z kadru.
+   Minimum animacji pilnuje flex (anim bierze resztę wysokości).
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) and (max-height: 760px){
+  .bd-mob-pin .bd-proof__text .bd-scene__kicker{ font-size:11px; margin-bottom:2px; }
+  .bd-mob-pin .bd-proof__text .bd-scene__title{
+    font-size:clamp(26px, 7vw, 32px); margin-block:4px 8px; }
+  .bd-mob-pin .bd-proof__text .bd-scene__text{
+    font-size:clamp(15px, 4vw, 17px); line-height:1.42; }
+  .bd-mob-pin .bd-proof__text .bd-scene__text + .bd-scene__text{ margin-top:6px; }
+  .bd-mob-pin .bd-pinstage{ padding-block:8px; }
+  .bd-mob-pin .bd-faza{ gap:8px; }
+}
+/* stopień mocny: bardzo niskie okna (320×568 i podobne) — kicker to czysta
+   dekoracja nagłówka, treść niesie tytuł i akapity, więc może zniknąć */
+@media (max-width: 900px) and (max-height: 620px){
+  .bd-mob-pin .bd-proof__text .bd-scene__kicker{ display:none; }
+  .bd-mob-pin .bd-proof__text .bd-scene__title{
+    font-size:clamp(21px, 6.6vw, 25px); line-height:1.15; margin-block:2px 6px; }
+  .bd-mob-pin .bd-proof__text .bd-scene__text{
+    font-size:clamp(13.5px, 4.2vw, 15px); line-height:1.38; }
+  .bd-mob-pin .bd-pinstage{ padding-block:6px; }
+  .bd-mob-pin .bd-faza{ gap:6px; }
+}
+/* telefon w poziomie: pion nie pomieści tekstu NAD animacją, więc scena
+   przechodzi na desktopowy układ dwóch kolumn — tekst obok animacji */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 520px){
+  .bd-mob-pin .bd-faza--dowod{ flex-direction:row; align-items:center;
+    justify-content:center; gap:12px; }
+  .bd-mob-pin .bd-proof__text{ flex:0 1 46%; text-align:left; padding-inline:12px 0; }
+  .bd-mob-pin .bd-proof__text .bd-scene__text{ margin-inline:0; }
+  .bd-mob-pin .bd-proof__anim{ flex:1 1 54%; height:100%; width:auto; min-width:0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ETAP 2E — K10 „OLEJ RUSZA W DALSZĄ DROGĘ" (Trop 5, scena przypięta)
+
+   Blok #k10-seq przyjeżdża z dokumentu lekcji RAZEM ze swoim silnikiem
+   frameSequence i stylami .seq z arkusza wspólnego. Tu tylko dopasowanie
+   do rozdziału: kotwica sticky pod belką TROPU (w legacy była pod hudem
+   audio), tekst w przepływie pod kadrem (w legacy jest absolutną nakładką
+   na dole ekranu — w rozdziale nachodziłby na animację na telefonie)
+   i kompakty typografii wzorcem N3 (raport 54). Wszystko pod `body.bd-on`
+   — legacy nie widzi żadnej z tych reguł.
+   ═══════════════════════════════════════════════════════════════════ */
+body.bd-on .bd-chscene--k10{
+  position:relative;
+  padding-block:clamp(8px,1.4vh,16px) 0;
+}
+
+/* 2E.1/3 — tło sceny butelki (K09) jako warstwa dekoracyjna: sticky
+   o ZEROWEJ wysokości nie zabiera miejsca w przepływie, a jego ::before
+   maluje kadr pod belką przez cały czas scrubu — obraz nigdy nie jest
+   rozciągany na wysokość runwayu. Kolor fallbacku jak w K09. */
+.bd-k10tlo{ position:sticky; top:var(--bd-bar-h, 64px); height:0; z-index:0; }
+.bd-k10tlo::before{
+  content:""; position:absolute; left:0; right:0; top:0;
+  height:calc(100svh - var(--bd-bar-h, 64px));
+  background-color:#f3e6d0;
+  background-image:url("../assets/images/lekcja45/09-stacja-kontroli/tlo-desktop.webp");
+  background-size:cover; background-position:center 62%;
+  pointer-events:none;
+}
+body.bd-on .bd-chscene--k10 .bd-chscene__in{ position:relative; z-index:1; }
+
+/* 2E.1/1 — LIKWIDACJA PUSTKI: scena zaczyna się bezpośrednio pod
+   zdaniem-łącznikiem. Stage NIE jest już kadrem 100svh z treścią
+   pośrodku (wjazd pokazywał pół ekranu pustki nad treścią) — ma
+   wysokość TREŚCI, przypina się gdy dojedzie pod belkę, a przestrzeń
+   scrubu pracuje wyłącznie ZA kadrem (reszta wysokości sekcji).
+   Silnik bez zmian: postęp dalej liczy się z geometrii sekcji. */
+body.bd-on #k10-seq{
+  height:calc((100svh - var(--bd-bar-h, 64px)) * 3.2);
+  /* klasa .scene centruje zawartość gridem — przy stage o wysokości TREŚCI
+     zostawiałoby to ~1 ekran pustki nad kadrem (stage lądował w pionowym
+     środku sekcji). W rozdziale sekcja jest zwykłym blokiem. */
+  display:block; min-height:0; padding:0;
+}
+/* Etap 2E.2 — KOMPOZYCJA WYPEŁNIA KADR OD BELKI W DÓŁ.
+   Wcześniej stage miał wysokość TREŚCI i lądował tuż pod belką, a reszta
+   ekranu zostawała pusta: zmierzone 360 px pustki na 390 × 844 (43% ekranu)
+   i 166 px na 320 × 568. Na wąskim ekranie obraz nie urośnie wszerz (ogranicza
+   go szerokość jasnej kolumny), więc „wypełnienie" znaczy: wziąć całą wysokość
+   pod belką i ROZŁOŻYĆ przestrzeń równo nad i pod treścią. */
+body.bd-on #k10-seq .seq__stage{
+  position:sticky; top:var(--bd-bar-h, 64px);
+  min-height:calc(100svh - var(--bd-bar-h, 64px));
+  height:auto;
+  display:flex; flex-direction:column; justify-content:center;
+  padding:clamp(6px,1.2vh,14px) clamp(14px,3vw,44px) clamp(10px,1.6vh,18px);
+}
+body.bd-on #k10-seq .seq__stage > div{ width:100%; }
+/* hasła: ciemny atrament, żeby czytały się na jasnym kadrze sceny */
+body.bd-on #k10-seq .seq__step{ color:#1f2d20; font-weight:700; }
+body.bd-on #k10-seq .seq__step-sub{ color:#3c4a37; font-weight:400; }
+/* kompozycja na osi tropu */
+body.bd-on #k10-seq .kicker,
+body.bd-on #k10-seq .lead,
+body.bd-on #k10-seq .seq__caption{ text-align:center; }
+body.bd-on #k10-seq .lead{ margin-inline:auto; }
+body.bd-on #k10-seq .seq__frame{ max-height:56svh; }
+/* tekst NIERUCHOMY w przepływie pod kadrem, nie nakładka absolutna */
+body.bd-on #k10-seq .seq__steps{
+  position:static; max-width:680px;
+  margin:clamp(8px,1.6vh,16px) auto 0;
+  /* Sześć haseł ma różną długość, a krok „staje się surowcem" ma dwa
+     poziomy typografii. Bez rezerwy wysokości zmiana hasła przesuwałaby
+     wyśrodkowaną kompozycję przy każdym przejściu fazy. */
+  display:flex; align-items:flex-start; justify-content:center;
+  min-height:clamp(62px,8.5vh,92px);
+}
+body.bd-on #k10-seq .seq__step{ text-align:center; }
+
+/* telefon: pion — ta sama scena, mniejsza typografia (wzorzec N3) */
+@media (max-width: 900px){
+  body.bd-on #k10-seq .lead{ font-size:clamp(24px,6.6vw,32px);
+    line-height:1.15; margin-block:2px 8px; }
+  body.bd-on #k10-seq .seq__step{ font-size:clamp(14px,3.9vw,16px); line-height:1.42; }
+  body.bd-on #k10-seq .seq__caption{ font-size:11px; }
+  body.bd-on #k10-seq .seq__frame{ max-height:44svh; }
+}
+/* bardzo niskie okna: znika wyłącznie dekoracyjny kicker; podpis
+   „schemat symboliczny" to treść (uczciwość przekazu) — zawsze zostaje */
+@media (max-width: 900px) and (max-height: 620px){
+  body.bd-on #k10-seq .kicker{ display:none; }
+  body.bd-on #k10-seq .lead{ font-size:clamp(20px,6vw,24px); }
+  body.bd-on #k10-seq .seq__step{ font-size:clamp(12.5px,3.8vw,14px); line-height:1.35; }
+  body.bd-on #k10-seq .seq__frame{ max-height:38svh; }
+}
+/* telefon w poziomie: kadr po lewej, tekst po prawej (wzorzec N3) */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 520px){
+  body.bd-on #k10-seq .seq__stage > div{
+    display:grid; grid-template-columns:1.15fr 1fr;
+    align-items:center; column-gap:16px;
+  }
+  body.bd-on #k10-seq .kicker{ display:none; }
+  body.bd-on #k10-seq .lead{ grid-column:1 / -1;
+    font-size:clamp(18px,3vw,22px); margin-block:0 4px; }
+  body.bd-on #k10-seq .seq__frame{ grid-column:1; grid-row:2 / span 2;
+    max-height:calc(100svh - var(--bd-bar-h, 64px) - 96px); }
+  body.bd-on #k10-seq .seq__steps{ grid-column:2; margin:0; }
+  body.bd-on #k10-seq .seq__step{ text-align:left; font-size:13px; line-height:1.35; }
+  body.bd-on #k10-seq .seq__caption{ grid-column:2; text-align:left; margin-top:6px; }
+}
+
+/* 2E.1/3 — wariant mobilny tła (pionowy kadr z K09) */
+@media (max-width: 900px){
+  .bd-k10tlo::before{
+    background-image:url("../assets/images/lekcja45/09-stacja-kontroli/tlo-mobile.webp");
+    background-position:center 55%;
+  }
+}
+
+/* wariant statyczny (reduced motion / brak klatek): sekcja wraca do
+   wysokości treści — bez tej reguły nadpisanie wysokości runwayu
+   wygrywałoby specyficznością z .seq.is-static i zostawiało pusty ogon */
+body.bd-on #k10-seq.is-static{ height:auto; }
+body.bd-on #k10-seq.is-static .seq__stage{ position:static; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ETAP 3A — TROP 6 „SKALA PROBLEMU": SCENA K11 „STADION"
+
+   Blok #k11-seq przyjeżdża z dokumentu lekcji ze swoim silnikiem
+   frameSequence i stylami .seq/.k11__* z arkusza WSPÓLNEGO. Tu wyłącznie
+   warstwa tablicy (`body.bd-on`) — legacy nie widzi żadnej z tych reguł.
+
+   Dwie fazy zajmują TĘ SAMĄ przestrzeń kadru (wzorzec dowód → diagram
+   z P03): stadion jest scrubowany, a po plateau cofa się w głąb
+   i ustępuje ekranowi analitycznemu. Crossfade, nie wjazd od dołu.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* 3A.1 (decyzja użytkownika): scena gra na JASNYM tle z rodziny Tropu 5 —
+   biało-czerwony stadion i złoty olej czytają się na kremowym kadrze
+   znacznie lepiej niż na ciemnym gradiencie `data-tone="deep"`. Cała
+   typografia obu faz przestrojona na ciemny atrament. Legacy zachowuje
+   ciemną oprawę bez zmian — te reguły żyją tylko pod `body.bd-on`. */
+body.bd-on .bd-chscene--k11{
+  position:relative;
+  padding-block:clamp(8px,1.4vh,16px) 0;
+}
+
+/* Jasne tło sceny (te same kadry co Trop 5). Sticky o ZEROWEJ wysokości
+   nie zabiera miejsca w przepływie, a jego ::before maluje kadr pod belką
+   przez cały scrub. Kolor fallbacku pod grafiką: wolne łącze ani błąd nie
+   zostawiają dziury. */
+.bd-k11tlo{ position:sticky; top:var(--bd-bar-h, 64px); height:0; z-index:0; }
+.bd-k11tlo::before{
+  content:""; position:absolute; left:0; right:0; top:0;
+  height:calc(100svh - var(--bd-bar-h, 64px));
+  background-color:#f3e6d0;
+  background-image:url("../assets/images/lekcja45/09-stacja-kontroli/tlo-desktop.webp");
+  background-size:cover; background-position:center 62%;
+  pointer-events:none;
+}
+body.bd-on .bd-chscene--k11 .bd-chscene__in{ position:relative; z-index:1; }
+
+/* Sekcja #k11-seq JEST runwayem (wzorzec K10): jej wysokość wyznacza
+   długość scrubu, a silnik frameSequence liczy z niej postęp. Kadr
+   przypina .seq__stage pod belką tropu i ma wysokość TREŚCI (nauka
+   z 2E.1 — kadr 100svh zostawiał ekran pustki nad zawartością). */
+body.bd-on #k11-seq{
+  display:block; min-height:0; padding:0;
+  height:calc((100svh - var(--bd-bar-h, 64px)) * 4.2);
+}
+/* Korekta 3C.3.2: animacja stadionu dzieje się w KADRZE-OKNIE, które
+   wypełnia jasną kolumnę od belki do dołu — zero pustej dolnej połowy. */
+body.bd-on #k11-seq .seq__stage{
+  position:sticky; top:var(--bd-bar-h, 64px);
+  /* pod kadrem zostaje pas na skrót „przejdź niżej", żeby po domknięciu
+     animacji był widoczny bez dodatkowego przewijania */
+  min-height:calc(100svh - var(--bd-bar-h, 64px) - clamp(84px,11vh,118px));
+  height:auto; display:flex; flex-direction:column; justify-content:center;
+  padding:clamp(10px,1.8vh,20px) clamp(14px,3vw,44px) clamp(12px,2vh,22px);
+  border-radius:20px;
+  background:linear-gradient(180deg, rgba(226,220,206,.5), rgba(214,208,193,.72));
+  box-shadow:inset 0 0 0 1px rgba(62,96,52,.14);
+}
+body.bd-on #k11-seq .seq__stage > div{ width:100%; }
+/* Faza analityczna odróżnia się WINIETĄ, nie pełną ciemnością: delikatne
+   przygaszenie brzegów kadru skupia wzrok na liczbach, tło zostaje jasne. */
+body.bd-on #k11-seq .seq__stage::before{
+  content:""; position:absolute; inset:0; z-index:0;
+  border-radius:20px; pointer-events:none;
+  opacity:0; transition:opacity .5s ease;
+  background:radial-gradient(ellipse at 50% 42%,
+    rgba(255,255,255,0) 42%, rgba(74,92,70,.16) 78%, rgba(46,58,44,.26) 100%);
+}
+body.bd-on #k11-seq.is-analiza .seq__stage::before{ opacity:1; }
+body.bd-on #k11-seq .seq__stage > *{ position:relative; z-index:1; }
+
+/* kompozycja na osi tropu; ciemny atrament na jasnym tle */
+body.bd-on #k11-seq .kicker,
+body.bd-on #k11-seq .lead{ text-align:center; }
+body.bd-on #k11-seq .lead{ margin-inline:auto; color:var(--bd-ink); }
+body.bd-on #k11-seq .kicker{ color:#8a6a12; }
+/* Korekta 3C.2.1: większy render — kadr ma być wypełniony, nie w połowie pusty */
+/* `width:auto` zatrzymywało render na jego naturalnych 760 px, więc kadr
+   nie rósł mimo większego `max-height` — stąd pusta dolna połowa. Klatki
+   mają 760 px, więc powiększamy z umiarem (do 980 px), żeby nie rozmyć. */
+body.bd-on #k11-seq .seq__frame{
+  max-height:72svh; width:100%; max-width:980px; margin-inline:auto;
+  transition:max-height .5s cubic-bezier(.2,.7,.3,1), transform .5s cubic-bezier(.2,.7,.3,1), filter .5s ease;
+  filter:drop-shadow(0 10px 22px rgba(30,40,28,.22));
+}
+/* tekst kroków w przepływie pod kadrem (w legacy jest nakładką absolutną) */
+body.bd-on #k11-seq .seq__steps{
+  position:static; max-width:680px; margin:clamp(8px,1.6vh,16px) auto 0;
+}
+body.bd-on #k11-seq .seq__step{
+  text-align:center; color:#26311f;
+  font-size:clamp(16px,1.9vw,22px); line-height:1.5;
+}
+body.bd-on #k11-seq .seq__step strong{ color:#1f4d24; }
+
+/* ── FAZA B: ekran analityczny ──
+   Domyślnie schowany; wchodzi klasą `is-analiza` na sekcji. Stadion cofa
+   się w głąb, liczby wchodzą crossfadem. */
+/* Korekta 3C.2.1: ekran analityczny nie może REZERWOWAĆ miejsca, kiedy go
+   nie widać — 416 px niewidzialnej rezerwy rozpychało przypięty kadr i to
+   ona zostawiała pustą dolną połowę (pomiar składników w raporcie 60). */
+body.bd-on #k11-seq .k11__meter{
+  opacity:0; transform:translate3d(0,14px,0);
+  transition:opacity .45s ease, transform .45s cubic-bezier(.2,.7,.3,1);
+  pointer-events:none;
+  margin-top:0; height:0; overflow:hidden;
+}
+/* 3C.1: stadion kurczy się MOCNIEJ niż w 3A i przestaje być bohaterem
+   kadru — od tej chwili jest jednostką miary dla siatki sylwetek.
+   Kurczymy WYSOKOŚĆ, nie samą skalę: `transform` nie zmienia układu, więc
+   po `scale()` zostawał pas pustki wielkości pierwotnego kadru. */
+body.bd-on #k11-seq.is-analiza .seq__frame{
+  max-height:19svh; transform:none;
+}
+body.bd-on #k11-seq.is-analiza .k11__meter{
+  opacity:1; transform:none; pointer-events:auto;
+  height:auto; overflow:visible; margin-top:clamp(10px,2vh,22px);
+}
+
+/* ── jednostka skali ── */
+body.bd-on #k11-seq .k11__unit{ color:#3c4a37; font-weight:600; }
+
+/* ── siatka 41 miniatur: 10 + 10 + 10 + 10 + 1 ──
+   Wygaszone miniatury (stadion PUSTY) są widoczne od początku fazy — uczeń
+   wie, ile pól ma się zapełnić — a zapalone pokazują ten sam stadion
+   wypełniony olejem. Oba stany jadą z jednego pliku; szczegóły i powód
+   odejścia od rysowanej sylwetki w arkuszu wspólnym (korekta 3C.1.1). */
+body.bd-on #k11-seq .k11__grid{ margin-top:clamp(8px,1.4vh,14px); max-width:1020px; }
+body.bd-on #k11-seq .k11__grupa-podpis{ color:#3c4a37; opacity:.9; }
+body.bd-on #k11-seq .k11__plus{ color:#3c4a37; }
+
+/* ── liczby jako TEKST (zasada: tekst nie mieszka w grafice) ──
+   3A.1: ciemny atrament na jasnym tle, kontrast AA. */
+/* Korekta 3C.2.1: liczby i miniatury urosły razem z kadrem */
+body.bd-on #k11-seq .k11__multiplier{
+  font-size:clamp(40px,6.4vw,84px); margin:clamp(4px,1vh,10px) 0 0;
+  color:#a8660a;
+}
+body.bd-on #k11-seq .k11__stad{ width:33px; }
+body.bd-on #k11-seq .k11__unit{ font-size:clamp(13px,1.6vw,17px); }
+body.bd-on #k11-seq .k11__unit-ikona{ width:46px; }
+body.bd-on #k11-seq .k11__final-liczba{ font-size:clamp(34px,6.2vw,76px); }
+body.bd-on #k11-seq .k11__final-jedn{ font-size:clamp(16px,2.1vw,26px); }
+body.bd-on #k11-seq .k11__final-rownanie{ font-size:clamp(24px,4.2vw,48px); }
+body.bd-on #k11-seq .k11__grupa-podpis{ font-size:13px; }
+body.bd-on #k11-seq .k11__podpis{
+  margin:2px 0 0; text-align:center;
+  font-size:clamp(12px,1.4vw,16px); color:#3c4a37;
+}
+/* ── komunikat finalny: największa typografia sceny ── */
+body.bd-on #k11-seq .k11__final{ margin-top:clamp(6px,1.4vh,14px); }
+body.bd-on #k11-seq .k11__final-liczba{ color:#1f4d24; }
+body.bd-on #k11-seq .k11__final-jedn{ color:#1f4d24; }
+body.bd-on #k11-seq .k11__final-rownanie{ color:#a8660a; }
+
+/* ── telefon: kompakty typografii wysokością okna (wzorzec N3) ── */
+@media (max-width: 900px){
+  .bd-k11tlo::before{
+    background-image:url("../assets/images/lekcja45/09-stacja-kontroli/tlo-mobile.webp");
+    background-position:center 55%;
+  }
+  body.bd-on #k11-seq .lead{ font-size:clamp(24px,6.6vw,32px);
+    line-height:1.15; margin-block:2px 8px; }
+  body.bd-on #k11-seq .seq__step{ font-size:clamp(14px,3.9vw,16px); line-height:1.42; }
+  body.bd-on #k11-seq .seq__frame{ max-height:46svh; }
+  /* 3C.1: stadion-jednostka schodzi jeszcze niżej, żeby cztery dziesiątki
+     i komunikat finalny zmieściły się na jednym ekranie telefonu */
+  body.bd-on #k11-seq.is-analiza .seq__frame{ max-height:12svh; transform:none; }
+  body.bd-on #k11-seq .k11__unit{ font-size:12px; }
+}
+@media (max-height: 620px){
+  /* Korekta 3C.3.2: przy niskim oknie (telefon w poziomie) kadr-okno nie
+     może wymuszać wysokości — zawartość i tak jej nie wypełni, a skrót
+     „przejdź niżej" wypadał wtedy pod dolną krawędź. */
+  body.bd-on #k11-seq .seq__stage{ min-height:0; }
+  body.bd-on #k11-seq .seq__frame{ max-height:24svh; }
+  body.bd-on #k11-seq.is-analiza .seq__frame{ max-height:11svh; }
+  body.bd-on #k11-seq .lead{ font-size:clamp(17px,3vw,22px); margin-block:0 4px; }
+  body.bd-on #k11-seq .seq__step{ font-size:clamp(12px,1.6vw,14px); line-height:1.35; }
+  body.bd-on #k11-seq .seq__steps{ margin-top:4px; }
+  body.bd-on .bd-dalej{ padding-block:6px; }
+  body.bd-on .bd-dalej__txt small{ display:none; }
+}
+@media (max-height: 620px) and (min-width: 600px){
+  /* Telefon w poziomie ma dość SZEROKOŚCI, a brakuje mu PIONU: cztery rzędy
+     miniatur jedna pod drugą nie mieszczą się razem z liczbami i skrótem.
+     Wracamy do układu poziomego — grupy obok siebie, jak na desktopie. */
+  body.bd-on #k11-seq .k11__grid{ flex-direction:row; flex-wrap:wrap; gap:4px 8px; }
+  body.bd-on #k11-seq .k11__grupa{ flex-direction:column; gap:2px; }
+  body.bd-on #k11-seq .k11__pole{ grid-template-columns:repeat(5,auto); }
+  body.bd-on #k11-seq .k11__grupa:last-of-type .k11__pole{ grid-template-columns:auto; }
+  body.bd-on #k11-seq .k11__grupa-podpis{ border-left:0; border-top:1px solid currentColor;
+    padding:2px 0 0; text-align:center; min-width:2.2em; }
+  body.bd-on #k11-seq .k11__stad{ width:20px; }
+  body.bd-on #k11-seq .k11__unit{ margin:4px 0 0; font-size:11px; }
+  body.bd-on #k11-seq .k11__multiplier{ font-size:clamp(26px,5vw,38px); }
+  body.bd-on #k11-seq .k11__final-liczba{ font-size:clamp(24px,4.6vw,36px); }
+  body.bd-on #k11-seq .k11__final-rownanie{ font-size:clamp(17px,3.2vw,24px); }
+}
+@media (max-width: 900px) and (max-height: 620px){
+  body.bd-on #k11-seq .kicker{ display:none; }
+  body.bd-on #k11-seq .lead{ font-size:clamp(20px,6vw,24px); }
+  body.bd-on #k11-seq .seq__step{ font-size:clamp(12.5px,3.8vw,14px); line-height:1.35; }
+  body.bd-on #k11-seq .seq__frame{ max-height:30svh; }
+  body.bd-on #k11-seq .k11__multiplier{ font-size:clamp(30px,8vw,44px); }
+  body.bd-on #k11-seq .k11__final-liczba{ font-size:clamp(24px,7vw,32px); }
+}
+
+/* ── wariant statyczny (reduced motion / brak klatek): pełna wiedza ── */
+body.bd-on #k11-seq.is-static{ height:auto; }
+body.bd-on #k11-seq.is-static .seq__stage{ position:static; }
+body.bd-on #k11-seq.is-static .k11__stat figcaption{ color:#3c4a37; }
+@media (prefers-reduced-motion: reduce){
+  body.bd-on #k11-seq{ height:auto; }
+  body.bd-on #k11-seq .seq__stage{ position:static; }
+  body.bd-on #k11-seq .k11__meter{ opacity:1; transform:none; transition:none; }
+  body.bd-on #k11-seq .seq__frame{ transition:none; }
+  body.bd-on #k11-seq .seq__stage::before{ transition:none; }
+  body.bd-on #k11-seq.is-analiza .seq__frame{ transform:none; }
+  /* 3C.1: stan końcowy od razu — komplet sylwetek i pełny komunikat */
+  body.bd-on #k11-seq .k11__final{ opacity:1; transform:none; transition:none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ETAP 3B — SCENA K12 „LAS: ODPADY ZOSTAWIAJĄ ŚLADY" (Trop 6, druga scena)
+
+   Blok #k12-scene przyjeżdża z dokumentu lekcji ze swoim silnikiem
+   frameSequence i stylami .k12* z arkusza WSPÓLNEGO. Tu wyłącznie warstwa
+   tablicy (`body.bd-on`) — legacy nie widzi żadnej z tych reguł.
+
+   Scena gra na jasnym tle (jak K11 po korekcie 3A.1): sekcja jest
+   runwayem, kadr przypina się pod belką tropu, a skaner przeskakuje po
+   pięciu odpadach w tej samej przestrzeni.
+   ═══════════════════════════════════════════════════════════════════ */
+body.bd-on .bd-chscene--k12{
+  position:relative;
+  padding-block:clamp(8px,1.4vh,16px) 0;
+}
+.bd-k12tlo{ position:sticky; top:var(--bd-bar-h, 64px); height:0; z-index:0; }
+.bd-k12tlo::before{
+  content:""; position:absolute; left:0; right:0; top:0;
+  height:calc(100svh - var(--bd-bar-h, 64px));
+  background-color:#f3e6d0;
+  background-image:url("../assets/images/lekcja45/09-stacja-kontroli/tlo-desktop.webp");
+  background-size:cover; background-position:center 62%;
+  pointer-events:none;
+}
+body.bd-on .bd-chscene--k12 .bd-chscene__in{ position:relative; z-index:1; }
+
+/* ── Korekta 3C.3.2: skrót pojawia się DOPIERO po domknięciu animacji
+   stadionu (licznik doliczony do ×41), a nie od wejścia w scenę. ── */
+body.bd-on .bd-dalej{ opacity:0; pointer-events:none;
+  transition:opacity .45s ease, transform .2s ease, box-shadow .2s ease; }
+body.bd-on #k11-seq.is-policzone .bd-dalej{ opacity:1; pointer-events:auto; }
+
+/* ── Korekta 3C.3.1: skrót „przejdź niżej" pod sceną stadionu ── */
+body.bd-on .bd-dalej{
+  display:flex; align-items:center; gap:clamp(10px,1.6vw,18px);
+  margin:clamp(10px,2vh,22px) auto 0; padding:10px clamp(14px,2vw,22px);
+  max-width:520px; width:100%;
+  background:rgba(255,255,255,.82);
+  border:1px solid rgba(62,96,52,.24); border-radius:999px;
+  box-shadow:0 6px 16px rgba(30,40,28,.1);
+  cursor:pointer; font:inherit; color:#1f4d24; text-align:left;
+  transition:transform .2s ease, box-shadow .2s ease;
+}
+body.bd-on .bd-dalej:hover{ transform:translateY(-2px); box-shadow:0 10px 22px rgba(30,40,28,.16); }
+body.bd-on .bd-dalej:focus-visible{ outline:3px solid var(--lk-amber,#f2b127); outline-offset:3px; }
+body.bd-on .bd-dalej__nic{
+  flex:none; width:52px; height:14px; border-radius:2px;
+  background:radial-gradient(circle at 20% 60%, var(--lk-amber,#f2b127) 0 2px, transparent 2px),
+             linear-gradient(90deg, transparent 0 6px, var(--lk-amber,#f2b127) 6px 46px, transparent 46px);
+  opacity:.8;
+}
+body.bd-on .bd-dalej__txt{ flex:1; font-weight:800; font-size:clamp(14px,1.7vw,18px); }
+body.bd-on .bd-dalej__txt small{
+  display:block; margin-top:2px; font-weight:600; letter-spacing:.06em;
+  text-transform:uppercase; font-size:clamp(9px,1vw,11px); color:#8a6a12;
+}
+body.bd-on .bd-dalej__strzalka{
+  flex:none; display:grid; place-items:center;
+  width:34px; height:34px; border-radius:50%;
+  border:1.5px solid rgba(62,96,52,.35); font-size:16px;
+}
+
+/* sekcja = runway (wzorzec K10/K11).
+   3C.3: dłuższa droga — po skanerze mieści się jeszcze plateau, przejazd
+   dwóch ciężarówek, komunikat, zdanie o wysypiskach i pytanie. */
+body.bd-on #k12-scene{
+  display:block; min-height:0; padding:0;
+  /* 3C.3.3: doszło sprzątanie lasu (sekwencja wstecz), więc scena
+     potrzebuje dłuższej drogi — wysokość dobrana pomiarem faz. */
+  height:calc((100svh - var(--bd-bar-h, 64px)) * 6.6);
+}
+body.bd-on #k12-scene .k12__stage{
+  position:sticky; top:var(--bd-bar-h, 64px);
+  height:auto; min-height:0; display:block;
+  padding:clamp(6px,1.2vh,14px) clamp(14px,3vw,44px) clamp(10px,1.6vh,18px);
+  border-radius:20px;
+}
+body.bd-on #k12-scene .k12__stage > div{ margin-inline:auto; }
+
+/* kadr: sekwencja ma alfę, więc bez tła i bez przycinania */
+/* Korekta 3C.2.1: diorama na PRAWIE PEŁNĄ szerokość jasnej kolumny —
+   wcześniej treść zajmowała górną połowę kadru, a dolna świeciła pustką.
+
+   Korekta 3C.2.2 — WYMIAR BIERZE SIĘ Z WYSOKOŚCI, nie z szerokości.
+   Przy `width:100%` + `max-height` pole kadru miało proporcje 2,34, a obraz
+   w nim 1,78: `object-fit:contain` rysował dioramę węższą niż jej pole,
+   a pinezki liczone w procentach POLA rozjeżdżały się z obiektami. Teraz
+   wysokość ustala rozmiar, a szerokość dolicza `aspect-ratio`, więc pole
+   i obraz pokrywają się co do piksela. */
+body.bd-on #k12-scene .k12__images{
+  aspect-ratio:1100 / 619; overflow:visible;
+  border-radius:0; background:none;
+  height:44svh; width:auto; max-width:100%; max-height:none;
+  margin-inline:auto;
+}
+body.bd-on #k12-scene .k12__images img{ object-fit:contain; }
+body.bd-on #k12-scene .k12__frame{
+  filter:drop-shadow(0 10px 22px rgba(30,40,28,.22));
+}
+
+/* typografia — ciemny atrament na jasnym tle (kontrast AA) */
+body.bd-on #k12-scene .kicker{ text-align:center; color:#8a6a12; }
+body.bd-on #k12-scene .lead{
+  text-align:center; margin-inline:auto; color:var(--bd-ink);
+}
+body.bd-on #k12-scene .k12__fakt{ color:#26311f; }
+body.bd-on #k12-scene .k12__fakt--echo{ color:#3c4a37; }
+body.bd-on #k12-scene .k12__question{ color:#1f4d24; }
+
+/* Korekta 3C.2.1: zdania i pytanie nie rezerwują miejsca, dopóki nie wejdą
+   — inaczej 191 px niewidzialnej rezerwy rozpychało kadr przez całą scenę. */
+body.bd-on #k12-scene .k12__fakt:not(.is-on),
+body.bd-on #k12-scene .k12__question:not(.is-on){
+  height:0; overflow:hidden; margin-block:0;
+}
+/* Korekta 3C.2.2: karta ZOSTAJE do końca sceny — wcześniej chowałem tu cały
+   interfejs, żeby zrobić miejsce zdaniom, i po fazie skanera opis znikał,
+   a klik w pinezkę nie miał czego pokazać. Miejsca użycza teraz KADR:
+   skaner skończył rolę, więc diorama może się zmniejszyć. */
+/* ── Korekta 3C.3.1: zaproszenie, bramka, sekcja finału ── */
+body.bd-on #k12-scene .k12__zaproszenie{ color:#8a3630; }
+body.bd-on #k12-scene .k12__brama{ color:#8a3630; }
+body.bd-on #k12-scene .k12__final{
+  max-width:820px; margin:clamp(10px,2vh,24px) auto 0; text-align:center;
+}
+body.bd-on #k12-scene .k12__fakt-naglowek{ margin-bottom:4px; }
+body.bd-on #k12-scene .k12__fakt-podpis{ color:#26311f;
+  font-size:clamp(14px,1.7vw,19px); }
+body.bd-on #k12-scene .k12__fakt-podpis u{ text-decoration-thickness:2px;
+  text-underline-offset:3px; }
+/* diorama w finale zwalnia miejsce tekstom i pojazdom */
+body.bd-on #k12-scene.is-final .k12__images{ height:28svh; }
+
+/* ── Korekta 3C.3.2: ZAMKNIĘCIE TROPU W TYM SAMYM KADRZE ──
+   Las gaśnie stopniowo (zmienna `--zanik` z mapowania faz), a w jego
+   miejscu wchodzi wierszami panel. Obie warstwy leżą na sobie, więc
+   przejście jest przenikaniem, nie skokiem do osobnej sekcji.
+   Wszystko odwracalne: scroll w górę przywraca las. */
+body.bd-on #k12-scene .k12__stage > div{ position:relative; }
+body.bd-on #k12-scene.is-zanik .k12__scena,
+body.bd-on #k12-scene.is-zanik .k12__final{
+  opacity:calc(1 - var(--zanik, 0));
+  transform:translateY(calc(var(--zanik, 0) * -18px));
+  pointer-events:none;
+}
+body.bd-on #k12-scene .k12__panel{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:clamp(8px,1.6vh,18px); text-align:center;
+  padding:clamp(10px,2vh,24px) 0;
+  opacity:0; pointer-events:none;
+}
+body.bd-on #k12-scene .k12__panel.is-on{ opacity:1; pointer-events:auto; }
+body.bd-on #k12-scene .k12__panel > *{
+  margin:0; opacity:0; transform:translateY(14px);
+  transition:opacity .5s ease, transform .5s cubic-bezier(.2,.7,.3,1);
+}
+body.bd-on #k12-scene .k12__panel > .is-on{ opacity:1; transform:none; }
+body.bd-on #k12-scene .k12__panel-tytul{
+  font-family:var(--font-title, system-ui, sans-serif);
+  font-size:clamp(24px,4vw,46px); font-weight:800; color:#1f4d24; line-height:1.06;
+}
+body.bd-on #k12-scene .k12__panel-tekst{
+  max-width:56ch; font-size:clamp(14px,1.8vw,19px); line-height:1.5; color:#26311f;
+}
+
+@media (prefers-reduced-motion: reduce){
+  /* bez przenikania — obie części po prostu następują po sobie */
+  body.bd-on #k12-scene.is-zanik .k12__scena,
+  body.bd-on #k12-scene.is-zanik .k12__final{ opacity:1; transform:none; }
+  body.bd-on #k12-scene .k12__panel{ position:static; opacity:1; pointer-events:auto;
+    margin-top:clamp(16px,3vh,32px); }
+  body.bd-on #k12-scene .k12__panel > *{ opacity:1; transform:none; transition:none; }
+}
+body.bd-on #k12-scene.is-final .k12__karta{
+  min-height:0; padding:6px clamp(12px,2vw,20px);
+  flex-direction:row; gap:8px; align-items:baseline; justify-content:center;
+  flex-wrap:wrap;
+}
+body.bd-on #k12-scene.is-final .k12__karta-nazwa{
+  font-size:clamp(14px,1.6vw,18px); margin:0;
+}
+body.bd-on #k12-scene.is-final .k12__karta-nazwa::before{
+  content:"Ślad 5 z 5 — "; font-weight:700; color:#8a3630;
+}
+body.bd-on #k12-scene.is-final .k12__karta-tekst{ display:none; }
+body.bd-on #k12-scene.is-final .k12__licznik{ display:none; }
+/* skaner skończony — miniatura dioramy nie ma już czego orientować */
+body.bd-on #k12-scene.is-final .k12__mapka{ display:none; }
+/* po kliknięciu pinezki karta wraca do pełnej postaci */
+body.bd-on #k12-scene.is-final.is-rozwinieta .k12__karta{
+  min-height:clamp(104px,14vh,136px);
+  flex-direction:column; padding:clamp(12px,1.8vw,20px) clamp(14px,2.2vw,28px);
+}
+body.bd-on #k12-scene.is-final.is-rozwinieta .k12__karta-nazwa{
+  font-size:clamp(20px,2.6vw,30px);
+}
+body.bd-on #k12-scene.is-final.is-rozwinieta .k12__karta-nazwa::before{ content:none; }
+body.bd-on #k12-scene.is-final.is-rozwinieta .k12__karta-tekst{ display:block; }
+body.bd-on #k12-scene.is-final.is-rozwinieta .k12__licznik{ display:block; }
+
+/* ── 3C.3.3: sprzątanie kończy pracę skanera ──
+   Gdy las wraca do czystości, nie ma już czego skanować: lupa, licznik
+   i karta opisu gasną razem ze śmieciami. Miejsce zostaje zarezerwowane
+   (opacity, nie display), żeby budujący się finał nie podskakiwał. */
+body.bd-on #k12-scene.is-sprzatanie .k12__hud,
+body.bd-on #k12-scene.is-czysto .k12__hud,
+body.bd-on #k12-scene.is-sprzatanie .k12__lupa,
+body.bd-on #k12-scene.is-czysto .k12__lupa{
+  opacity:0; pointer-events:none; transition:opacity .4s ease;
+}
+
+
+/* ── komunikat finału: liczba jako nagłówek, reszta zdania jako podpis ── */
+body.bd-on #k12-scene .k12__fakt-naglowek{
+  display:block; font-family:var(--font-title, system-ui, sans-serif);
+  font-size:clamp(22px,3.6vw,44px); font-weight:800; line-height:1.05;
+  letter-spacing:-.01em; color:#1f4d24; text-transform:uppercase;
+}
+body.bd-on #k12-scene .k12__fakt-podpis{
+  display:block; margin-top:6px;
+  font-size:clamp(13px,1.6vw,17px); color:#3c4a37;
+}
+
+/* ── ETAP 3C.2 + korekta 3C.2.1: układ skanera ──
+   Karta opisu stoi POD dioramą — jednolicie na desktopie i telefonie.
+   Dzięki temu diorama dostaje pełną szerokość jasnej kolumny (korekta
+   „kadr świeci pustką"), a opis nadal nigdy nie zasłania obiektu.
+   Karta ma STAŁĄ wysokość: przeskok między krótkim a długim zdaniem
+   nie ma prawa przesuwać układu. */
+body.bd-on #k12-scene .k12__scena{ display:block; }
+body.bd-on #k12-scene .k12__hud{
+  max-width:760px; margin:clamp(8px,1.4vh,16px) auto 0;
+}
+body.bd-on #k12-scene .k12__licznik{ color:#8a3630; text-align:center; }
+body.bd-on #k12-scene .k12__karta{
+  background:rgba(255,255,255,.86);
+  border:1px solid rgba(62,96,52,.22);
+  border-radius:16px;
+  padding:clamp(12px,1.8vw,20px) clamp(14px,2.2vw,28px);
+  box-shadow:0 6px 18px rgba(30,40,28,.12);
+  text-align:center;
+  /* rezerwa dobrana do NAJDŁUŻSZEGO ze zdań („Jej zawartość może wsiąknąć…"),
+     żeby przeskok między śladami nie zmieniał wysokości karty */
+  min-height:clamp(104px,14vh,136px);
+  display:flex; flex-direction:column; justify-content:center;
+}
+body.bd-on #k12-scene .k12__karta-nazwa{
+  color:#1f4d24; font-size:clamp(20px,2.6vw,30px);
+}
+body.bd-on #k12-scene .k12__karta-tekst{
+  color:#26311f; font-size:clamp(15px,1.9vw,21px);
+}
+/* miniatura dioramy: potrzebna dopiero przy przybliżeniu, czyli na telefonie */
+body.bd-on #k12-scene .k12__mapka{ display:none; }
+
+/* ── telefon: kompakty (wzorzec N3/3A) ── */
+@media (max-width: 900px){
+  .bd-k12tlo::before{
+    background-image:url("../assets/images/lekcja45/09-stacja-kontroli/tlo-mobile.webp");
+    background-position:center 55%;
+  }
+  body.bd-on #k12-scene .lead{ font-size:clamp(24px,6.6vw,32px);
+    line-height:1.15; margin-block:2px 8px; }
+  body.bd-on #k12-scene .k12__images{ height:auto; max-width:100%; }
+  body.bd-on #k12-scene .k12__fakt{ font-size:clamp(13px,3.6vw,15px); }
+  body.bd-on #k12-scene .k12__question{ font-size:clamp(17px,4.6vw,22px); }
+
+  /* ── 3C.2 na telefonie: karta POD kadrem, diorama się przybliża ──
+     Przybliżenie transformuje `.k12__swiat`, więc lupa i pinezki jadą
+     razem z obrazem. Kadr dostaje przycięcie i własną warstwę kompozycji
+     — inaczej powiększony świat wylewałby się na sąsiednie elementy. */
+  body.bd-on #k12-scene .k12__hud{ margin-top:8px; }
+  /* Korekta 3C.3.1: treść trzyma się jasnej kolumny — min. 16 px oddechu
+     po bokach na każdej scenie tropu (zgłoszenie ze zrzutów mobilnych). */
+  body.bd-on #k11-seq .seq__stage,
+  body.bd-on #k12-scene .k12__stage{ padding-inline:max(16px, 4vw); }
+  body.bd-on #k11-seq .seq__frame{ max-width:100%; }
+  /* Korekta 3C.3.1: szerokość miniatury liczona z REALNIE dostępnego pasa.
+     Wcześniej reguła desktopowa (33 px) obowiązywała też na telefonie
+     i dziesiąta sztuka z etykietą „|10" wychodziła poza jasną kolumnę.
+     Rząd = 10 miniatur + 9 przerw (2 px) + odstęp (6 px) + podpis (21 px),
+     a kolumna to szerokość okna minus marginesy strony i padding sceny. */
+  body.bd-on #k11-seq .k11__stad{
+    width:min(26px, calc((100vw - 133px) / 10));
+  }
+  body.bd-on #k11-seq .k11__pole{ justify-content:start; }
+  body.bd-on #k11-seq .k11__grupa{ max-width:100%; }
+  body.bd-on #k11-seq .k11__unit-ikona{ width:34px; }
+  body.bd-on #k12-scene .k12__final{ padding-inline:2px; }
+  /* Ramka przycinająca zostaje BLOKIEM: `.k12__images` ma `width:auto`
+     z `aspect-ratio`, a jako element flex traciło szerokość (jego treść
+     to same obrazy pozycjonowane absolutnie) i kadr znikał. */
+  body.bd-on #k12-scene .k12__swiat{
+    overflow:hidden; border-radius:16px;
+  }
+  body.bd-on #k12-scene.is-zoom .k12__swiat{
+    box-shadow:inset 0 0 0 1px rgba(62,96,52,.18);
+  }
+  body.bd-on #k12-scene .k12__licznik{ text-align:center; }
+  body.bd-on #k12-scene .k12__karta{ text-align:center; }
+  /* pinezki i lupa nie mogą rosnąć razem ze światem — kontrujemy skalę,
+     żeby przy przybliżeniu zostały tej samej wielkości co bez niego */
+  body.bd-on #k12-scene.is-zoom .k12__pin.is-on{
+    transform:translate(-50%,-50%) scale(.556);
+  }
+  body.bd-on #k12-scene.is-zoom .k12__lupa.is-on{
+    transform:translate(-50%,-50%) scale(.556);
+  }
+
+  /* miniatura całej dioramy z pinezkami — orientacja przy przybliżeniu */
+  body.bd-on #k12-scene .k12__mapka{
+    display:block; position:relative;
+    width:min(148px,42vw); aspect-ratio:1100/619;
+    margin:8px auto 0; border-radius:8px;
+    background-image:url("../assets/images/lekcja45/las-seq/las-063.webp");
+    background-size:cover; background-position:center;
+    border:1px solid rgba(62,96,52,.28);
+    opacity:0; transition:opacity .3s ease;
+  }
+  body.bd-on #k12-scene.is-skan .k12__mapka{ opacity:1; }
+  body.bd-on #k12-scene .k12__mapka-pin{
+    position:absolute; width:9px; height:9px;
+    transform:translate(-50%,-50%) scale(.5);
+    border-radius:50%; background:#8a3630;
+    border:1px solid rgba(255,255,255,.9);
+    opacity:0; transition:opacity .25s ease, transform .25s ease;
+  }
+  body.bd-on #k12-scene .k12__mapka-pin.is-on{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  body.bd-on #k12-scene .k12__mapka-pin.is-scan{
+    background:var(--lk-amber,#f2b127); transform:translate(-50%,-50%) scale(1.4);
+    box-shadow:0 0 0 2px rgba(242,177,39,.35);
+  }
+}
+@media (max-width: 900px) and (max-height: 620px){
+  body.bd-on #k12-scene .kicker{ display:none; }
+  body.bd-on #k12-scene .lead{ font-size:clamp(20px,6vw,24px); }
+  body.bd-on #k12-scene .k12__images{ max-height:28svh; }
+  body.bd-on #k12-scene .k12__fakt{ font-size:clamp(12px,3.4vw,13.5px); }
+}
+
+/* Korekta 3C.2.1: panel domknięcia tropu wyśrodkowany w kadrze, a nie
+   przyklejony do górnej krawędzi. */
+body.bd-on #bd-scene-p06-koniec{
+  min-height:calc(100svh - var(--bd-bar-h, 64px));
+  display:flex; flex-direction:column; justify-content:center;
+}
+
+/* ── wariant statyczny (reduced motion / brak klatek) ── */
+body.bd-on #k12-scene.is-static{ height:auto; }
+body.bd-on #k12-scene.is-static .k12__stage{ position:static; }
+body.bd-on #k12-scene.is-static .k12__images{ overflow:hidden; border-radius:18px; }
+body.bd-on #k12-scene.is-static .k12__images img{ object-fit:cover; }
+@media (prefers-reduced-motion: reduce){
+  body.bd-on #k12-scene{ height:auto; }
+  body.bd-on #k12-scene .k12__stage{ position:static; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   TROP 7 „PSZOK — CENTRUM DOWODÓW" (4A.1 → 4B → korekta 4A.3)
+
+   KOREKTA 4A.3: wejście i rozwinięcie skrótu to JEDEN przypięty kadr
+   z przenikaniem, a nie dwa osobne ekrany. Sterują nim dwie zmienne
+   ustawiane przez silnik przy scrollu:
+     --pw-t  1 → 0   obecność tytułu
+     --pw-k  0 → 1   obecność rozwinięcia skrótu
+   Zakresy zachodzą na siebie, więc treść jednocześnie gaśnie i wschodzi.
+   Klasa `pw--wolny` odpina kadr (piąta litera, ograniczony ruch, powrót
+   ucznia z zaliczonym skrótem) — scena płynie wtedy normalnie.
+   ═══════════════════════════════════════════════════════════════════ */
+
+body.bd-on .bd-chscene--pszok{ position:relative; padding-block:0; }
+
+body.bd-on .pw-runway{
+  position:relative; z-index:1;
+  height:calc(2.05 * (100svh - var(--bd-bar-h, 64px)));
+  /* Poprawka 5B.1: ta sama przyczyna co przy obiegu w Tropie 8 —
+     `.bd-chscene` to flex w poziomie, a runway bez `width:100%` kurczył
+     się do treści i lądował przy lewej krawędzi (oś kadru 684 wobec osi
+     kolumny 720, czyli 36 px w lewo, zmierzone na 1440). */
+  width:100%;
+}
+body.bd-on .pw-stage{
+  --pw-t:1; --pw-k:0; --pw-s:0;
+  position:sticky; top:var(--bd-bar-h, 64px);
+  height:calc(100svh - var(--bd-bar-h, 64px));
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:clamp(6px,1.4vh,18px);
+  padding:clamp(8px,1.6vh,22px) max(16px, 4vw);
+  text-align:center; overflow:hidden;
+}
+/* tytuł: gaśnie i zwija się, oddając wysokość rozwinięciu */
+body.bd-on .pw-tytul{
+  width:100%; opacity:var(--pw-t); overflow:hidden;
+  max-height:calc(42svh * var(--pw-t));
+  transform:translateY(calc(-14px * (1 - var(--pw-t))));
+}
+body.bd-on .pw-stage.is-skrot .pw-tytul{ visibility:hidden; }
+/* rozwinięcie skrótu: wschodzi POD placem, w tym samym kadrze.
+   `visibility` trzyma je poza kolejnością tabulacji i poza czytnikiem
+   ekranu, dopóki fazy nie zaczną go pokazywać. */
+body.bd-on .pw-skrot{
+  width:100%; max-width:900px; margin-inline:auto;
+  opacity:var(--pw-k); overflow:hidden; visibility:hidden;
+  max-height:calc(78svh * var(--pw-k));
+  pointer-events:none;
+}
+body.bd-on .pw-stage.is-blisko .pw-skrot{ visibility:visible; }
+body.bd-on .pw-stage.is-skrot .pw-skrot{ pointer-events:auto; }
+body.bd-on .pw-stage.is-pelny .pw-skrot{ max-height:none; overflow:visible; }
+
+/* kadr odpięty: wysokość z treści, żadnego przycinania, wszystko widoczne */
+body.bd-on .pw-runway.pw--wolny{ height:auto; }
+body.bd-on .pw--wolny .pw-stage{
+  position:static; height:auto;
+  min-height:calc(100svh - var(--bd-bar-h, 64px));
+  padding-block:clamp(16px,4vh,44px); overflow:visible;
+}
+body.bd-on .pw--wolny .pw-tytul{
+  max-height:none; opacity:1; visibility:visible; transform:none;
+}
+body.bd-on .pw--wolny .pw-skrot{
+  max-height:none; opacity:1; overflow:visible;
+  visibility:visible; pointer-events:auto;
+}
+.bd-k13tlo{ position:sticky; top:var(--bd-bar-h, 64px); height:0; z-index:0; }
+.bd-k13tlo::before{
+  content:""; position:absolute; left:0; right:0; top:0;
+  height:calc(100svh - var(--bd-bar-h, 64px));
+  background-color:#f3e6d0;
+  background-image:url("../assets/images/lekcja45/09-stacja-kontroli/tlo-desktop.webp");
+  background-size:cover; background-position:center 62%;
+  pointer-events:none;
+}
+/* KOREKTA 4A.2 — tytuł sceny wejścia zamiast zdania-mostu.
+   Tytuł ma 38 znaków, a domyślna miara `.bd-scene__title` to 18ch —
+   bez poszerzenia łamałby się na trzy linie. 26ch daje dwa wiersze
+   z naturalnym oddechem przed wielokropkiem. */
+body.bd-on .pw-tytul .bd-scene__kicker{ margin-bottom:.4em; }
+body.bd-on .pszok-wejscie__title{
+  max-width:min(26ch, 100%);
+  margin-bottom:clamp(4px,1vh,12px);
+}
+
+/* plac na PEŁNĄ szerokość jasnej kolumny; w fazie 2 maleje i przygasa,
+   oddając miejsce rozwinięciu skrótu — obie wartości są funkcją --pw-k */
+body.bd-on .pszok-plac{
+  margin:0 auto; width:100%; max-width:980px;
+  position:relative; flex:0 1 auto; min-height:0;
+}
+body.bd-on .pszok__plac{
+  display:block; width:100%; height:auto;
+  max-height:calc(58svh - 18svh * var(--pw-s)); object-fit:contain;
+  filter:drop-shadow(0 12px 26px rgba(30,40,28,.18));
+  /* dopóki nie ma pikseli — przezroczysty; miejsce trzyma płyta niżej */
+  opacity:0; transition:opacity .45s ease;
+}
+body.bd-on .pszok-plac.is-plac .pszok__plac{ opacity:calc(1 - .45 * var(--pw-s)); }
+/* Uwaga do wypełnienia kadru na bardzo szerokich oknach: przy 1920 plac
+   ma 975 px, bo tyle liczy JASNA KOLUMNA rozdziału (kadr: 1128 px minus
+   marginesy) — nie ogranicza go ani `max-width` obrazu, ani wysokość
+   kadru. Podnoszenie tych limitów nic nie daje; jedyne, co by pomogło,
+   to wypuszczenie sceny wejścia poza kartkę (jak Spacer w 4B.1), a to
+   zmiana wyglądu tropu, nie korekta układu. Zmierzone i opisane
+   w aneksie C — decyzja należy do użytkownika. */
+body.bd-on .pw--wolny .pszok-plac.is-plac .pszok__plac{
+  opacity:1; max-height:38svh;
+}
+body.bd-on .pszok-plac::before{
+  content:""; position:absolute; inset:0;
+  border-radius:18px;
+  background:linear-gradient(180deg, rgba(255,255,255,.6), rgba(206,199,186,.45));
+  transition:opacity .45s ease; pointer-events:none;
+}
+body.bd-on .pszok-plac.is-plac::before{ opacity:0; }
+
+/* ── ROZWINIĘCIE SKRÓTU (blok K13) w oprawie tablicy ──
+   Reguły zakresowane do `body.bd-on`, więc ?legacy=1 zostaje bez zmian. */
+/* 4A.3: blok siedzi w kadrze wejścia (.pw-skrot), a nie we własnej scenie.
+   Marginesy pionowe klocka wyzerowane — o rozkład dba kadr. */
+body.bd-on .pw-skrot #k13{
+  /* `.scene` wnosi `min-height:70vh` i `padding:12vh 5vw` — w osobnej
+     scenie było to w porządku, w kadrze zjadało 630 px i wypychało plac
+     poza górną krawędź. W kadrze o rozkład dba `.pw-stage`. */
+  min-height:0; padding:0; margin-block:0;
+  /* `data-tone="sage"` maluje w kadrze wyraźny zielony prostokąt —
+     tło niesie scena, klocek ma być przezroczysty */
+  background:transparent;
+}
+body.bd-on .pw-skrot #k13 > .kicker{ margin-bottom:.3em; }
+/* Tytuł „Co kryje się za skrótem?" w JEDNEJ linii na desktopie.
+   `.lead` ma `max-width:18ch`, a tytuł liczy 23 znaki — stąd łamanie.
+   Wzorzec z K06 w Tropie 4 (ta sama reguła, ten sam powód). */
+body.bd-on #k13 > .lead{
+  white-space:nowrap; max-width:none;
+  font-size:clamp(28px,3.4vw,52px);
+}
+body.bd-on #k13-expand{ gap:clamp(12px,2vh,20px); grid-template-columns:minmax(0, 1fr); }
+body.bd-on #k13-expand .k13__letters{ gap:clamp(8px,1.4vw,14px); }
+body.bd-on #k13-expand .k13__letter{
+  min-width:clamp(88px,10vw,132px);
+  padding:clamp(10px,1.6vh,16px) clamp(8px,1.2vw,14px);
+  background:rgba(255,255,255,.86);
+  border:1px solid rgba(62,96,52,.24); border-radius:16px;
+  box-shadow:0 6px 16px rgba(30,40,28,.1);
+  transition:transform .2s ease, box-shadow .2s ease, background .3s ease;
+}
+body.bd-on #k13-expand .k13__letter:hover:not(:disabled){ transform:translateY(-2px); }
+body.bd-on #k13-expand .k13__big{ font-size:clamp(34px,4.4vw,52px); color:#1f4d24; }
+body.bd-on #k13-expand .k13__word{ font-size:clamp(12px,1.4vw,15px); color:#3c4a37; }
+body.bd-on #k13-expand .k13__hint{ font-size:clamp(13px,1.5vw,16px); opacity:.8; }
+body.bd-on #k13-expand .k13__reveal{ max-width:62ch; margin-inline:auto; }
+
+/* 4A.3: PIĘĆ LITER W JEDNYM RZĘDZIE na desktopie — bez sieroty „K"
+   w drugim wierszu. `nowrap` przesądza sprawę, a `flex:1 1 0` pozwala
+   kafelkom podzielić się szerokością zamiast rozpychać rząd:
+   przy kolumnie 900 px wychodzi ~168 px na kafelek, a najdłuższe słowo
+   („Selektywnego") mierzy ~92 px. */
+@media (min-width: 901px){
+  /* `.k13` ma `justify-items:center`, więc rząd liter kurczył się do
+     szerokości treści i kafelki na `flex:1 1 0` wychodziły po 63 px.
+     Rząd musi najpierw dostać całą szerokość kolumny. */
+  body.bd-on .pw-skrot #k13-expand .k13__letters{
+    flex-wrap:nowrap; justify-content:center; align-items:stretch;
+    width:100%; max-width:820px; margin-inline:auto;
+  }
+  body.bd-on .pw-skrot #k13-expand .k13__letter{ flex:1 1 0; min-width:0; }
+}
+
+/* 4A.3: rozwinięcie ma własny plac tuż nad sobą — powtórka tej samej
+   grafiki wewnątrz odsłony jest w kadrze zbędna i kosztuje wysokość. */
+body.bd-on .pw-skrot .k13__reveal img{ display:none; }
+
+/* ── SPACER (K14) w rozdziale ── */
+body.bd-on .bd-chscene--k14{ padding-block:0; }
+body.bd-on #bd-scene-k14 .k14-host{ display:block; }
+/* ── KOREKTA 4B.1: SPACER MA WŁASNY, SZERSZY KADR ──
+   Zgłoszenie: na 1440 tekst stacji był ucięty na prawej krawędzi kolumny.
+   Dwie przyczyny, obie zmierzone:
+
+   1. Kolumna rozdziału jest węższa niż pełna strona lekcji, dla której
+      scena powstała. Spacer dostaje więc własny kadr wzorcem sceny gry
+      K04 — TYLKO ta sekcja; kartka `.bd-page` i pozostałe tropy bez zmian.
+
+   2. Tekst stacji miał `width: min(40vw, 680px)` — liczone od OKNA, nie od
+      kadru sceny. Kontroler stawia go na 25% albo 75% szerokości kadru
+      i centruje (`translate(-50%)`), więc mieści się wyłącznie przy
+      szerokości ≤ 50% kadru. Zmierzone przed korektą: 57% kadru
+      i nadmiar 27–58 px na 901/1280/1440/1920. Teraz liczymy od KADRU. */
+body.bd-on #bd-scene-k14 .bd-chscene__in{
+  max-width:1320px; margin-inline:auto;
+  padding:0 clamp(8px,1.4vw,20px);
+}
+body.bd-on #rail-pszok .pj__texts .pj-station__text{
+  width:min(46%, 640px);
+}
+/* tytuł i opis nadal łamią się wewnątrz pudełka — pilnujemy tylko, żeby
+   długie słowa nie rozpychały go ponad przydzieloną szerokość */
+body.bd-on #rail-pszok .pj-station__title,
+body.bd-on #rail-pszok .pj-station__desc{ max-width:100%; overflow-wrap:break-word; }
+
+
+/* ── telefon ── */
+@media (max-width: 900px){
+  .bd-k13tlo::before{
+    background-image:url("../assets/images/lekcja45/09-stacja-kontroli/tlo-mobile.webp");
+    background-position:center 55%;
+  }
+  /* Na telefonie plac ogranicza SZEROKOŚĆ, nie wysokość (proporcja 1,95),
+     więc kurczymy go w fazie 2 tylko symbolicznie — i tak nie zabiera
+     wysokości, a każdy zabrany piksel powiększa pustkę w kadrze. */
+  body.bd-on .pszok__plac{ max-height:46svh; }
+  /* pełna szerokość okna zamiast kolumny z marginesem: +9% wysokości
+     obrazu bez kadrowania grafiki */
+  body.bd-on .pw-stage .pszok-plac{
+    width:100vw; max-width:100vw; margin-inline:calc(50% - 50vw);
+  }
+  /* na wąskim ekranie tytuł MOŻE się złamać — nagłówek w jednej linii
+     zjadłby czytelność stopnia pisma. Stopień podniesiony (4A.3): tytuł
+     jest jedyną treścią fazy 1 obok grafiki, więc może być mocniejszy. */
+  body.bd-on .pszok-wejscie__title{ font-size:clamp(28px,8.2vw,36px); }
+  body.bd-on #k13 > .lead{ white-space:normal; font-size:clamp(24px,6.4vw,32px); }
+  /* 4A.3: pionowa lista pięciu kafelków (układ z 4A) nie mieści się już
+     w kadrze razem z placem — mierzone 400 px przy 568 px wysokości kadru.
+     Trzy w rzędzie i dwa wyśrodkowane niżej: 5 kafelków, żadnej sieroty,
+     całość ~150 px. Przy 320 px kafelek ma 90 px, a najdłuższe słowo
+     („Selektywnego" 12 px) mierzy ~74 px. */
+  body.bd-on .pw-skrot #k13-expand .k13__letters{
+    flex-direction:row; flex-wrap:wrap; justify-content:center;
+    align-items:stretch; gap:8px;
+    width:100%; max-width:min(340px, 100%); margin-inline:auto;
+  }
+  body.bd-on .pw-skrot #k13-expand .k13__letter{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    flex:0 0 calc((100% - 16px) / 3);
+    min-width:0; min-height:0; padding:8px 6px; text-align:center;
+  }
+  body.bd-on .pw-skrot #k13-expand .k13__big{ font-size:clamp(24px,7vw,30px); }
+  body.bd-on .pw-skrot #k13-expand .k13__word{ font-size:clamp(12px,3.4vw,14px); min-height:0; }
+}
+
+@media (max-height: 620px){
+  body.bd-on .pszok__plac{ max-height:calc(46svh - 20svh * var(--pw-k)); }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   KOREKTA 4B.3 — SPACER W TABLICY: UKŁAD PIONOWY, JEDNA STACJA NA EKRAN
+
+   Zastępuje scenę z kamerą i naprzemiennymi stronami (ta zostaje
+   nietknięta w ?legacy=1 — tych reguł nie widzi). Kadr przypięty pod
+   belką tropu; w nim kolejno: tytuł, opis, obraz stacji.
+   Wszystko mieści się w kolumnie na każdej szerokości — obraz skaluje
+   się do dostępnej WYSOKOŚCI kadru, a nie do szerokości okna.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* runway: 14 stacji po ~1,15 ekranu + ogon na domknięcie ostatniej */
+body.bd-on #rail-pszok.bd-pj{
+  height:calc((14 * 1.15 + 0.6) * (100svh - var(--bd-bar-h, 64px)));
+  padding:0; position:relative;
+}
+/* nagłówek sceny przewija się normalnie — kadr zaczyna się pod nim */
+body.bd-on #rail-pszok.bd-pj .pj__head{ position:static; padding:0 0 clamp(8px,2vh,20px); }
+/* Reguła ukrywająca „Pomiń animację →" (korekta 4A.2) jest już zbędna:
+   w 4A.3 przycisk zniknął z dokumentu, więc nie ma czego ukrywać. */
+
+/* kadr: przypięty POD BELKĄ tropu */
+body.bd-on #rail-pszok.bd-pj .pj__stage{
+  position:sticky; top:var(--bd-bar-h, 64px);
+  height:calc(100svh - var(--bd-bar-h, 64px));
+  overflow:hidden; isolation:isolate;
+  display:flex; align-items:center; justify-content:center;
+}
+/* warstwy sceny z kamerą nie biorą udziału w nowym układzie */
+body.bd-on #rail-pszok.bd-pj .pj__background,
+body.bd-on #rail-pszok.bd-pj .pj__road{ display:none; }
+body.bd-on #rail-pszok.bd-pj .pj__world,
+body.bd-on #rail-pszok.bd-pj .pj__world-inner{
+  position:static; inset:auto; transform:none; width:100%; height:100%;
+}
+body.bd-on #rail-pszok.bd-pj .pj__ui{ display:contents; }
+
+/* stos stacji = jedna komórka; aktywna stacja leży na wierzchu */
+body.bd-on #rail-pszok.bd-pj .pj__stations{
+  position:relative; display:block; height:100%; max-width:none; margin:0;
+}
+body.bd-on #rail-pszok.bd-pj .pj-station{
+  position:absolute; inset:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"no" "txt" "vis";   /* numer → tekst → obraz */
+  align-content:center; justify-items:center;
+  gap:clamp(6px,1.4vh,16px);
+  padding:clamp(8px,2vh,20px) max(16px, 3vw);
+  text-align:center;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:opacity .45s ease;
+}
+body.bd-on #rail-pszok.bd-pj .pj-station.is-aktywna{
+  visibility:visible; pointer-events:auto;
+  opacity:var(--pj-zanik, 1);
+}
+
+/* ── fazy: kontener → odpady → tekst ── */
+body.bd-on #rail-pszok.bd-pj .pj-station__visual{
+  grid-area:vis; position:relative; width:100%;
+  max-width:min(760px, 100%);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:0;
+}
+body.bd-on #rail-pszok.bd-pj .pj-station__visual img{
+  display:block; width:auto; max-width:100%; height:auto;
+  object-fit:contain;
+  filter:drop-shadow(0 14px 26px rgba(0,0,0,.2));
+}
+body.bd-on #rail-pszok.bd-pj .pj-station__container{
+  max-height:34svh;
+  opacity:0; transform:translateY(18px) scale(.985);
+  transition:opacity .5s ease, transform .6s cubic-bezier(.22,1,.36,1);
+}
+body.bd-on #rail-pszok.bd-pj .pj-station__waste{
+  margin-top:clamp(4px,1vh,12px); max-height:22svh;
+  opacity:0; transform:translateY(12px);
+  transition:opacity .45s ease, transform .5s cubic-bezier(.22,1,.36,1);
+}
+body.bd-on #rail-pszok.bd-pj .pj-station.is-kontener .pj-station__container{
+  opacity:1; transform:none;
+}
+body.bd-on #rail-pszok.bd-pj .pj-station.is-odpady .pj-station__waste{
+  opacity:1; transform:none;
+}
+
+body.bd-on #rail-pszok.bd-pj .pj-station__text{
+  grid-area:txt; position:static; width:min(62ch, 100%);
+  transform:none; opacity:0; translate:0 10px;
+  transition:opacity .45s ease, translate .45s ease;
+}
+body.bd-on #rail-pszok.bd-pj .pj-station.is-tekst .pj-station__text{
+  opacity:1; translate:0 0;
+}
+body.bd-on #rail-pszok.bd-pj .pj-station__title{
+  font-size:clamp(24px,3.2vw,44px); line-height:1.06;
+  max-width:20ch; margin:0 auto clamp(6px,1.2vh,14px);
+}
+body.bd-on #rail-pszok.bd-pj .pj-station__desc{
+  font-size:clamp(15px,1.5vw,20px); line-height:1.45;
+  max-width:52ch; margin-inline:auto; color:#1b241d;
+}
+
+/* licznik stacji i podpis o regulaminie — zostają */
+body.bd-on #rail-pszok.bd-pj .pj-station__no{
+  grid-area:no; margin:0; font-weight:800; letter-spacing:.04em;
+  color:#6d6252; font-size:clamp(13px,1.4vw,16px);
+}
+body.bd-on #rail-pszok.bd-pj .pj__note{
+  position:absolute; left:0; right:0; bottom:clamp(6px,1.4vh,14px);
+  margin:0; text-align:center; font-size:clamp(11px,1.1vw,13px);
+  opacity:.72; padding-inline:max(16px,3vw);
+}
+
+/* ── telefon: ten sam układ pionowy, mniejsza typografia ── */
+@media (max-width: 900px){
+  body.bd-on #rail-pszok.bd-pj .pj-station{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"no" "txt" "vis";
+    text-align:center; padding-inline:max(16px, 4vw);
+  }
+  body.bd-on #rail-pszok.bd-pj .pj-station__text{ justify-self:center; }
+  body.bd-on #rail-pszok.bd-pj .pj-station__title{
+    font-size:clamp(21px,5.6vw,28px); margin-inline:auto; }
+  body.bd-on #rail-pszok.bd-pj .pj-station__desc{
+    font-size:clamp(14px,3.8vw,16px); margin-inline:auto; }
+  body.bd-on #rail-pszok.bd-pj .pj-station__container{ max-height:30svh; }
+  body.bd-on #rail-pszok.bd-pj .pj-station__waste{ max-height:20svh; }
+}
+
+/* ── ograniczony ruch: statyczna lista w tym samym układzie ── */
+body.bd-on #rail-pszok.bd-pj--statyczny{ height:auto; }
+body.bd-on #rail-pszok.bd-pj--statyczny .pj__stage{
+  position:static; height:auto; overflow:visible; display:block;
+}
+body.bd-on #rail-pszok.bd-pj--statyczny .pj__stations{ height:auto; }
+body.bd-on #rail-pszok.bd-pj--statyczny .pj-station{
+  position:static; inset:auto; opacity:1; visibility:visible; pointer-events:auto;
+  margin-bottom:clamp(28px,6vh,64px);
+}
+body.bd-on #rail-pszok.bd-pj--statyczny .pj-station__container,
+body.bd-on #rail-pszok.bd-pj--statyczny .pj-station__waste,
+body.bd-on #rail-pszok.bd-pj--statyczny .pj-station__text{
+  opacity:1; transform:none; translate:none; transition:none;
+}
+body.bd-on #rail-pszok.bd-pj--statyczny .pj__note{ position:static; margin-top:16px; }
+
+/* ── KOREKTA 4B.3a: OGON POD WARTOWNIKIEM ──
+   `#k14-end` to węzeł o ZEROWEJ wysokości, a warunek wejścia obserwatora
+   brzmi `r.top < vh`. Leżąc dokładnie na dole rozdziału trafiał równo
+   w `vh` i przy części wysokości okna nigdy nie „wchodził w kadr" —
+   zaliczenie k14 nie następowało (zmierzone: 1920, 430 i orientacja
+   pozioma). Kilkadziesiąt pikseli ogona rozstrzyga to raz na zawsze. */
+body.bd-on #bd-scene-k14{ padding-bottom:clamp(28px,6vh,72px); }
+
+/* ── orientacja pozioma: kadr ma tu ~326 px wysokości, więc obraz i tekst
+   muszą zejść o stopień, inaczej stacja wychodzi poza ramę (zmierzone
+   przekroczenie 7 px na 844 × 390) ── */
+@media (max-height: 520px){
+  body.bd-on #rail-pszok.bd-pj .pj-station{ gap:4px; padding-block:6px; }
+  body.bd-on #rail-pszok.bd-pj .pj-station__title{
+    font-size:clamp(17px,3vh,22px); margin-bottom:4px; }
+  body.bd-on #rail-pszok.bd-pj .pj-station__desc{
+    font-size:clamp(12px,2.2vh,15px); line-height:1.35; max-width:60ch; }
+  body.bd-on #rail-pszok.bd-pj .pj-station__no{ font-size:12px; }
+  body.bd-on #rail-pszok.bd-pj .pj-station__container{ max-height:26svh; }
+  body.bd-on #rail-pszok.bd-pj .pj-station__waste{ max-height:16svh; margin-top:2px; }
+  body.bd-on #rail-pszok.bd-pj .pj__note{ font-size:10px; bottom:4px; }
+}
+
+/* ── UZUPEŁNIENIE 4B.3: SPACER GRA NA KARTCE TROPU ──
+   Scena przyszła z lekcji z własnym, prawie białym kadrem (`.pszok-journey`
+   ma `background:#f7f9f7`, a `.act--three` odcień sage). W tablicy wyglądało
+   to jak wklejony prostokąt na kremowej kartce. Tło zdejmujemy — zostaje
+   sam obiekt z cieniem. Legacy tych reguł nie widzi. */
+body.bd-on #rail-pszok.bd-pj{ background:transparent; color:inherit; }
+body.bd-on #rail-pszok.bd-pj .pj__stage{ background:transparent; }
+body.bd-on #rail-pszok.bd-pj .pj__world,
+body.bd-on #rail-pszok.bd-pj .pj__world-inner,
+body.bd-on #rail-pszok.bd-pj .pj__stations,
+body.bd-on #rail-pszok.bd-pj .pj-station{ background:transparent; }
+/* dopuszczona subtelna winieta pod obiektem — bez prostokąta i bez barwy tła */
+body.bd-on #rail-pszok.bd-pj .pj-station__container{
+  filter:drop-shadow(0 18px 26px rgba(60,74,55,.22));
+}
+body.bd-on #rail-pszok.bd-pj .pj-station__waste{
+  filter:drop-shadow(0 12px 18px rgba(60,74,55,.20));
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ETAP 4C — GRA „OBSŁUŻ PSZOK" (K15) I DOMKNIĘCIE TROPU 7
+   ═══════════════════════════════════════════════════════════════════ */
+
+body.bd-on .bd-chscene--k15{ padding-block:clamp(16px,4vh,48px); }
+/* kadr gry jak scena gry K04 — szerszy niż kolumna tekstu */
+body.bd-on #bd-scene-k15 .bd-chscene__in{
+  max-width:1320px; margin-inline:auto; padding-inline:max(16px, 3vw);
+}
+body.bd-on #bd-scene-k15 .bd-page__main{ max-width:none; }
+/* gra rysuje na płótnie 1600 × 1000, więc kadr trzyma tę proporcję —
+   inaczej Phaser (Scale.FIT) zostawiłby czarne pasy nad i pod planszą */
+body.bd-on #k15 .frame__box--pszok{
+  position:relative; width:100%; aspect-ratio:1600 / 1000;
+  border-radius:var(--lk-radius, 18px); overflow:hidden;
+  background:#f4efe4;
+  box-shadow:0 10px 28px rgba(30,40,28,.14);
+}
+body.bd-on #k15 .frame__box--pszok iframe{
+  position:absolute; inset:0; width:100%; height:100%; border:0; display:block;
+}
+body.bd-on #k15 .frame--pszok{ margin:clamp(12px,2.4vh,24px) 0 0; }
+body.bd-on #k15 .frame__status{ text-align:center; font-size:14px; opacity:.8; margin-top:10px; }
+body.bd-on #k15 .note{ margin-inline:auto; max-width:64ch; text-align:center; }
+body.bd-on #k15 .kicker,
+body.bd-on #k15 .lead{ text-align:center; }
+body.bd-on #k15 .lead{ margin-inline:auto; }
+body.bd-on #k15 .body-text{ margin-inline:auto; text-align:center; }
+
+/* uświadomienie po grze — wchodzi dopiero po wygranej */
+body.bd-on #k15-po{
+  margin:clamp(18px,3vh,32px) auto 0; max-width:60ch; text-align:center;
+}
+body.bd-on #k15-po .k15__po-tytul{
+  font-family:var(--font-title, system-ui, sans-serif);
+  font-size:clamp(20px,2.6vw,30px); font-weight:800; color:#1f4d24;
+  margin:0 0 10px;
+}
+
+body.bd-on #bd-scene-p07-koniec{
+  min-height:calc(100svh - var(--bd-bar-h, 64px));
+  display:flex; flex-direction:column; justify-content:center;
+}
+
+@media (max-width: 900px){
+  body.bd-on #bd-scene-k15 .bd-chscene__in{ padding-inline:max(16px, 4vw); }
+  body.bd-on #k15 .lead{ font-size:clamp(24px,6.6vw,32px); }
+  body.bd-on #k15 .body-text{ font-size:clamp(14px,3.9vw,16px); }
+  body.bd-on #k15 .note{ font-size:12px; }
+  body.bd-on #k15-po .k15__po-tytul{ font-size:clamp(19px,5.4vw,24px); }
+}
+
+
+/* ── 4C: podpowiedź o obrocie i pełny ekran (wąski pion / dotyk) ── */
+.pszok-obrot{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  margin:0 auto clamp(8px,1.6vh,14px); max-width:44ch;
+  padding:8px 14px; border-radius:999px;
+  background:rgba(242,177,39,.16); border:1px solid rgba(242,177,39,.5);
+  color:#6b4e07; font-weight:700; font-size:clamp(13px,3.6vw,15px);
+  text-align:left;
+}
+.pszok-obrot[hidden]{ display:none; }
+.pszok-obrot svg{ flex:none; }
+.pszok-pelny{ margin:10px 0 0; text-align:center; }
+.pszok-pelny .bd-btn--maly{
+  padding:8px 18px; font-size:14px; min-height:40px;
+}
+.pszok-pelny button[hidden]{ display:none; }
+/* w pełnym ekranie kadr wypełnia całą przestrzeń, gra zachowuje proporcję */
+#pszok-kadr:fullscreen{
+  width:100%; height:100%; aspect-ratio:auto; border-radius:0;
+  background:#0f1512; display:flex; align-items:center; justify-content:center;
+}
+#pszok-kadr:fullscreen iframe{ position:static; width:100%; height:100%; }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   TROP 8 „CO DALEJ Z ODPADAMI?" — KADR WEJŚCIA Z OBIEGIEM (etap 5A)
+
+   Wzorzec 4A.3: jeden przypięty kadr, fazy jako czysta funkcja postępu.
+   Cztery zmienne ustawiane przez silnik:
+     --ob-t    1 → 0   obecność tytułu i zdania-mostu
+     --ob-k    0 → 1   obecność obiegu (pierścień rośnie do pełnej średnicy)
+     --ob-luk  0 → 1   rysowanie pętli
+     --ob-x    0 → 1   dwa zdania domykające
+   Klasa `ob--wolny` odpina kadr (ograniczony ruch) — scena płynie normalnie.
+   ═══════════════════════════════════════════════════════════════════ */
+
+body.bd-on .bd-chscene--obieg{ position:relative; padding-block:0; }
+
+body.bd-on .ob-runway{
+  position:relative; z-index:1;
+  height:calc(2.4 * (100svh - var(--bd-bar-h, 64px)));
+  /* `.bd-chscene` to flex w poziomie, więc runway jako element flex kurczył
+     się do szerokości treści i lądował przy lewej krawędzi: oś pierścienia
+     wypadała 70 px na lewo od osi kolumny (zmierzone na 1440). Pozostałe
+     sceny nie mają tego problemu, bo używają `.bd-chscene__in{width:100%}`. */
+  width:100%;
+}
+body.bd-on .ob-stage{
+  --ob-t:1; --ob-k:0; --ob-luk:0; --ob-x:0;
+  position:sticky; top:var(--bd-bar-h, 64px);
+  height:calc(100svh - var(--bd-bar-h, 64px));
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:clamp(6px,1.4vh,18px);
+  padding:clamp(8px,1.6vh,22px) max(16px, 4vw);
+  text-align:center; overflow:hidden;
+}
+
+/* ── faza 1: tytuł i zdanie-most ── */
+body.bd-on .ob-tytul{
+  width:100%; opacity:var(--ob-t); overflow:hidden;
+  max-height:calc(52svh * var(--ob-t));
+  transform:translateY(calc(-14px * (1 - var(--ob-t))));
+}
+body.bd-on .ob-stage.is-obieg .ob-tytul{ visibility:hidden; }
+body.bd-on .ob-tytul__h{ max-width:min(20ch, 100%); }
+body.bd-on .ob-most{ margin-bottom:0; }
+
+/* ── faza 2: obieg ──
+   Pierścień ROŚNIE razem z --ob-k, więc zabiera dokładnie tyle miejsca,
+   ile w danej chwili zajmuje — bez sztuczek z przycinaniem wysokości.
+   Okrąg ma promień 36% pudełka, a przystanki 26% szerokości siedzą na
+   jego krawędzi: wystają o 13%, mieszczą się w 14% marginesu. */
+/* Pusty ślad pierścienia jest na scenie OD POCZĄTKU, tylko mniejszy
+   i przygaszony: kadr fazy 1 wypełniał się bez niego w 22% (sam tytuł),
+   a uczeń dostaje od razu zapowiedź, że rzecz będzie o pętli. */
+body.bd-on .ob-kolo{
+  --ob-bok: min(60svh, 88%, 640px);
+  --ob-teraz: calc(var(--ob-bok) * (0.62 + 0.38 * var(--ob-k)));
+  position:relative; margin-inline:auto;
+  width:var(--ob-teraz); height:var(--ob-teraz);
+  opacity:calc(0.34 + 0.66 * var(--ob-k)); flex:none;
+}
+body.bd-on .ob-kolo__svg{ position:absolute; inset:0; width:100%; height:100%; }
+body.bd-on .ob-kolo__slad{
+  fill:none; stroke:rgba(62,96,52,.18); stroke-width:1.4;
+}
+/* 2πr dla r=36 to 226,19 — stąd długość kreski i przesunięcie */
+body.bd-on .ob-kolo__luk{
+  fill:none; stroke:#3e6034; stroke-width:1.8; stroke-linecap:round;
+  stroke-dasharray:226.19;
+  stroke-dashoffset:calc(226.19 * (1 - var(--ob-luk)));
+  /* `stroke-linecap:round` zostawia widoczną kropkę nawet przy zerowej
+     długości kreski — przy --ob-luk = 0 pętla ma być pusta, więc łuk
+     wygaszamy (opacity samo przycina wartości powyżej 1) */
+  opacity:calc(var(--ob-luk) * 20);
+  transform:rotate(-90deg); transform-origin:50% 50%;
+}
+body.bd-on .ob-stopy{
+  position:absolute; inset:0; margin:0; padding:0; list-style:none;
+}
+body.bd-on .ob-stop{
+  position:absolute; width:26%; translate:-50% -50%;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  opacity:0; transform:scale(.82);
+  transition:opacity .45s ease, transform .45s ease;
+}
+body.bd-on .ob-stop.is-widoczny{ opacity:1; transform:scale(1); }
+body.bd-on .ob-stop--gora { left:50%; top:14%; }
+body.bd-on .ob-stop--prawo{ left:86%; top:50%; }
+body.bd-on .ob-stop--dol  { left:50%; top:86%; }
+body.bd-on .ob-stop--lewo { left:14%; top:50%; }
+body.bd-on .ob-stop__ikona{
+  display:grid; place-items:center;
+  width:100%; aspect-ratio:1; border-radius:50%;
+  background:rgba(255,255,255,.9);
+  border:1px solid rgba(62,96,52,.22);
+  box-shadow:0 6px 16px rgba(30,40,28,.12);
+}
+body.bd-on .ob-stop__ikona img{
+  width:78%; height:78%; object-fit:contain; display:block;
+}
+/* Etykieta leży na kresce pierścienia (przystanki siedzą na jego
+   krawędzi), więc dostaje kremową podkładkę — bez niej zielona linia
+   przechodziła przez litery. */
+body.bd-on .ob-stop__etykieta{
+  font-family:'Cabinet Grotesk', system-ui, sans-serif;
+  font-size:clamp(11px,1.15vw,15px); font-weight:700; color:#26401f;
+  line-height:1.15; white-space:nowrap;
+  display:flex; align-items:center; gap:5px;
+  padding:3px 9px 3px 4px; border-radius:999px;
+  background:rgba(246,240,229,.92);
+}
+/* numer nadaje pętli kierunek czytania — bez niego cztery ikony na kole
+   nie mówią, od czego zacząć */
+body.bd-on .ob-stop__etykieta::before{
+  content:attr(data-nr);
+  display:grid; place-items:center;
+  width:1.35em; height:1.35em; border-radius:50%;
+  background:#3e6034; color:#f7f3e8; font-size:.82em;
+}
+
+/* ── faza 3: dwa zdania domykające ── */
+body.bd-on .ob-domkniecie{
+  width:100%; max-width:52ch; margin:0 auto;
+  opacity:var(--ob-x); overflow:hidden;
+  max-height:calc(28svh * var(--ob-x));
+}
+
+/* ── kadr odpięty (ograniczony ruch): wszystko widoczne, nic nie rośnie ── */
+body.bd-on .ob-runway.ob--wolny{ height:auto; }
+body.bd-on .ob--wolny .ob-stage{
+  position:static; height:auto;
+  min-height:calc(100svh - var(--bd-bar-h, 64px));
+  padding-block:clamp(16px,4vh,44px); overflow:visible;
+}
+body.bd-on .ob--wolny .ob-tytul{
+  max-height:none; opacity:1; visibility:visible; transform:none;
+}
+body.bd-on .ob--wolny .ob-kolo{
+  width:var(--ob-bok); height:var(--ob-bok); opacity:1;
+}
+body.bd-on .ob--wolny .ob-kolo__luk{ stroke-dashoffset:0; }
+body.bd-on .ob--wolny .ob-domkniecie{ max-height:none; opacity:1; }
+body.bd-on .ob--wolny .ob-stop{ opacity:1; transform:none; transition:none; }
+
+/* ── domknięcie tropu ── */
+body.bd-on .bd-chscene--p08koniec{ padding-block:clamp(24px,6vh,64px); }
+
+/* ── telefon ── */
+@media (max-width: 900px){
+  body.bd-on .ob-kolo{ --ob-bok: min(54svh, 90%, 420px); }
+  body.bd-on .ob-stop{ width:29%; }
+  body.bd-on .ob-stop__etykieta{ font-size:clamp(10px,3.1vw,13px); gap:4px; }
+  /* Etykiety przystanków bocznych wychodziły na 4 px od krawędzi kadru
+     (pomiar na 320) — wymagany odstęp to 16 px. Zamiast kurczyć cały
+     pierścień, przesuwamy same etykiety do środka: nic nie tracimy
+     z średnicy, a napis odsuwa się od krawędzi o ~1/5 swojej szerokości. */
+  body.bd-on .ob-stop--lewo  .ob-stop__etykieta{ translate:20% 0; }
+  body.bd-on .ob-stop--prawo .ob-stop__etykieta{ translate:-20% 0; }
+  body.bd-on .ob-tytul__h{ font-size:clamp(26px,7.4vw,34px); }
+}
+
+/* Tablet w pionie łapie się na próg telefonu, a limit 420 px zostawiał mu
+   połowę pustego kadru (zmierzone 50% wypełnienia na 768×1024). Ma dość
+   miejsca na pełną średnicę. */
+@media (min-width: 600px) and (max-width: 900px){
+  body.bd-on .ob-kolo{ --ob-bok: min(58svh, 86%, 620px); }
+  body.bd-on .ob-stop__etykieta{ font-size:15px; }
+  body.bd-on .ob-tytul__h{ font-size:clamp(26px,7.4vw,34px); }
+}
+
+/* ── GRA K16 „DRUGIE ŻYCIE MATERIAŁÓW" w rozdziale (etap 5B) ──
+   Zgłoszenie z Tropu 7: kadr gry był za wąski. Prototyp jest zaprojektowany
+   na `max-width:1100px` (sama maszyna 980 px), więc kadr 1320 px jak Spacer
+   zostawiłby puste pasy — 1180 px to tyle, ile moduł realnie potrzebuje,
+   plus oddech na marginesy. Wysokość dopasowuje istniejący mechanizm
+   z `initFrames` (mierzy treść, iteruje dwa razy). */
+/* POMIAR, KTÓRY ZMIENIŁ PLAN: sama reguła `max-width` na kolumnie sceny
+   NIE POSZERZA kadru, bo ogranicza go kartka rozdziału — `.bd-page` ma
+   `width:min(77vw, 1240px)`, czyli 1109 px przy oknie 1440. Zmierzone:
+   kolumna 1011 px, ramka 971 px. Tą samą pułapkę ma Spacer z etapu 4B.1:
+   jego `max-width:1320px` nigdy nie zaczął obowiązywać (patrz raport 68).
+   Scena gry wychodzi więc POZA kartkę i niesie jej kremowe tło ze sobą —
+   tylko ta jedna sekcja, reszta tropu bez zmian. */
+body.bd-on .bd-chscene--k16{
+  padding-block:clamp(20px,5vh,56px);
+  /* `.bd-chscene` wnosi ~49 px paddingu z każdej strony — razem
+     z paddingiem kolumny zjadało to 144 px z poszerzonego kadru
+     (zmierzone: scena 1180, ramka 1036). Odstęp daje sama kolumna. */
+  padding-inline:0;
+  width:min(1180px, 94vw); max-width:none;
+  margin-inline:calc(50% - min(590px, 47vw));
+  background:rgba(255,252,247,var(--sheet-opacity, .96));
+  border-radius:10px;
+}
+body.bd-on #bd-scene-k16 .bd-chscene__in{
+  max-width:1180px; margin-inline:auto;
+  padding:0 clamp(10px,1.2vw,18px);
+}
+body.bd-on #bd-scene-k16 .bd-page__main{ max-width:none; }
+body.bd-on #bd-slot-k16 #k16{
+  /* `.scene` wnosi 12vh paddingu i min-height 70vh — w rozdziale
+     o rozkład dba scena, nie klocek */
+  min-height:0; padding:0; margin-block:0; background:transparent;
+}
+body.bd-on #bd-slot-k16 .frame{ margin-top:clamp(12px,2.4vh,22px); }
+body.bd-on #bd-slot-k16 .frame__box{ max-width:1180px; margin-inline:auto; }
+body.bd-on #bd-slot-k16 .frame__status{ text-align:center; }
+body.bd-on #bd-slot-k16 .note{ max-width:60ch; margin-inline:auto; text-align:center; }
+/* zdanie po wygranej — ten sam wygląd co po grze PSZOK */
+body.bd-on #k16-po{ margin-top:clamp(12px,2.4vh,22px); text-align:center; }
+body.bd-on #k16-po[hidden]{ display:none; }
+/* warunkowe zdanie o haśle w panelu domknięcia */
+body.bd-on .bd-p08__haslo{ font-weight:700; color:#26401f; }
+body.bd-on .bd-p08__haslo:empty{ display:none; }
+
+@media (max-width: 900px){
+  body.bd-on #bd-scene-k16 .bd-chscene__in{ padding-inline:max(12px, 3vw); }
+  body.bd-on #bd-slot-k16 .note{ text-align:left; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   TROP 9 „ROZWIĄZANIE SPRAWY" — FINAŁ LEKCJI (etap 6A)
+
+   Pięć scen: terminal (jedyna ciemna w całej lekcji), odtajnione
+   nagranie, werdykt z hasłem, dyplom i domknięcie. Plus stempel
+   „SPRAWA ZAMKNIĘTA" na tablicy — leży W SCENIE, więc jeździ
+   i skaluje się razem z polaroidami.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 1. TERMINAL: ciemna tonacja zostaje, ale w oprawie rozdziału ── */
+body.bd-on .bd-chscene--terminal{ padding-block:clamp(24px,6vh,64px); }
+body.bd-on #bd-slot-k17 #k17{
+  min-height:0; padding:0; margin-block:0;
+  background:#0f1713; border-radius:18px;
+  padding:clamp(20px,4vh,40px) clamp(16px,3vw,36px);
+  color:#e8f0e6;
+}
+body.bd-on #bd-slot-k17 #k17 .lead{ color:#f4f8f2; }
+body.bd-on #bd-slot-k17 .terminal{ margin-inline:auto; max-width:62ch; }
+body.bd-on #bd-slot-k17 .terminal__msg{ color:#e8f0e6; }
+body.bd-on #bd-slot-k17 .terminal__missing{ color:#f2b127; }
+/* atrapa terminala 3D nie jest potrzebna w kadrze — treść niesie tekst */
+body.bd-on #bd-slot-k17 [data-ph="k17-terminal"]{ display:none; }
+
+/* ── 2. ODTAJNIENIE: kadr nagrania i plansza zastępcza ── */
+body.bd-on .bd-chscene--odtajnienie{ padding-block:clamp(24px,6vh,64px); }
+body.bd-on .bd-film{ max-width:960px; margin:clamp(14px,3vh,26px) auto 0; }
+body.bd-on .bd-film #k17-film-wrap{ margin:0; max-width:none; }
+/* Architektura pod plik MP4: kadr trzyma proporcję 16:9 niezależnie od
+   tego, czy stoi w nim plansza zastępcza, czy przyszły odtwarzacz. */
+body.bd-on .bd-film [data-ph="k17-film"]{ display:none; }
+body.bd-on .bd-atrapa{
+  position:relative; aspect-ratio:16/9; width:100%;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:clamp(8px,1.6vh,16px);
+  padding:clamp(16px,3vh,32px);
+  background:linear-gradient(160deg, #12201a 0%, #0b1512 60%, #16241d 100%);
+  border:1px solid rgba(242,177,39,.35); border-radius:16px;
+  text-align:center; color:#e8f0e6;
+}
+body.bd-on .bd-atrapa__tytul{
+  font-family:'Cabinet Grotesk', system-ui, sans-serif;
+  font-size:clamp(20px,2.6vw,30px); font-weight:700; margin:0; color:#f2b127;
+}
+body.bd-on .bd-atrapa__opis{
+  margin:0; max-width:46ch; line-height:1.55;
+  font-size:clamp(14px,1.2vw,17px); color:#cfdccb;
+}
+body.bd-on .bd-atrapa__cta{ margin-top:clamp(4px,1vh,10px); }
+
+/* ── 3. WERDYKT: hasło zapalane literą po literze ── */
+body.bd-on .bd-chscene--werdykt{ padding-block:clamp(28px,7vh,72px); }
+body.bd-on .bd-werdykt{
+  list-style:none; margin:clamp(10px,2.4vh,22px) auto clamp(14px,3vh,28px);
+  padding:0; display:flex; justify-content:center;
+  gap:clamp(8px,1.8vw,22px); max-width:760px;
+}
+body.bd-on .bd-werdykt__litera{
+  flex:0 0 auto;
+  width:clamp(52px,9vw,104px); aspect-ratio:1;
+  display:grid; place-items:center;
+  border-radius:18px;
+  background:rgba(255,255,255,.5);
+  border:2px solid rgba(62,96,52,.22);
+  color:rgba(38,64,31,.28);
+  transition:background .4s ease, border-color .4s ease,
+             color .4s ease, transform .4s ease, box-shadow .4s ease;
+}
+body.bd-on .bd-werdykt__znak{
+  font-family:'Cabinet Grotesk', system-ui, sans-serif;
+  font-weight:700; font-size:clamp(26px,5vw,56px); line-height:1;
+}
+body.bd-on .bd-werdykt__litera.is-on{
+  background:#fffdf7; border-color:#f2b127; color:#1f4d24;
+  transform:translateY(-4px);
+  box-shadow:0 10px 24px rgba(30,40,28,.16);
+}
+body.bd-on .bd-werdykt__zdanie{ max-width:52ch; margin-inline:auto; }
+
+/* ── 4. DYPLOM ── */
+body.bd-on .bd-chscene--dyplom{ padding-block:clamp(24px,6vh,64px); }
+body.bd-on #bd-slot-k18 #k18{
+  min-height:0; padding:0; margin-block:0; background:transparent;
+}
+body.bd-on #bd-slot-k18 .scene__grid{ align-items:center; }
+body.bd-on #bd-slot-k18 .diploma-card{ margin-inline:auto; }
+
+/* ── 5. STEMPEL „SPRAWA ZAMKNIĘTA" ──
+   Leży w scenie tablicy: jeździ i skaluje się razem z polaroidami.
+   Pozycja w % kadru, żeby nie zasłaniała żadnego tropu ani nici. */
+body.bd-on .bd-stempel{
+  /* Wolne pole korka poniżej notatki „Pilne!", na lewo od Tropu 6 i nad
+     Tropem 7 — pieczęć nie zasłania żadnego polaroidu ani kartki
+     (sprawdzone pomiarem kolizji prostokątów na obu układach). */
+  position:absolute; left:61%; top:71%;
+  width:8%; aspect-ratio:1;
+  transform:translate(-50%, -50%) rotate(-13deg);
+  pointer-events:none; z-index:6;
+  opacity:.92;
+  filter:drop-shadow(0 2px 6px rgba(60,10,6,.25));
+}
+body.bd-on .bd-stempel svg{ display:block; width:100%; height:100%; }
+
+/* przybicie: krótkie uderzenie przy pojawieniu się, bez pętli */
+@keyframes bd-stempel-in{
+  0%   { opacity:0; transform:translate(-50%,-50%) rotate(-13deg) scale(2.1); }
+  60%  { opacity:1; transform:translate(-50%,-50%) rotate(-13deg) scale(.94); }
+  100% { opacity:1; transform:translate(-50%,-50%) rotate(-13deg) scale(1); }
+}
+body.bd-on .bd-stempel.is-przybity{ animation:bd-stempel-in .5s cubic-bezier(.2,.8,.3,1) both; }
+@media (prefers-reduced-motion: reduce){
+  body.bd-on .bd-stempel.is-przybity{ animation:none; }
+}
+
+/* ── telefon ── */
+@media (max-width: 900px){
+  body.bd-on .bd-werdykt{ gap:6px; }
+  body.bd-on .bd-werdykt__litera{ width:clamp(46px,16vw,68px); border-radius:14px; }
+  /* układ pionowy ma inne rozmieszczenie polaroidów — wolne pole jest
+     nad Tropem 1, w lewym górnym rogu korka */
+  body.bd-on .bd-stempel{ left:50%; top:45%; width:15%; }
+  body.bd-on #bd-slot-k18 .scene__grid--2{ grid-template-columns:1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TROP 5 — SLAJDY (Etap T5.1)
+   Sceny nie leżą już jedna pod drugą w jednym przewijaniu. Każda jest
+   osobną warstwą pod belką, a widoczna jest DOKŁADNIE JEDNA: nieaktywne
+   mają `display:none`, więc w kadrze nie ma ani jednego węzła tekstowego
+   sąsiedniej sceny (koniec prześwitów i krzyżowania opacity).
+   Sceny z własnym przewijaniem (lot butelki, sekwencja K10) zachowują je
+   WEWNĄTRZ swojej warstwy — skokowe są wyłącznie granice między scenami.
+   ═══════════════════════════════════════════════════════════════════ */
+.bd-chapterlay--p05.bd-slajdy{ overflow:hidden; }
+.bd-chapterlay--p05.bd-slajdy .bd-page{
+  position:absolute; inset:0; overflow:hidden; padding:0;
+}
+.bd-chapterlay--p05.bd-slajdy #bd-page-bar{
+  position:absolute; top:0; left:0; right:0; z-index:6;
+}
+.bd-chapterlay--p05.bd-slajdy .bd-chscene{
+  position:absolute; left:0; right:0; top:var(--bd-bar-h); bottom:0;
+  overflow-y:auto; overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  display:none; min-height:0;
+}
+.bd-chapterlay--p05.bd-slajdy .bd-chscene.is-slajd-on{ display:block; }
+/* slajd niedostępny (scena jeszcze nieodsłonięta) nie może się pokazać
+   nawet przez pomyłkę — `hidden` wygrywa z klasą widoczności */
+.bd-chapterlay--p05.bd-slajdy .bd-chscene[hidden]{ display:none !important; }
+
+/* WSKOK: krótki puls sprężyny, bez przezroczystości — poprzednia scena
+   znika w całości, zanim nowa wskoczy. */
+@keyframes bd-slajd-pop{
+  0%   { transform:scale(.96); }
+  55%  { transform:scale(1.02); }
+  100% { transform:scale(1); }
+}
+.bd-chapterlay--p05.bd-slajdy .bd-chscene.is-pop{
+  animation:bd-slajd-pop .45s cubic-bezier(.34,1.28,.5,1) both;
+}
+@media (prefers-reduced-motion: reduce){
+  .bd-chapterlay--p05.bd-slajdy .bd-chscene.is-pop{ animation:none; }
+}
+
+/* w trybie slajdów scena Olejomatu nie podchodzi już pod K07 —
+   crossfade zniknął razem z nakładką */
+.bd-chapterlay--p05.bd-slajdy #bd-scene-k07{ margin-top:0; }
+
+/* FINAŁ TROPU: pełny kadr, treść wyśrodkowana, przycisk pod spodem */
+.bd-chapterlay--p05.bd-slajdy .bd-chscene--p05koniec .bd-chscene__in{
+  min-height:100%; display:flex; align-items:center; justify-content:center;
+  padding:clamp(20px,4vh,56px) clamp(16px,4vw,64px);
+}
+.bd-chapterlay--p05.bd-slajdy .bd-chscene--p05koniec .bd-final{
+  display:flex; flex-direction:column; align-items:center; gap:clamp(18px,3vh,34px);
+  max-width:min(70ch, 92%); text-align:center;
+}
+.bd-chapterlay--p05.bd-slajdy .bd-chscene--p05koniec .bd-final__txt{ text-align:center; }
+.bd-chapterlay--p05.bd-slajdy .bd-chscene--p05koniec .bd-final__cta{ margin:0; }
+
+/* zdanie przejścia jako osobny slajd: jedna myśl na środku kadru */
+.bd-chapterlay--p05.bd-slajdy .bd-chscene--przejscie .bd-chscene__in{
+  min-height:100%; display:flex; align-items:center; justify-content:center;
+  padding:clamp(20px,4vh,56px) clamp(16px,4vw,64px);
+}
+.bd-chapterlay--p05.bd-slajdy .bd-chscene--przejscie .bd-przejscie{
+  margin:0; max-width:34ch; text-align:center;
+  font-size:clamp(20px,2.2vw,30px); line-height:1.45;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PANEL AUDIO W BELCE (Etap A3)
+   Jeden markup, dwie prezentacje: popover pod przyciskiem (≥900 px)
+   i modalny arkusz przy dolnej krawędzi (<900 px). Szata „karty z akt
+   sprawy": kremowy papier, ciemna zieleń, bursztynowy akcent.
+   ═══════════════════════════════════════════════════════════════════ */
+.bd-audiobtn{ display:inline-flex; align-items:center; gap:8px; }
+.bd-audiobtn__ico{ font-size:15px; line-height:1; }
+.bd-audiobtn.is-dzwiek{ border-color:rgba(240,180,41,.75); }
+
+.bd-audiopanel{ position:absolute; inset:0; z-index:40; }
+.bd-audiopanel[hidden]{ display:none; }
+.bd-audiopanel.is-popover{ pointer-events:none; }      /* tło klikalne — panel niemodalny */
+.bd-audiopanel.is-popover .bd-audiopanel__box{ pointer-events:auto; }
+.bd-audiopanel.is-arkusz{ background:rgba(18,26,16,.42); }
+
+.bd-audiopanel__box{
+  position:absolute; width:min(340px, calc(100% - 24px));
+  padding:18px 18px 16px; border-radius:20px;
+ /* faktura papieru bez dodatkowego pliku: dwa bardzo delikatne gradienty
+     na kremowym tle — zero nowych żądań sieciowych */
+  background-color:#fbf6ec;
+  background-image:
+    radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.85), rgba(255,255,255,0) 60%),
+    linear-gradient(180deg, rgba(214,196,160,.10), rgba(214,196,160,.02));
+  border:1px solid rgba(62,96,52,.22);
+  box-shadow:0 18px 44px rgba(24,38,20,.28);
+  color:#26401f;
+}
+.bd-audiopanel.is-popover .bd-audiopanel__box{
+  animation:bd-audio-wejscie .18s ease-out both;
+}
+@keyframes bd-audio-wejscie{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:none; } }
+
+.bd-audiopanel.is-arkusz .bd-audiopanel__box{
+  left:0; right:0; bottom:0; top:auto; width:auto;
+  border-radius:22px 22px 0 0;
+  padding:14px clamp(12px,4vw,18px) calc(16px + env(safe-area-inset-bottom));
+  animation:bd-audio-arkusz .2s ease-out both;
+  max-height:82vh; overflow-y:auto;
+}
+@keyframes bd-audio-arkusz{ from{ transform:translateY(14px); } to{ transform:none; } }
+.bd-audiopanel.is-arkusz .bd-audiopanel__box::before{
+  content:""; display:block; width:44px; height:4px; margin:0 auto 10px;
+  border-radius:99px; background:rgba(62,96,52,.28);
+}
+@media (prefers-reduced-motion: reduce){
+  .bd-audiopanel__box{ animation:none !important; }
+}
+
+.bd-audiopanel__close{
+  position:absolute; top:8px; right:8px;
+  width:48px; height:48px; display:flex; align-items:center; justify-content:center;
+  font-size:17px; color:#3e6034; background:none; border:0; border-radius:12px; cursor:pointer;
+}
+.bd-audiopanel__close:hover{ background:rgba(62,96,52,.10); }
+.bd-audiopanel__kicker{
+  margin:0 0 2px; font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:#8a7a3c; font-weight:700;
+}
+.bd-audiopanel__title{
+  margin:0 0 12px; font-family:var(--font-title, inherit);
+  font-size:clamp(17px,1.5vw,20px); line-height:1.25; color:#26401f; padding-right:40px;
+}
+.bd-audiopanel__cards{ display:grid; gap:8px; }
+
+/* ── KARTA WYBORU (wspólny wzorzec: panel i chipy w Tropie 1) ── */
+.bd-audiocard{ display:block; position:relative; cursor:pointer; }
+.bd-audiocard__radio{
+  position:absolute; inset:0; width:100%; height:100%; margin:0;
+  opacity:0; cursor:pointer;
+}
+.bd-audiocard__in{
+  display:flex; align-items:center; gap:10px;
+  min-height:52px; padding:10px 12px;
+  border:1.5px solid rgba(62,96,52,.24); border-radius:16px;
+  background:rgba(255,253,247,.72);
+  transition:border-color .16s ease, background .16s ease;
+}
+.bd-audiocard.is-on .bd-audiocard__in{
+  border-color:#e2a423; background:#fdf3dc;
+}
+.bd-audiocard__radio:focus-visible + .bd-audiocard__in{
+  outline:3px solid #7db8ff; outline-offset:2px;
+}
+.bd-audiocard__ico{ font-size:18px; line-height:1; width:26px; text-align:center; }
+.bd-audiocard__txt{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.bd-audiocard__name{ font-weight:700; font-size:15px; color:#26401f; }
+.bd-audiocard__desc{ font-size:12.5px; line-height:1.35; color:#4d5a4a; }
+.bd-audiocard__check{
+  margin-left:auto; font-weight:800; color:#c2861a; opacity:0; font-size:15px;
+}
+.bd-audiocard.is-on .bd-audiocard__check{ opacity:1; }
+
+.bd-audiopanel__now{ margin:14px 0 0; }
+.bd-audiopanel__nowlab{
+  margin:0; font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:#8a7a3c; font-weight:700;
+}
+.bd-audiopanel__scene{
+  margin:2px 0 0; font-size:14px; font-weight:600; color:#26401f;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.bd-audiopanel__status{ margin:4px 0 0; font-size:12.5px; line-height:1.4; color:#4d5a4a; min-height:1.4em; }
+.bd-audiopanel__row{ display:flex; gap:8px; margin-top:12px; }
+.bd-audiopanel__row[hidden]{ display:none; }
+.bd-audiopanel__btn{
+  flex:1; min-height:48px; padding:8px 12px; cursor:pointer;
+  font:inherit; font-size:14px; font-weight:700; color:#26401f;
+  background:rgba(255,253,247,.9); border:1.5px solid rgba(62,96,52,.24); border-radius:14px;
+}
+.bd-audiopanel__btn--main{ background:#f0b429; border-color:#e2a423; }
+.bd-audiopanel__btn:disabled{ opacity:.45; cursor:not-allowed; }
+.bd-audiopanel__btn:focus-visible{ outline:3px solid #7db8ff; outline-offset:2px; }
+
+/* ── CHIPY W TROPIE 1 (wariant B) ── */
+.bd-audiochips{ margin:18px 0 22px; }
+.bd-audiochips__q{
+  margin:0 0 8px; font-size:14px; font-weight:600; color:#4d5a4a;
+}
+.bd-audiochips__row{ display:flex; flex-wrap:wrap; gap:8px; }
+.bd-audiocard--chip{ flex:0 1 auto; }
+.bd-audiocard--chip .bd-audiocard__in{
+  min-height:48px; padding:8px 14px; border-radius:999px;
+}
+.bd-audiocard--chip .bd-audiocard__name{ font-size:14px; white-space:nowrap; }
+
+@media (max-width: 420px){
+  .bd-audiochips__row{ flex-direction:column; }
+  .bd-audiocard--chip{ width:100%; }
+}

@@ -1,0 +1,653 @@
+/* ═══════════════════════════════════════════════════════════════
+   K07 — Droga butelki (prototyp)
+   Jeden zestaw sześciu pól DOM; media query przestawia wyłącznie ich
+   współrzędne na planszy (desktop 3×2 wężowo / mobile 2×3 wężowo).
+   Pozycje pól zmierzone siatką procentową z rzeczywistych plansz:
+     desktop 2724×1562 — kolumny x 22,5/43,6/63,9%, rzędy y 25,5/58,5%
+     mobile  1414×2121 — kolumny x 23,7/53,2%, rzędy y 19,6/40,6/62,1%
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --k-green:  #2c5437;
+  --k-amber:  #f2b23a;
+  --k-text:   #1a2e1c;
+  --k-muted:  #5b6b5e;
+  --k-bg:     #eef4ec;
+  --k-card:   #ffffff;
+  --k-ok:     #2f7d43;
+  --k-err:    #b4453c;
+  --k-sel:    #1c6dd0;
+  --font-title: 'Signika', system-ui, sans-serif;
+  --font-body:  'Imprima', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 14px 56px;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, #ffffff 0%, rgba(255,255,255,0) 62%),
+    linear-gradient(170deg, var(--k-bg) 0%, #f7faf6 55%, var(--k-bg) 100%);
+  min-height: 100vh;
+  color: var(--k-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.k07-proto-note {
+  max-width: 1100px;
+  margin: 0 auto 2px;
+  padding: 3px 14px;
+  font-size: 12px;
+  color: #6a5b1f;
+  background: #fdf6d8;
+  border: 1px solid #e8d98b;
+  border-radius: 0 0 10px 10px;
+  text-align: center;
+}
+
+.k07 { max-width: 1100px; margin: 0 auto; }
+
+/* ── nagłówek (kompaktowy: plansza + bank mają zmieścić się w widoku) ── */
+.k07-head { text-align: center; padding: 10px 0 6px; }
+.k07-kicker {
+  margin: 0 0 2px;
+  font-family: var(--font-title);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: #b98a1e;
+}
+.k07-title {
+  margin: 0 0 2px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: clamp(26px, 3.4vw, 38px);
+  line-height: 1.05;
+  color: var(--k-green);
+}
+.k07-lead {
+  margin: 0 auto;
+  max-width: 62ch;
+  font-size: clamp(15px, 1.3vw, 17px);
+  line-height: 1.4;
+  color: var(--k-muted);
+}
+/* lewa informacja o zasadach — osobny element (nie dzieli <p> z przyciskiem) */
+.k07-note {
+  margin: 8px auto 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--k-muted);
+  opacity: 0.85;
+}
+
+/* ── PLANSZA ── */
+.k07-board {
+  position: relative;
+  max-width: 980px;
+  margin: 6px auto 0;
+}
+/* szeroki desktop: boczne elementy nagłówka są absolutne, a szerokość
+   planszy wynika z wolnej WYSOKOŚCI okna (rezerwa 386 px = zmierzony
+   koszt noty, nagłówka i banku kart + zapas) — komplet kart ma być
+   widoczny bez przewijania. Podłoga 640 px chroni czytelność kart,
+   sufit 1180 px to umiarkowane powiększenie konsoli ponad dawne 980 px,
+   gdy miejsca jest dużo. */
+@media (min-width: 1100px) {
+  .k07-board {
+    max-width: clamp(640px, calc((100vh - 386px) * 1.7438), 1180px);
+  }
+}
+.k07-board__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* plansza nie załadowana → tekstowa układanka nadal działa: pola dostają
+   widoczne ramki na neutralnym tle */
+.k07-board.img-failed { background: #3a4148; border-radius: 18px; aspect-ratio: 1414 / 2121; }
+@media (min-width: 901px) {
+  .k07-board.img-failed { aspect-ratio: 2724 / 1562; }
+}
+.k07-board.img-failed .k07-board__img { visibility: hidden; position: absolute; }
+.k07-board.img-failed .k07-slot { border-color: rgba(255,255,255,0.55); }
+
+/* ── POLA (jeden DOM, dwa zestawy współrzędnych) ── */
+.k07-slots { position: absolute; inset: 0; }
+.k07-slot {
+  position: absolute;
+  left: var(--sx); top: var(--sy);
+  width: var(--sw); height: var(--sh);
+  margin: 0; padding: 0;
+  background: transparent;
+  border: 2px dashed transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  display: flex; align-items: center; justify-content: center;
+}
+.k07-slot:focus-visible { outline: 3px solid #7db8ff; outline-offset: 3px; }
+.k07-slot:hover:not(.is-locked) { border-color: rgba(242, 178, 58, 0.65); }
+/* numer pola — HTML, nie bitmapa */
+.k07-slot__no {
+  position: absolute;
+  top: -11px; left: -11px;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  background: var(--k-amber);
+  color: #3c2d05;
+  border: 2px solid #d99a1d;
+  border-radius: 50%;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 14px;
+  z-index: 2;
+  pointer-events: none;
+}
+/* stan pola przy wybranej karcie: cel wskazywany nie tylko kolorem */
+.k07--placing .k07-slot:not(.is-locked) { border-color: rgba(125, 184, 255, 0.9); }
+
+/* karta osadzona w polu */
+.k07-slot .k07-card { width: 92%; height: auto; }
+
+/* pole zablokowane (poprawne po sprawdzeniu) */
+.k07-slot.is-locked { cursor: default; }
+.k07-slot.is-locked .k07-card { cursor: default; }
+.k07-slot__mark {
+  position: absolute;
+  top: -10px; right: -10px;
+  width: 26px; height: 26px;
+  display: none;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 15px;
+  z-index: 2;
+  pointer-events: none;
+}
+.k07-slot.is-correct .k07-slot__mark {
+  display: grid;
+  background: var(--k-ok);
+  color: #fff;
+}
+.k07-slot.is-wrong .k07-slot__mark {
+  display: grid;
+  background: var(--k-err);
+  color: #fff;
+}
+.k07-slot.is-wrong { border-color: rgba(180, 69, 60, 0.8); }
+
+/* WSPÓŁRZĘDNE — MOBILE 2×3 (wężowo: 1 TL, 2 TR, 3 MR, 4 ML, 5 BL, 6 BR) */
+.k07-slot[data-step="1"] { --sx: 23.4%; --sy: 19.4%; --sw: 21.4%; --sh: 16.2%; }
+.k07-slot[data-step="2"] { --sx: 53.0%; --sy: 19.4%; --sw: 22.6%; --sh: 16.2%; }
+.k07-slot[data-step="3"] { --sx: 53.0%; --sy: 40.4%; --sw: 22.6%; --sh: 16.1%; }
+.k07-slot[data-step="4"] { --sx: 23.4%; --sy: 40.4%; --sw: 21.4%; --sh: 16.1%; }
+.k07-slot[data-step="5"] { --sx: 23.4%; --sy: 61.9%; --sw: 21.4%; --sh: 16.5%; }
+.k07-slot[data-step="6"] { --sx: 53.0%; --sy: 61.9%; --sw: 22.6%; --sh: 16.5%; }
+
+/* podświetlenie trasy — MOBILE */
+.k07-glow {
+  position: absolute;
+  left: var(--gx); top: var(--gy); width: var(--gw); height: var(--gh);
+  border-radius: 999px;
+  background: rgba(255, 196, 64, 0.0);
+  opacity: 0;
+  transition: opacity 0.35s ease, box-shadow 0.35s ease;
+  pointer-events: none;
+}
+.k07-glow.is-lit {
+  opacity: 1;
+  background: rgba(255, 200, 70, 0.28);
+  box-shadow: 0 0 14px 5px rgba(255, 190, 60, 0.55);
+}
+.k07-glow[data-seg="1"] { --gx: 45.6%; --gy: 25.4%; --gw: 8.0%; --gh: 2.4%; }
+.k07-glow[data-seg="2"] { --gx: 75.0%; --gy: 32.5%; --gw: 4.6%; --gh: 16.5%; }
+.k07-glow[data-seg="3"] { --gx: 45.6%; --gy: 46.8%; --gw: 8.0%; --gh: 2.4%; }
+.k07-glow[data-seg="4"] { --gx: 17.6%; --gy: 52.0%; --gw: 4.6%; --gh: 14.5%; }
+.k07-glow[data-seg="5"] { --gx: 45.6%; --gy: 68.3%; --gw: 8.0%; --gh: 2.4%; }
+.k07-glow[data-seg="6"] { --gx: 45.8%; --gy: 80.2%; --gw: 8.4%; --gh: 9.6%; border-radius: 12px; }
+
+/* WSPÓŁRZĘDNE — DESKTOP 3×2 (wężowo: 1 TL, 2 TM, 3 TR, 4 BR, 5 BM, 6 BL) */
+@media (min-width: 901px) {
+  .k07-slot[data-step="1"] { --sx: 22.4%; --sy: 25.3%; --sw: 13.1%; --sh: 24.7%; }
+  .k07-slot[data-step="2"] { --sx: 43.5%; --sy: 25.3%; --sw: 13.1%; --sh: 24.7%; }
+  .k07-slot[data-step="3"] { --sx: 63.8%; --sy: 25.3%; --sw: 13.3%; --sh: 24.7%; }
+  .k07-slot[data-step="4"] { --sx: 63.8%; --sy: 58.3%; --sw: 13.3%; --sh: 25.2%; }
+  .k07-slot[data-step="5"] { --sx: 43.5%; --sy: 58.3%; --sw: 13.1%; --sh: 25.2%; }
+  .k07-slot[data-step="6"] { --sx: 22.4%; --sy: 58.3%; --sw: 13.1%; --sh: 25.2%; }
+
+  .k07-glow[data-seg="1"] { --gx: 36.2%; --gy: 34.6%; --gw: 6.9%; --gh: 2.9%; }
+  .k07-glow[data-seg="2"] { --gx: 57.2%; --gy: 34.6%; --gw: 6.2%; --gh: 2.9%; }
+  .k07-glow[data-seg="3"] { --gx: 77.9%; --gy: 35.5%; --gw: 3.6%; --gh: 36.0%; }
+  .k07-glow[data-seg="4"] { --gx: 57.2%; --gy: 69.6%; --gw: 6.2%; --gh: 2.9%; }
+  .k07-glow[data-seg="5"] { --gx: 36.2%; --gy: 69.6%; --gw: 6.9%; --gh: 2.9%; }
+  .k07-glow[data-seg="6"] { --gx: 88.3%; --gy: 72.8%; --gw: 6.3%; --gh: 17.0%; border-radius: 12px; }
+}
+
+/* ── KARTY ── */
+.k07-card {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 100%;
+  margin: 0; padding: 0;
+  background: transparent;
+  border: 3px solid transparent;
+  border-radius: 14px;
+  font: inherit;
+  cursor: grab;
+  touch-action: manipulation;
+}
+.k07-card:focus-visible { outline: 3px solid #7db8ff; outline-offset: 3px; }
+.k07-card__img {
+  display: block;
+  width: 100%; height: auto;
+  border-radius: 10px;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+/* karta bez obrazka: tekstowy zamiennik — układanka działa dalej */
+.k07-card.img-failed .k07-card__img { display: none; }
+.k07-card.img-failed { background: #fff; border-color: #cfdcc9; padding: 10px; min-height: 96px; }
+.k07-card.img-failed .k07-card__label { display: block; }
+
+/* podpis: w banku widoczny stale; w polu przez aria-label + tooltip */
+.k07-card__label {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--k-text);
+}
+.k07-slot .k07-card__label {
+  position: absolute;
+  left: 50%; bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 220px;
+  padding: 5px 12px;
+  background: #fff;
+  border: 1px solid #dfe8dc;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(30, 50, 38, 0.14);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 5;
+}
+.k07-slot .k07-card:hover .k07-card__label,
+.k07-slot .k07-card:focus-visible .k07-card__label,
+.k07-slot.is-selected .k07-card__label { opacity: 1; }
+
+/* stan „wybrana" — nie tylko kolor: znaczek + tekst + aria-pressed */
+.k07-card.is-selected { border-color: var(--k-sel); cursor: grabbing; }
+.k07-card__sel {
+  position: absolute;
+  top: -10px; right: -10px;
+  padding: 3px 9px;
+  background: var(--k-sel);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  display: none;
+  z-index: 3;
+  pointer-events: none;
+}
+.k07-card.is-selected .k07-card__sel { display: block; }
+.k07-card[aria-disabled="true"] { cursor: default; }
+
+/* ── BANK ── */
+.k07-bank-wrap { margin-top: 6px; }
+.k07-bank-title {
+  margin: 0 0 4px;
+  text-align: center;
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--k-green);
+}
+.k07-bank {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 150px));
+  justify-content: center;
+  gap: 12px;
+  min-height: 100px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px dashed #cfdcc9;
+  border-radius: 14px;
+}
+/* komunikat „wszystkie karty na planszy" żyje jako PRAWDZIWY tekst DOM
+   na ekranie konsoli — nie jako pseudoelement CSS */
+
+/* ── wspólny przycisk (dialog) ── */
+.k07-btn {
+  padding: 13px 30px;
+  border: none;
+  border-radius: 999px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 17px;
+  color: #fff;
+  background: var(--k-green);
+  cursor: pointer;
+}
+.k07-btn:disabled { background: #9db3a2; cursor: default; }
+.k07-btn:focus-visible { outline: 3px solid #7db8ff; outline-offset: 3px; }
+
+/* ═══ EKRAN KONSOLI — dynamiczny tekst na niebieskich monitorach ═══
+   Jeden element DOM; media query przestawia wyłącznie współrzędne.
+   Współrzędne zmierzone z plansz (procenty kadru planszy). */
+.k07-console-message {
+  position: absolute;
+  /* MOBILE: monitory u góry planszy pion (x 12,5–87%, y 2,5–9,2%) */
+  left: 14%; top: 3.0%;
+  width: 72%; height: 5.8%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4%;
+  text-align: center;
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: clamp(10px, 2.6vw, 15px);
+  line-height: 1.25;
+  color: #eaf6ff;
+  text-shadow: 0 0 6px rgba(40, 140, 255, 0.8), 0 1px 2px rgba(0,0,0,0.5);
+  text-wrap: balance;
+  pointer-events: none;
+  z-index: 4;
+}
+@media (min-width: 901px) {
+  /* DESKTOP: dwa monitory (x 21–79%, y 2,5–15%) */
+  .k07-console-message {
+    left: 21.5%; top: 3.6%;
+    width: 57%; height: 10.6%;
+    font-size: clamp(13px, 1.5vw, 19px);
+  }
+}
+
+/* ═══ LUPA — jedyny przycisk „Sprawdź kolejność" ═══
+   Nakładka na lupę wrysowaną w planszę; ikona pozostaje częścią grafiki,
+   button daje semantykę, fokus i stany. */
+.k07-lens {
+  position: absolute;
+  /* MOBILE: lupa w dolnym pasie planszy pion (środek ~23,8% / 84,6%) */
+  left: 17.4%; top: 80.3%;
+  width: 12.8%; height: 8.9%;
+  min-width: 44px; min-height: 44px;
+  margin: 0; padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 5;
+  font: inherit;
+}
+@media (min-width: 901px) {
+  /* DESKTOP: lupa w lewym dolnym rogu konsoli (środek ~8,6% / 82,8%) */
+  .k07-lens {
+    left: 4.4%; top: 74.3%;
+    width: 8.7%; height: 17.2%;
+  }
+}
+.k07-lens:disabled { cursor: default; }
+.k07-lens:focus-visible { outline: 3px solid #7db8ff; outline-offset: 4px; }
+
+/* pierścień stanu wokół lupy */
+.k07-lens__ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  pointer-events: none;
+}
+/* krótki napis przy aktywnej lupie */
+.k07-lens__tip {
+  position: absolute;
+  left: 50%; top: calc(100% + 6px);
+  transform: translateX(-50%);
+  width: max-content;
+  padding: 4px 12px;
+  background: var(--k-amber);
+  color: #3c2d05;
+  border: 2px solid #d99a1d;
+  border-radius: 999px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: clamp(11px, 1.2vw, 14px);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* STANY LUPY (data-state) */
+/* readyToCheck (Etap 2B.2): wezwanie musi być natychmiast oczywiste —
+   dwuwarstwowa poświata (ciemny kontur odcina pierścień od żółtej obudowy
+   + bursztynowa łuna na zewnątrz), łagodne powiększenie pierścienia i puls
+   ~1 s (1 błysk/s, daleko poniżej granicy 3/s). Animowane są wyłącznie
+   `box-shadow`, `transform` i `border-color` samego pierścienia — plansza
+   ani układ nie drgają. */
+.k07-lens[data-state="ready"] .k07-lens__ring {
+  border-color: #fff3d0;
+  animation: k07-lens-pulse 1s ease-in-out infinite;
+}
+.k07-lens[data-state="ready"] .k07-lens__tip {
+  opacity: 1;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+.k07-lens[data-state="checking"] .k07-lens__ring {
+  border-color: rgba(125, 184, 255, 0.95);
+  box-shadow: 0 0 12px 3px rgba(125, 184, 255, 0.5);
+  animation: none;
+}
+.k07-lens[data-state="completed"] .k07-lens__ring {
+  border-color: rgba(47, 125, 67, 0.9);
+  box-shadow: 0 0 10px 2px rgba(47, 125, 67, 0.45);
+  animation: none;
+}
+@keyframes k07-lens-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 3px rgba(60, 40, 5, 0.55),                 /* kontur na obudowie */
+      0 0 10px 3px rgba(255, 214, 110, 0.75),          /* ciepła łuna */
+      0 0 0 0 rgba(255, 255, 255, 0.0);
+  }
+  50% {
+    transform: scale(1.11);
+    box-shadow:
+      0 0 0 3px rgba(60, 40, 5, 0.65),
+      0 0 26px 12px rgba(255, 214, 110, 0.95),
+      0 0 40px 20px rgba(255, 255, 255, 0.35);
+  }
+}
+
+/* ═══ POŚWIATY LAMP KONSOLI (DOM, nie grafika) ═══ */
+.k07-lampfx {
+  position: absolute;
+  left: var(--lx); top: var(--ly); width: var(--lw); height: var(--lh);
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.k07-lampfx.is-on { opacity: 1; }
+.k07-lampfx--warn.is-on {
+  background: rgba(230, 80, 60, 0.30);
+  box-shadow: 0 0 16px 6px rgba(230, 80, 60, 0.55);
+}
+.k07-lampfx--ok1.is-on,
+.k07-lampfx--ok2.is-on {
+  background: rgba(90, 220, 120, 0.28);
+  box-shadow: 0 0 14px 5px rgba(90, 220, 120, 0.55);
+}
+/* MOBILE: lampy w dolnym pasie planszy pion */
+.k07-lampfx--warn { --lx: 31.4%; --ly: 80.4%; --lw: 11.6%; --lh: 7.8%; }
+.k07-lampfx--ok1  { --lx: 46.0%; --ly: 79.0%; --lw: 7.0%;  --lh: 3.2%; }
+.k07-lampfx--ok2  { --lx: 31.4%; --ly: 80.4%; --lw: 11.6%; --lh: 7.8%; }
+@media (min-width: 901px) {
+  /* DESKTOP: mini-lampy po lewej, kropki i przełącznik po prawej */
+  .k07-lampfx--warn { --lx: 4.3%;  --ly: 66.4%; --lw: 9.2%; --lh: 6.8%; }
+  .k07-lampfx--ok1  { --lx: 88.4%; --ly: 65.4%; --lw: 5.8%; --lh: 5.2%; }
+  .k07-lampfx--ok2  { --lx: 4.3%;  --ly: 66.4%; --lw: 9.2%; --lh: 6.8%; }
+}
+/* bursztynowe łączniki w fazie sprawdzania: pulsują; przy ograniczonym
+   ruchu — statyczna poświata (bez animacji) */
+.k07--checking .k07-glow.is-scan {
+  opacity: 1;
+  background: rgba(255, 200, 70, 0.20);
+  box-shadow: 0 0 10px 4px rgba(255, 190, 60, 0.40);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .k07--checking .k07-glow.is-scan { animation: k07-scan 0.9s ease-in-out infinite; }
+}
+@keyframes k07-scan {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* bez pulsowania: mocna STATYCZNA obwódka i poświata; etykieta zostaje */
+  .k07-lens[data-state="ready"] .k07-lens__ring {
+    animation: none;
+    transform: scale(1.08);
+    border-color: #fff3d0;
+    box-shadow:
+      0 0 0 3px rgba(60, 40, 5, 0.65),
+      0 0 22px 10px rgba(255, 214, 110, 0.95),
+      0 0 34px 16px rgba(255, 255, 255, 0.30);
+  }
+}
+
+/* ═══ DIALOG SUKCESU ═══ */
+.k07-dialog {
+  max-width: min(92vw, 520px);
+  padding: 24px 28px;
+  border: none;
+  border-radius: 16px;
+  background: #fdfefc;
+  box-shadow: 0 18px 50px rgba(20, 40, 28, 0.35);
+  text-align: center;
+}
+.k07-dialog::backdrop { background: rgba(16, 28, 20, 0.55); }
+.k07-dialog__title {
+  margin: 0 0 12px;
+  font-family: var(--font-title);
+  font-size: clamp(22px, 3vw, 30px);
+  color: var(--k-ok);
+}
+.k07-dialog__text { margin: 0 0 18px; font-size: 15px; line-height: 1.55; }
+
+/* ═══ przycisk narracji (prototyp; wzorzec .k16-sound) ═══
+   Bazowo w przepływie (tablet/telefon, cel dotykowy ≥44 px);
+   na szerokim desktopie absolutnie w prawym górnym rogu nagłówka. */
+
+/* szeroki desktop: nota po lewej (2–3 linie), narracja po prawej;
+   tytuł i podtytuł zostają wyśrodkowane; poniżej 1100 px oba wracają
+   do przepływu, zanim mogłyby najechać na tytuł */
+@media (min-width: 1100px) {
+  .k07-head { position: relative; padding: 6px 0 2px; }
+  .k07-note {
+    position: absolute;
+    left: 0; top: 8px;
+    margin: 0;
+    max-width: 19ch;
+    text-align: left;
+  }
+  }
+
+.k07-diag {
+  margin: 14px auto 0; max-width: 66ch;
+  padding: 10px 14px;
+  background: #fbe9e7; border: 1px solid #e8b4ae; border-radius: 8px;
+  font-size: 13px; color: #8d3a32;
+}
+.k07-diag.is-hidden { display: none; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip: rect(0 0 0 0); overflow: hidden;
+}
+
+/* ── DESKTOP: bank pod planszą w rzędzie 6 kart; podtytuł w jednym
+   wierszu tam, gdzie realnie się mieści (bez white-space: nowrap) ── */
+@media (min-width: 901px) {
+  body { padding-bottom: 10px; }
+  .k07-bank { grid-template-columns: repeat(6, minmax(110px, 140px)); }
+  .k07-lead { max-width: none; }
+}
+
+/* ── REDUCED MOTION: bez sekwencyjnego zapalania i przejść ── */
+@media (prefers-reduced-motion: reduce) {
+  .k07-glow { transition: none; }
+  .k07-slot .k07-card__label { transition: none; }
+}
+
+/* ═══ TRYB OSADZENIA W ROZDZIALE TABLICY (?embed=board → html.k07-embed) ═══
+   Rozdział P05 daje własny tytuł, opis i tło — moduł oddaje wyłącznie
+   interakcję: planszę (żółto-ciemna obudowa to część gry), bank kart,
+   statusy, dialog i kontrolki. Notka prototypowa oraz zdublowane teksty
+   nagłówka znikają, tło dokumentu staje się przezroczyste, żeby zniknęło
+   wrażenie „okna w oknie". Samodzielny podgląd — bez zmian. */
+html.k07-embed body {
+  background: none;
+  padding: 0 4px 8px;
+}
+html.k07-embed .k07-proto-note,
+html.k07-embed .k07-kicker,
+html.k07-embed .k07-title,
+html.k07-embed .k07-lead { display: none; }
+/* zostaje pomocnicza nota i kontrolka polecenia — w jednym zwartym rzędzie */
+html.k07-embed .k07-head { padding: 2px 0 4px; }
+@media (min-width: 1100px) {
+  html.k07-embed .k07-head { min-height: 46px; }
+  html.k07-embed .k07-note { top: 4px; }
+}
+
+/* ═══ WEZWANIE DO LUPY W MIEJSCU PUSTEGO BANKU (Etap 2B.2) ═══
+   Pojawia się wyłącznie w fazach readyToCheck / needsCorrection, czyli gdy
+   bank jest pusty — zajmuje jego miejsce, więc NIE zasłania planszy i nie
+   przesuwa układu. Treść dla czytnika ekranu niesie #k07-feedback. */
+.k07-callout {
+  max-width: 640px;
+  margin: 4px auto 0;
+  padding: 12px 16px;
+  background: #fff8e4;
+  border: 2px solid var(--k-amber);
+  border-radius: 14px;
+  text-align: center;
+}
+.k07-callout[hidden] { display: none !important; }
+.k07-callout__txt {
+  margin: 0;
+  font-size: clamp(14px, 1.4vw, 16px);
+  line-height: 1.45;
+  color: #4a3a10;
+}
+.k07-callout__act { margin: 10px 0 0; }
+.k07-callout__act:empty,
+.k07-callout__act:has(> [hidden]) { margin: 0; }
+.k07-callout__btn {
+  min-height: 44px; min-width: 44px;
+  padding: 10px 20px;
+  border: 2px solid #d99a1d;
+  border-radius: 999px;
+  background: var(--k-amber);
+  color: #3c2d05;
+  font: inherit;
+  font-family: var(--font-title);
+  font-weight: 700;
+  cursor: pointer;
+}
+.k07-callout__btn[hidden] { display: none !important; }
+.k07-callout__btn:hover { background: #ffc75a; }
+.k07-callout__btn:focus-visible { outline: 3px solid #7db8ff; outline-offset: 3px; }
+/* wariant „do poprawy": ta sama ramka, chłodniejszy akcent tekstu */
+.k07-callout.is-correction { background: #fdf0ec; border-color: #e0a79c; }
+.k07-callout.is-correction .k07-callout__txt { color: #7a3a30; }

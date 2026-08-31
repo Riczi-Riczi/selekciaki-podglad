@@ -1,0 +1,648 @@
+/* ═══════════════════════════════════════════════════════════════
+   K16 — Drugie życie materiałów (prototyp)
+   Czysty CSS, bez zależności. Pozycje nakładek na maszynie podane
+   w procentach jej kadru (1718×862) — zmierzone z samej grafiki:
+     taśmy       y 80–90%
+     lewy przedsionek  do x≈32%   |  prawy przedsionek  od x≈67,5%
+     lampki      x≈53,5%, y 22–33%
+     ekran       x 40–49%, y 20–37%
+     pierścień   środek ≈ 50% / 62%
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --k-green:  #2c5437;
+  --k-sage:   #b6d5aa;
+  --k-teal:   #3fa3a3;
+  --k-text:   #1a2e1c;
+  --k-muted:  #5b6b5e;
+  --k-bg:     #eef4ec;
+  --k-card:   #ffffff;
+  --k-ok:     #2f7d43;
+  --k-err:    #b4453c;
+  --font-title: 'Signika', system-ui, sans-serif;
+  --font-body:  'Imprima', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 16px 64px;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, #ffffff 0%, rgba(255,255,255,0) 62%),
+    linear-gradient(170deg, var(--k-bg) 0%, #f7faf6 55%, var(--k-bg) 100%);
+  min-height: 100vh;
+  color: var(--k-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.k16-proto-note {
+  max-width: 1100px;
+  margin: 0 auto 4px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #6a5b1f;
+  background: #fdf6d8;
+  border: 1px solid #e8d98b;
+  border-radius: 0 0 10px 10px;
+  text-align: center;
+}
+
+.k16 { max-width: 1100px; margin: 0 auto; }
+
+/* ── nagłówek ── */
+.k16-head { text-align: center; padding: 26px 0 18px; }
+.k16-kicker {
+  margin: 0 0 6px;
+  font-family: var(--font-title);
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: var(--k-teal);
+}
+.k16-title {
+  margin: 0 0 12px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: clamp(28px, 4.4vw, 52px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--k-green);
+}
+.k16-lead {
+  margin: 0 auto;
+  max-width: 52ch;
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.55;
+  color: var(--k-muted);
+}
+.k16-progress {
+  margin: 16px 0 0;
+  font-size: 14px;
+  color: var(--k-muted);
+}
+.k16-progress b { color: var(--k-green); font-size: 17px; }
+.k16-dots { display: inline-flex; gap: 6px; margin-left: 12px; vertical-align: middle; }
+.k16-dots i {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #cfdcc9; display: block;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+.k16-dots i.is-done { background: var(--k-ok); }
+.k16-dots i.is-now  { background: var(--k-teal); transform: scale(1.35); }
+
+/* ── przełącznik dźwięku (prototyp) ── */
+.k16-sound {
+  margin-top: 10px;
+  padding: 7px 16px;
+  border: 2px solid #d8e4d4;
+  border-radius: 999px;
+  background: var(--k-card);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--k-muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.k16-sound[aria-pressed="true"] { color: var(--k-green); border-color: var(--k-sage); }
+.k16-sound:hover { border-color: var(--k-sage); }
+.k16-sound:focus-visible { outline: 3px solid var(--k-teal); outline-offset: 3px; }
+@media (min-width: 1100px) {
+  .k16-head { position: relative; }
+  .k16-sound { position: absolute; top: 6px; right: 0; margin-top: 0; }
+}
+/* na tablecie/telefonie przycisk zostaje w przepływie — cel dotykowy ≥44 px */
+@media (max-width: 1099px) {
+  .k16-sound { min-height: 44px; padding: 10px 20px; }
+}
+
+/* ── SCENA ─────────────────────────────────────────────────── */
+/* podpis odpadu przeniesiony NAD obiekt — dolna rezerwa 46 px zbędna;
+   zostaje estetyczny odstęp, żeby pytanie nie podjeżdżało pod taśmę */
+.k16-stage { margin: 8px auto 0; padding-bottom: 22px; }
+
+.k16-machine {
+  position: relative;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  aspect-ratio: 2161 / 862;   /* maszyna V5 z wydłużonymi taśmociągami */
+}
+.k16-machine__img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  z-index: 3;                 /* maszyna zasłania obiekty pod przedsionkami */
+  pointer-events: none;
+  filter: drop-shadow(0 18px 30px rgba(30, 50, 38, 0.16));
+}
+
+/* ekran maszyny — wyświetlacz V5: x 44–49,6%, y 24–35,5% */
+.k16-screen {
+  position: absolute;
+  left: 44%; top: 24%;
+  width: 5.6%; height: 11.5%;
+  z-index: 4;
+  display: grid; place-items: center;
+  pointer-events: none;
+}
+.k16-screen__txt {
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: clamp(5px, 0.62vw, 9px);
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  text-align: center;
+  color: #d8fff4;
+  text-shadow: 0 0 6px rgba(0, 220, 190, 0.9);
+  opacity: 0.92;
+}
+
+/* lampki etapów — V5: kolumna kropek x 52,7–54,1%, y 21–38,5% */
+.k16-lamps {
+  position: absolute;
+  left: 52.75%; top: 21.2%;
+  width: 1.4%; height: 17.6%;
+  z-index: 4;
+  display: flex; flex-direction: column; justify-content: space-between;
+  pointer-events: none;
+}
+.k16-lamp {
+  display: block;
+  width: 100%; aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+.k16-lamp.is-on {
+  background: #6ff3d0;
+  box-shadow: 0 0 10px 3px rgba(80, 240, 200, 0.75);
+}
+
+/* ── pierścień + znak recyklingu ──
+   Ciemne koło V5: środek 50,4% / 62,7%, średnica 7,15% szerokości kadru
+   (18,6% wysokości). Pierścień = 74% średnicy ciemnego pola (5,3%),
+   znak = 52% (3,7%) — oba w całości wewnątrz ciemnego koła, z dala od
+   turkusowej obwódki i żółtego elementu przy prawej krawędzi. */
+.k16-ring {
+  position: absolute;
+  /* wspólny środek ze znakiem recyklingu (50,75% / 63,62%) — wcześniej
+     pierścień krążył wokół starego środka geometrycznego i oba elementy
+     obracały się wokół dwóch różnych osi */
+  left: 48.10%;               /* 50,75 − 5,3/2 */
+  top: 56.97%;                /* 63,62 − 13,3/2 (wys. = 5,3 × 2161/862) */
+  width: 5.3%; aspect-ratio: 1;
+  z-index: 4;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(96, 208, 205, 0.9);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.k16-recycle-sign {
+  position: absolute;
+  /* korekta wizualna użytkownika: geometryczny środek (48,55/57,95) czytał
+     się jako przesunięty względem WIZUALNEGO centrum ciemnego koła (cień
+     przy krawędzi przekłamuje odbiór) — bez translate, bo transform
+     jest zajęty przez animację obrotu */
+  left: 48.90%;
+  top: 58.85%;
+  width: 3.7%; height: auto;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+/* idle: niewidoczne · work: widoczne i obracają się (różne prędkości,
+   przeciwne kierunki) · done: łagodne wygaszenie (fade 250 ms) */
+.k16-machine[data-state="work"] .k16-ring,
+.k16-machine[data-state="work"] .k16-recycle-sign { opacity: 1; }
+.k16-machine[data-state="work"] .k16-ring {
+  animation: k16-spin 2.4s linear infinite;
+}
+.k16-machine[data-state="work"] .k16-recycle-sign {
+  animation: k16-spin-ccw 3.5s linear infinite;
+}
+@keyframes k16-spin     { to { transform: rotate(360deg); } }
+@keyframes k16-spin-ccw { to { transform: rotate(-360deg); } }
+
+/* ── TAŚMY ──
+   Zasłanianie robi WYŁĄCZNIE warstwa maszyny (z-index 3) nad obiektami
+   (z-index 2) — przedsionki są nieprzezroczystymi bryłami renderu.
+   Świadomie BEZ `overflow: hidden`: przycinało również zewnętrzne końce
+   taśm, więc odpad i produkt nie mieściły się w kadrze w całości.
+
+   Geometria w % szerokości maszyny (zmierzona z grafiki):
+     zewnętrzna lewa taśma   0–18%      lewy przedsionek   18–32%
+     prawy przedsionek    67,5–82%      zewnętrzna prawa   82–100%
+   Obiekt wpisany w prostokąt 16% × 27%, wyrównany do dołu (stoi na taśmie). */
+.k16-belt {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.k16-obj {
+  position: absolute;
+  /* V5: górna powierzchnia taśmy y≈79,4%. Dół obiektu na 77% wysokości
+     kadru = szczelina ~2,4% (≈12 px na desktopie) — delikatna lewitacja,
+     nic nie chowa się za przednią częścią platformy. */
+  bottom: 23%;
+  /* kwadratowe pole obiektu: 21% szerokości kadru maszyny, na dużym
+     monitorze ograniczone do 264 px (~kadr 125×125 mm z projektu).
+     Kwadrat to tylko przestrzeń — przezroczysty WebP mieści się w nim
+     przez object-fit: contain, bez rozciągania. */
+  width: min(21%, 264px);
+  aspect-ratio: 1 / 1;
+  height: auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  will-change: left, opacity;
+}
+.k16-obj__img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto; height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(28, 46, 34, 0.28));
+}
+
+/* ── WEJŚCIE: spoczynek na zewnętrznej taśmie → w prawo pod przedsionek ──
+   Strefy V5: zewnętrzna lewa taśma 0–25,4%, lewy przedsionek 25,4–37,1%,
+   korpus 38–64% (przedsionek styka się z korpusem — brak prześwitu). */
+.k16-obj--in { left: 2%; transform: scale(0.92); }
+/* nowa runda: odpad pojawia się od razu w pełnej pozycji (fade + scale),
+   bez wjazdu spoza lewej krawędzi */
+.k16-obj--in.is-ready {
+  opacity: 1; transform: scale(1);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+/* cykl: jedzie w prawo i gaśnie pod przedsionkiem. Docelowe 28% mieści cały
+   obiekt (28–49%) pod nieprzezroczystym pasem przedsionek+korpus.
+   Zanikanie startuje w 0,3 s, zanim przednia krawędź minie bryłę. */
+.k16-obj--in.is-gone {
+  left: 28%; opacity: 0; transform: scale(1);
+  transition: left 1s cubic-bezier(.45, 0, .75, .2), opacity 0.45s ease 0.3s;
+}
+
+/* ── WYJŚCIE: start POD prawym przedsionkiem → w prawo na zewnętrzną taśmę ──
+   Strefy V5: prawy przedsionek 64,6–76,4%, zewnętrzna prawa taśma 76,4–100%. */
+.k16-obj--out { left: 52%; }
+.k16-obj--out.is-out {
+  left: 77.5%; opacity: 1;
+  /* opóźniony fade: produkt staje się widoczny dopiero, gdy wysuwa się
+     spod przedsionka — inaczej mrugnąłby na jego krawędzi */
+  transition: left 1.05s cubic-bezier(.22, .61, .36, 1), opacity 0.4s ease 0.2s;
+}
+
+/* ── PODPIS AKTUALNEGO ODPADU ──
+   Kapsuła z samą nazwą jest DZIECKIEM poruszającego się obiektu
+   wejściowego: wisi nad kwadratowym polem odpadu, jedzie razem z nim
+   w prawo i znika pod przedsionkiem (dziedziczy opacity wrappera).
+   Zwykły tekst, nie przycisk; bez miniatury. Własny translateX(-50%)
+   nie koliduje z animacją rodzica — to niezależne transformacje. */
+.k16-obj--in .k16-inputbar__name {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(280px, 88vw);
+  padding: 6px 18px;
+  background: var(--k-card);
+  border: 1px solid #dfe8dc;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--k-text);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(30, 50, 38, 0.09);
+  z-index: 1;
+  pointer-events: none;
+}
+/* wąskie ekrany: pole obiektu jest małe, więc centrowanie wypychałoby
+   długą nazwę poza lewą krawędź — kotwiczymy kapsułę do lewej obiektu */
+@media (max-width: 1099px) {
+  .k16-obj--in .k16-inputbar__name { left: 0; transform: none; }
+}
+@media (max-width: 620px) {
+  .k16-obj--in .k16-inputbar__name {
+    font-size: 13px;
+    padding: 4px 12px;
+    max-width: 74vw;
+    white-space: normal;   /* wyjątkowe łamanie tylko na bardzo wąskim ekranie */
+  }
+}
+
+/* ── ODPOWIEDZI ── */
+.k16-answers { margin: 20px 0 0; }
+.k16-answers__legend {
+  margin: 0 0 14px;
+  text-align: center;
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: clamp(17px, 2vw, 22px);
+  color: var(--k-green);
+}
+.k16-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 2vw, 22px);
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.k16-card {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 16px 12px 14px;
+  background: var(--k-card);
+  border: 2px solid #dce7d8;
+  border-radius: 16px;
+  font: inherit;
+  color: var(--k-text);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(30, 50, 38, 0.07);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.k16-card:hover:not(:disabled) { transform: translateY(-3px); border-color: var(--k-sage); box-shadow: 0 10px 22px rgba(30,50,38,0.12); }
+.k16-card:focus-visible { outline: 3px solid var(--k-teal); outline-offset: 3px; }
+.k16-card:disabled { cursor: default; }
+
+.k16-card__img {
+  width: 100%; height: clamp(88px, 12vw, 132px);
+  object-fit: contain;
+  pointer-events: none;
+}
+/* etykieta — nie jest stale widoczna; pokazuje ją hover / long-press / focus */
+.k16-card__lbl,
+.k16-obj-lbl {
+  display: block;
+  padding: 5px 12px;
+  background: #fff;
+  border: 1px solid #dfe8dc;
+  border-radius: 999px;
+  font-size: clamp(12px, 1.25vw, 15px);
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--k-text);
+  box-shadow: 0 2px 8px rgba(30, 50, 38, 0.1);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  pointer-events: none;
+}
+.k16-card.is-labelled .k16-card__lbl { opacity: 1; transform: translateY(0); }
+
+/* stany odpowiedzi — nigdy sam kolor: dochodzi znak i tekst */
+.k16-card__mark {
+  position: absolute; top: 8px; right: 10px;
+  font-size: 20px; font-weight: 700; line-height: 1;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.k16-card.is-correct { border-color: var(--k-ok); box-shadow: 0 0 0 3px rgba(47,125,67,0.16); }
+.k16-card.is-correct .k16-card__mark { opacity: 1; color: var(--k-ok); }
+.k16-card.is-wrong   { border-color: var(--k-err); }
+.k16-card.is-wrong .k16-card__mark { opacity: 1; color: var(--k-err); }
+.k16-card.is-wrong   { animation: k16-shake 0.4s ease; }
+@keyframes k16-shake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  45% { transform: translateX(5px); }
+  70% { transform: translateX(-3px); }
+}
+.k16-card.is-dimmed { opacity: 0.45; }
+
+/* ── FEEDBACK I AKCJE ── */
+.k16-feedback {
+  min-height: 58px;
+  margin: 18px auto 0;
+  max-width: 62ch;
+  padding: 0 8px;
+  text-align: center;
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.5;
+}
+.k16-feedback.is-ok  { color: var(--k-ok); }
+.k16-feedback.is-err { color: var(--k-err); }
+.k16-feedback b { font-weight: 700; }
+
+.k16-actions { display: flex; justify-content: center; gap: 14px; margin-top: 6px; min-height: 52px; }
+.k16-btn {
+  padding: 13px 30px;
+  border: none; border-radius: 999px;
+  font-family: var(--font-title);
+  font-weight: 700; font-size: 17px;
+  color: #fff;
+  background: var(--k-green);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+.k16-btn:hover  { background: #24452d; transform: translateY(-2px); }
+.k16-btn:focus-visible { outline: 3px solid var(--k-teal); outline-offset: 3px; }
+.k16-btn--save { background: var(--k-teal); }
+.k16-btn--save:hover { background: #328787; }
+
+.k16-model {
+  margin: 32px auto 0;
+  max-width: 66ch;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.7);
+  border-left: 4px solid var(--k-sage);
+  border-radius: 0 10px 10px 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--k-muted);
+}
+.k16-diag {
+  margin: 16px auto 0; max-width: 66ch;
+  padding: 10px 14px;
+  background: #fbe9e7; border: 1px solid #e8b4ae; border-radius: 8px;
+  font-size: 13px; color: #8d3a32;
+}
+
+/* ── TABLET ── */
+@media (max-width: 900px) {
+  .k16-machine { max-width: 100%; }
+  .k16-cards { gap: 12px; }
+  .k16-card { padding: 12px 8px 12px; }
+}
+
+/* ── TELEFON ──
+   KOREKTA 5B.1: cała runda ma się mieścić w jednym kadrze telefonu.
+   Wcześniej odpowiedzi szły JEDNA POD DRUGĄ, kaflami na całą szerokość
+   (z pustym miejscem po prawej) — sam blok odpowiedzi mierzył 318 px
+   i wypychał informację zwrotną oraz przycisk poza dolną krawędź.
+   Teraz trzy kafle stoją OBOK SIEBIE, jak na desktopie: sama grafika,
+   etykieta nadal pod długim przytrzymaniem palca. Miejsce na informację
+   zwrotną i przycisk jest zarezerwowane w regułach bazowych
+   (`min-height` na .k16-feedback i .k16-actions), więc ich pojawienie się
+   nie przesuwa maszyny ani kafli. Mechanika, pary i assety — nietknięte. */
+@media (max-width: 620px) {
+  body { padding: 0 10px 40px; }
+  .k16-head { padding: 12px 0 8px; }
+  .k16-stage { margin-top: 4px; padding-bottom: 12px; }
+  .k16-answers { margin-top: 10px; }
+  .k16-answers__legend { margin-bottom: 10px; }
+  .k16-cards { gap: 8px; max-width: none; }
+  .k16-card { padding: 8px 6px; gap: 0; }
+  .k16-card__img { height: clamp(62px, 21vw, 96px); }
+  /* Etykieta jest niewidoczna do czasu przytrzymania palca, ale w układzie
+     kolumnowym NADAL ZAJMOWAŁA MIEJSCE — kafel rósł do 165 px, z pustym
+     pasem pod grafiką. Na telefonie kładziemy ją NA kaflu; pojawia się
+     dokładnie tak samo, a wysokość dyktuje sama grafika. */
+  .k16-card__lbl {
+    position: absolute; left: 4px; right: 4px; bottom: 4px;
+    padding: 4px 8px; font-size: 12px;
+  }
+  /* znak poprawności wraca do narożnika kafla — w układzie kolumnowym
+     nie ma już wiersza, na którego końcu mógłby stanąć */
+  .k16-card__mark { position: absolute; top: 5px; right: 5px; margin: 0; }
+  .k16-screen__txt { font-size: 5px; }
+  .k16-feedback { min-height: 64px; margin-top: 12px; }
+}
+
+/* ── DESKTOP ≥ 1100 px — układ kompaktowy ──
+   Cel: pełny, ukończony stan rundy (nagłówek + maszyna + materiał +
+   odpowiedzi + wyjaśnienie + przycisk + nota o modelu) mieści się
+   w 1920×1080 bez scrollowania. Ciachamy przede wszystkim pionowe
+   odstępy, nie maszynę ani karty. Mobile pozostaje bez zmian. */
+@media (min-width: 1100px) {
+  body { padding-bottom: 22px; }
+  .k16-proto-note { padding: 5px 14px; margin-bottom: 0; }
+  /* +26 px dołu: rekompensata za wyjęcie postępu rundy z przepływu —
+     maszyna ma zostać na tej samej wysokości (±4 px), a oddech między
+     instrukcją a sceną pozostaje jak w referencji */
+  .k16-head { padding: 10px 0 30px; }
+  .k16-kicker { margin-bottom: 4px; }
+  .k16-title { font-size: clamp(32px, 2.4vw, 44px); margin-bottom: 8px; }
+  /* podtytuł w jednej linii na szerokich monitorach */
+  .k16-lead { max-width: none; }
+  /* postęp rundy: lewy górny narożnik, równolegle z przyciskiem dźwięku
+     (dźwięk po prawej) — lekki, bez kapsuły, wciąż aktualizowany z JS */
+  .k16-progress {
+    position: absolute;
+    top: 13px; left: 0;
+    margin: 0;
+  }
+  .k16-stage { margin-top: 0; }
+  /* V5: płynna szerokość na średnim desktopie (1100–1599 px) */
+  .k16 { max-width: 1240px; }
+  .k16-machine { max-width: none; width: min(1180px, 94vw); }
+  .k16-answers { margin-top: 6px; }
+  .k16-answers__legend { margin-bottom: 10px; font-size: 20px; }
+  .k16-cards { max-width: 980px; }
+  .k16-card { padding: 12px 12px; gap: 8px; }
+  .k16-card__img { height: clamp(96px, 9.4vw, 140px); }
+  /* wyjaśnienie poprawnej pary w jednej linii przy odpowiedniej szerokości */
+  .k16-feedback { min-height: 28px; margin-top: 8px; max-width: 116ch; }
+  .k16-actions { min-height: 0; margin-top: 6px; }
+  .k16-btn { padding: 10px 26px; font-size: 16px; }
+  /* nota o modelu: jedna linia, delikatny, dopasowany do tekstu panel */
+  .k16-model {
+    margin-top: 10px;
+    padding: 7px 16px;
+    max-width: 96vw;
+    width: fit-content;
+    font-size: 13px;
+  }
+}
+
+/* ── SZEROKI DESKTOP ≥ 1600 px — powiększenie kompozycji ──
+   Po skróceniu tekstów układ zostawał zbity u góry ekranu. Powiększamy
+   rzeczywiste wymiary (bez transform: scale), ~15–18% w górę. */
+@media (min-width: 1600px) {
+  .k16 { max-width: 1460px; }
+  /* V5 jest szersza o taśmy: 1230 px daje centralnemu korpusowi tę samą
+     wysokość, co dawne 980 px przy V3 (980 × 2161/1718 ≈ 1232) */
+  .k16-machine { width: min(1230px, 94vw); max-width: none; }
+  /* większe pytanie i karty — wypełniają dół ekranu jak w referencji */
+  .k16-cards { max-width: 1120px; }
+  .k16-card__img { height: clamp(145px, 8.3vw, 160px); }
+  .k16-title { font-size: clamp(36px, 2.5vw, 48px); }
+  .k16-lead { font-size: 19px; }
+  .k16-answers__legend { font-size: 23px; }
+  .k16-feedback { font-size: 19px; min-height: 24px; margin-top: 6px; }
+  .k16-model { font-size: 14px; margin-top: 6px; }
+  /* budżet wysokości: odstępy oddają miejsce powiększonym kartom */
+  body { padding-bottom: 10px; }
+  .k16-proto-note { padding: 3px 12px; font-size: 12px; }
+  .k16-head { padding: 6px 0 26px; }   /* +24 px rekompensaty za postęp */
+  .k16-answers { margin-top: 4px; }
+  .k16-answers__legend { margin-bottom: 8px; }
+  .k16-card { padding: 10px 12px; }
+  .k16-actions { margin-top: 4px; }
+}
+
+/* ── DESKTOP o niższym oknie (np. 1440×900) — dociśnięcie ──
+   Maszyna 880 px (zamiast wcześniejszych 760 px — tamta wartość była
+   zbyt agresywna); oszczędności szukamy w odstępach, nie w skali. */
+@media (min-width: 1100px) and (max-height: 960px) {
+  body { padding-bottom: 8px; }
+  .k16-proto-note { font-size: 12px; padding: 4px 12px; }
+  .k16-head { padding: 4px 0 24px; }   /* +22 px rekompensaty za postęp */
+  .k16-title { font-size: clamp(30px, 2.1vw, 40px); margin-bottom: 4px; }
+  .k16-lead { font-size: 16px; }
+  /* maszyny celowo NIE zmniejszamy przy niskim oknie — spec dopuszcza
+     niewielkie przewinięcie w 1440×900 zamiast pomniejszania korpusu */
+  .k16-answers { margin-top: 3px; }
+  .k16-answers__legend { margin-bottom: 6px; font-size: 18px; }
+  .k16-card { padding: 8px 10px; gap: 6px; }
+  .k16-card__img { height: clamp(88px, 8vw, 118px); }
+  .k16-feedback { margin-top: 4px; min-height: 24px; font-size: 16px; }
+  .k16-actions { margin-top: 3px; }
+  .k16-btn { padding: 9px 24px; font-size: 15px; }
+  .k16-model { margin-top: 6px; padding: 5px 14px; font-size: 12px; }
+}
+
+/* ── REDUCED MOTION ──
+   Bez potrząsania i obrotów; obiekty przechodzą krótkim fade + scale. */
+@media (prefers-reduced-motion: reduce) {
+  /* bez jazdy po taśmie — obiekty pojawiają się i znikają w miejscu,
+     produkt od razu stoi na zewnętrznej części prawej taśmy */
+  .k16-obj--in  { transform: none; }
+  .k16-obj--out { left: 77.5%; }
+  .k16-obj--in.is-ready, .k16-obj--out.is-out {
+    opacity: 1; transform: none; transition: opacity 0.3s ease;
+  }
+  .k16-obj--in.is-gone {
+    left: 2%; opacity: 0; transform: none; transition: opacity 0.3s ease;
+  }
+  /* pierścień i znak: podczas pracy widoczne, ale STATYCZNE — informacja
+     o etapach zostaje, obrotów brak */
+  .k16-machine[data-state="work"] .k16-ring,
+  .k16-machine[data-state="work"] .k16-recycle-sign { animation: none; }
+  .k16-card.is-wrong { animation: none; }
+  .k16-card:hover:not(:disabled) { transform: none; }
+  .k16-btn:hover { transform: none; }
+  .k16-dots i.is-now { transform: none; box-shadow: 0 0 0 3px rgba(63,163,163,0.3); }
+}
+
+/* ═══ TRYB OSADZENIA W ROZDZIALE TABLICY (?embed=board → html.k16-embed) ═══
+   Wzorzec z K07 (patrz k07.css). Rozdział P08 daje własny tytuł, opis
+   i tło, a moduł oddaje wyłącznie interakcję: maszynę, taśmy, wybór
+   produktu, statusy i kontrolki. Znikają: notka prototypowa (po integracji
+   mówiłaby uczniowi nieprawdę — moduł JEST podłączony i przekazuje literę)
+   oraz zdublowany nagłówek. Tło dokumentu staje się przezroczyste, żeby
+   nie było wrażenia „okna w oknie". Mechanika, pary i assety — bez zmian.
+   Samodzielny podgląd modułu (bez parametru) zostaje jak dotąd. */
+html.k16-embed body {
+  background: none;
+  padding: 0 8px 16px;
+  min-height: 0;
+}
+html.k16-embed .k16-proto-note,
+html.k16-embed .k16-kicker,
+html.k16-embed .k16-title,
+html.k16-embed .k16-lead { display: none; }
+/* zostaje licznik rund i przełącznik dźwięku — w jednym zwartym rzędzie */
+html.k16-embed .k16-head { padding: 6px 0 10px; }

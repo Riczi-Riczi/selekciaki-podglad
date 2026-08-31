@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selekciaki – strażnicy klimatu | SELEKT</title>
+  <meta name="description" content="Interaktywna baza edukacyjna dla szkół z terenu Związku Międzygminnego SELEKT w Czempiniu.">
+  <link rel="stylesheet" href="style.css?v=20260707k">
+  <!-- Intro logo: ukryj elementy hero do startu animacji (bez błysku);
+       przy preferencji ograniczonego ruchu intro się nie odpala -->
+  <script>if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('js-intro');</script>
+</head>
+<body>
+
+  <!-- ========== NAVBAR ========== -->
+  <nav class="navbar" id="navbar">
+    <a href="#hero" class="nav-brand">
+      <span class="nav-brand-text">SELEKT</span>
+    </a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#o-projekcie" class="nav-link">O projekcie</a></li>
+      <li><a href="#edukacja"    class="nav-link">Edukacja</a></li>
+      <li><a href="#segregacja"  class="nav-link">Segregacja</a></li>
+      <li><a href="#kino"        class="nav-link">Kino</a></li>
+      <li><a href="#baza-wiedzy" class="nav-link">Baza wiedzy</a></li>
+      <li><a href="#nauczyciel"  class="nav-link nav-link--cta">Nauczyciel</a></li>
+    </ul>
+    <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- ========== SCROLL DOTS ========== -->
+  <nav class="scroll-nav" id="scroll-nav" aria-label="Nawigacja sekcji">
+    <a href="#hero"        class="scroll-dot scroll-dot--active" data-section="hero"        title="Strona główna"></a>
+    <a href="#o-projekcie" class="scroll-dot"                    data-section="o-projekcie" title="O projekcie"></a>
+    <a href="#edukacja"    class="scroll-dot"                    data-section="edukacja"    title="Edukacja"></a>
+    <a href="#segregacja"  class="scroll-dot"                    data-section="segregacja"  title="Segregacja"></a>
+    <a href="#kino"        class="scroll-dot"                    data-section="kino"        title="Kino"></a>
+    <a href="#baza-wiedzy" class="scroll-dot"                    data-section="baza-wiedzy" title="Baza wiedzy"></a>
+    <a href="#nauczyciel"  class="scroll-dot"                    data-section="nauczyciel"  title="Nauczyciel"></a>
+  </nav>
+
+  <!-- ================================================
+       SEKCJA 1 — HERO (logo centered + duże)
+       ================================================ -->
+  <section class="section section--hero" id="hero">
+
+    <!-- Tło ekologiczne — subtelna głębia -->
+    <div class="hero-bg" aria-hidden="true"></div>
+
+    <div class="hero-center">
+
+      <!-- Grafika 3D "Świat SELEKT" — ponad logo-wrap -->
+      <img class="hero-arc" src="assets/logos/napis_3d_swiat_selekt.webp" alt="Świat SELEKT">
+
+      <div class="logo-wrap">
+        <div class="logo-glow"></div>
+
+        <div class="logo-nav" id="logo-nav">
+
+          <!-- 6 elementów logo jako osobne pliki, stackowane transparentnie -->
+          <!-- pointer-events:none — interakcja przez strefy klikalne poniżej -->
+          <img class="logo-img" id="leaf-1-img" src="assets/logos/leaf_3D-1-01.webp" alt="" draggable="false">
+          <img class="logo-img" id="arm-1-img"  src="assets/logos/arm_3D-2-01.webp"  alt="" draggable="false">
+          <img class="logo-img" id="arm-2-img"  src="assets/logos/arm_3D-3-01.webp"  alt="" draggable="false">
+          <img class="logo-img" id="arm-3-img"  src="assets/logos/arm_3D-1-01.webp"  alt="" draggable="false">
+          <img class="logo-img" id="leaf-2-img" src="assets/logos/leaf_3D-2-01.webp" alt="" draggable="false">
+          <img class="logo-img" id="leaf-3-img" src="assets/logos/leaf_3D-3-01.webp" alt="" draggable="false">
+
+          <!-- Niewidoczne strefy klikalne na wierzchu — data-img wskazuje który obraz animować -->
+          <div class="logo-el" id="leaf-1"
+               role="button" tabindex="0"
+               data-target="nauczyciel"
+               data-label="Strefa nauczyciela"
+               data-img="leaf-1-img"></div>
+
+          <div class="logo-el" id="arm-1"
+               role="button" tabindex="0"
+               data-target="edukacja"
+               data-label="Strefa edukacji"
+               data-img="arm-1-img"></div>
+
+          <div class="logo-el" id="arm-2"
+               role="button" tabindex="0"
+               data-target="segregacja"
+               data-label="Jak segregować?"
+               data-img="arm-2-img"></div>
+
+          <div class="logo-el" id="arm-3"
+               role="button" tabindex="0"
+               data-target="o-projekcie"
+               data-label="O projekcie"
+               data-img="arm-3-img"></div>
+
+          <div class="logo-el" id="leaf-2"
+               role="button" tabindex="0"
+               data-target="kino"
+               data-label="Kino Ekologa"
+               data-img="leaf-2-img"></div>
+
+          <div class="logo-el" id="leaf-3"
+               role="button" tabindex="0"
+               data-target="baza-wiedzy"
+               data-label="Baza wiedzy"
+               data-img="leaf-3-img"></div>
+
+        </div><!-- /.logo-nav -->
+
+        <!-- Etykieta aktywnego elementu -->
+        <div class="logo-label" id="logo-label">
+          <span class="logo-label__text" id="logo-label-text"></span>
+          <span class="logo-label__arrow">→</span>
+        </div>
+
+      </div><!-- /.logo-wrap -->
+
+      <!-- Minimalistyczny tekst pod logo -->
+      <div class="hero-tagline">
+        <p class="hero-tagline__main">Interaktywna baza edukacyjna</p>
+        <p class="hero-tagline__sub">Najedź na znak i wybierz sekcję</p>
+      </div>
+
+    </div><!-- /.hero-center -->
+
+    <div class="hero-scroll">
+      <span class="hero-scroll__arrow">↓</span>
+      <span class="hero-scroll__label">scroll</span>
+    </div>
+
+  </section>
+
+  <!-- ================================================
+       SEKCJA 2 — O PROJEKCIE
+       ================================================ -->
+  <section class="section section--light op-scrolly" id="o-projekcie">
+
+    <!-- Animowany gradient tła: reaguje na scroll (obrót/przesunięcie) i kursor/palec -->
+    <div class="op-aurora" aria-hidden="true"></div>
+
+    <!-- Organiczne kształty gradientowe (SVG, parallax względem scrolla) -->
+    <svg class="op-blob op-blob--1" viewBox="0 0 200 200" aria-hidden="true">
+      <defs><linearGradient id="opg1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#b6d5aa"/><stop offset="100%" stop-color="#f2b127"/>
+      </linearGradient></defs>
+      <path fill="url(#opg1)" d="M43.9,-64.5C57.8,-56.4,70.7,-45.4,77.2,-31.2C83.7,-17,83.8,0.5,78.5,15.5C73.2,30.5,62.5,43,49.6,52.9C36.7,62.8,21.6,70.1,4.9,73.2C-11.8,76.3,-30.1,75.2,-43.6,66.6C-57.1,58,-65.8,41.9,-70.6,25C-75.4,8.1,-76.3,-9.6,-70.6,-24.5C-64.9,-39.4,-52.6,-51.5,-39,-59.7C-25.4,-67.9,-10.4,-72.2,2.7,-76.1C15.8,-80,30,-72.6,43.9,-64.5Z" transform="translate(100 100)"/>
+    </svg>
+    <svg class="op-blob op-blob--2" viewBox="0 0 200 200" aria-hidden="true">
+      <defs><linearGradient id="opg2" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#3e6034"/><stop offset="100%" stop-color="#b6d5aa"/>
+      </linearGradient></defs>
+      <path fill="url(#opg2)" d="M38.1,-55.9C51.2,-49.1,64.6,-40.8,71.5,-28.6C78.4,-16.4,78.8,-0.3,74.4,13.9C70,28.1,60.8,40.4,49.2,49.8C37.6,59.2,23.6,65.7,8.1,70.1C-7.4,74.5,-24.4,76.8,-38.2,70.6C-52,64.4,-62.6,49.7,-68.9,33.7C-75.2,17.7,-77.2,0.4,-73.4,-15C-69.6,-30.4,-60,-43.9,-47.4,-50.9C-34.8,-57.9,-19.2,-58.4,-3.3,-54.1C12.6,-49.8,25,-62.7,38.1,-55.9Z" transform="translate(100 100)"/>
+    </svg>
+
+    <!-- ═══ HISTORIA 1: wielkie otwarcie ═══ -->
+    <div class="op-story op-story--hero">
+      <span class="section-chip">O projekcie</span>
+      <h2 class="op-big">
+        <span class="op-line op-fit">CZYM JEST</span>
+        <span class="op-line op-fit op-line--accent">ŚWIAT SELEKT?</span>
+      </h2>
+      <!-- Lead odsłaniany słowo po słowie w rytmie scrolla, niemal pełna szerokość -->
+      <p class="op-lead" id="op-lead">Praktyczna wiedza o tym, jak dbać o środowisko —
+      od animacji z Selekciakami dla najmłodszych, przez interaktywne e-lekcje,
+      aż po konkretne porady dla dorosłych i seniorów.</p>
+    </div>
+
+    <!-- ═══ HISTORIA 2: ekologiczny kredyt ═══ -->
+    <div class="op-story">
+      <div class="op-split">
+        <div class="op-split__text">
+          <p class="op-line op-fit">ŻYJEMY NA</p>
+          <p class="op-line op-fit op-line--accent">EKOLOGICZNY KREDYT</p>
+          <p class="op-sub op-sub--big">Każdego roku bierzemy od planety więcej, niż jest w stanie
+          odtworzyć — jakbyśmy żyli na coraz większym debecie. Ale to konto można
+          spłacać drobnymi, codziennymi nawykami.</p>
+        </div>
+
+        <!-- Winieta: bank + dokument + eko-liść (motyw „ekologicznego kredytu") -->
+        <figure class="op-art op-art--credit" aria-hidden="true">
+          <svg viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="118" y="34" width="66" height="88" rx="4" fill="#ffffff" stroke="#3e6034" stroke-width="2.5" transform="rotate(7 151 78)"/>
+            <g transform="rotate(7 151 78)" stroke="#3e6034" stroke-width="2" opacity=".45" stroke-linecap="round">
+              <path d="M130 54h44M130 64h44M130 74h32M130 84h44M130 94h28"/>
+            </g>
+            <path d="M18 58 60 34l42 24" fill="#e8f5e2" stroke="#3e6034" stroke-width="3" stroke-linejoin="round"/>
+            <rect x="22" y="58" width="76" height="8" rx="1" fill="#b6d5aa" stroke="#3e6034" stroke-width="3"/>
+            <g fill="#e8f5e2" stroke="#3e6034" stroke-width="3">
+              <rect x="28" y="72" width="9" height="42"/><rect x="45" y="72" width="9" height="42"/>
+              <rect x="62" y="72" width="9" height="42"/><rect x="79" y="72" width="9" height="42"/>
+            </g>
+            <rect x="18" y="114" width="84" height="9" rx="1" fill="#b6d5aa" stroke="#3e6034" stroke-width="3"/>
+            <path d="M60 20c7 2 10 8 8 14-6 1-12-3-12-9 1-2 2-4 4-5Z" fill="#3e6034"/>
+          </svg>
+        </figure>
+      </div>
+
+      <div class="op-stats op-stats--two">
+        <div class="op-stat op-stat--card op-stat--glow">
+          <div class="op-stat__icon">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="32" cy="32" r="22" fill="#e8f5e2" stroke="#3e6034" stroke-width="2.5"/>
+              <path d="M10 32h44M32 10c8 6 8 38 0 44M32 10c-8 6-8 38 0 44M16 20c9 4 23 4 32 0M16 44c9-4 23-4 32 0" stroke="#3e6034" stroke-width="1.8" opacity=".65"/>
+              <path d="M44 40v10M39 45l5 5 5-5" stroke="#f2b127" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="op-stat__body">
+            <span class="op-stat__num"><span class="op-num__val" data-count="7" data-prefix="&lt;">&lt;7</span><span class="op-stat__unit">%</span></span>
+            <span class="op-stat__label">surowców na świecie wraca do ponownego obiegu</span>
+          </div>
+        </div>
+        <div class="op-stat op-stat--card op-stat--glow">
+          <div class="op-stat__icon">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 46h40l-3 8H15l-3-8Z" fill="#b6d5aa" stroke="#3e6034" stroke-width="2.5" stroke-linejoin="round"/>
+              <rect x="18" y="30" width="10" height="16" fill="#e8f5e2" stroke="#3e6034" stroke-width="2.5"/>
+              <rect x="36" y="22" width="10" height="24" fill="#e8f5e2" stroke="#3e6034" stroke-width="2.5"/>
+              <path d="M20 20l6-6 6 5 8-9" stroke="#f2b127" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <path d="M40 10h6v6" stroke="#f2b127" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+          </div>
+          <div class="op-stat__body">
+            <span class="op-stat__num"><span class="op-num__val" data-count="100">100</span><span class="op-stat__unit">mld ton</span></span>
+            <span class="op-stat__label">materiałów wydobywamy rocznie — większość kończy jako śmieć</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ZIEMIA STEROWANA SCROLLEM: sekwencja klatek na canvasie.
+         Scroll = obrót (w obie strony) + zoom: mikro → pełna wysokość
+         ekranu → mikro. Zero własnego zegara — rusza się TYLKO ze scrollem. ═══ -->
+    <div class="op-flood" id="op-flood" aria-hidden="true">
+      <div class="op-flood__stage">
+        <canvas class="op-flood__canvas" id="op-flood-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- ═══ HISTORIA 3: ukryte koszty — liczby w osobnych kartach z ikonami ═══ -->
+    <div class="op-story">
+      <p class="op-line op-fit">UKRYTE KOSZTY</p>
+      <p class="op-line op-fit op-line--accent">CODZIENNYCH RZECZY</p>
+
+      <div class="op-stats op-stats--three">
+        <!-- LAPTOP + kropla wody -->
+        <div class="op-stat op-stat--card">
+          <div class="op-stat__icon op-stat__icon--lg">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="14" y="16" width="36" height="24" rx="3" fill="#e8f5e2" stroke="#3e6034" stroke-width="2.5"/>
+              <path d="M8 48h48l-3 4.2a3 3 0 0 1-2.7 1.6H13.7A3 3 0 0 1 11 52.2L8 48Z" fill="#b6d5aa" stroke="#3e6034" stroke-width="2.5" stroke-linejoin="round"/>
+              <path d="M32 21c3.4 4.5 5.5 7.1 5.5 9.8a5.5 5.5 0 0 1-11 0c0-2.7 2.1-5.3 5.5-9.8Z" fill="#f2b127"/>
+            </svg>
+          </div>
+          <span class="op-stat__num"><span class="op-num__val" data-count="20000">20 000</span> <span class="op-stat__unit">litrów</span></span>
+          <span class="op-stat__label">wody pochłania produkcja jednego laptopa</span>
+        </div>
+
+        <!-- AUTO na drodze -->
+        <div class="op-stat op-stat--card">
+          <div class="op-stat__icon op-stat__icon--lg">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 40c0-2.2 1.4-7.6 3-9l2.4-4.6A5 5 0 0 1 21.9 24h20.2a5 5 0 0 1 4.5 2.4L49 31c1.6 1.4 3 6.8 3 9v3.2a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V40Z" fill="#e8f5e2" stroke="#3e6034" stroke-width="2.5" stroke-linejoin="round"/>
+              <path d="M18 31h28" stroke="#3e6034" stroke-width="2"/>
+              <circle cx="21" cy="45" r="4.2" fill="#3e6034"/><circle cx="43" cy="45" r="4.2" fill="#3e6034"/>
+              <path d="M4 55h8M18 55h11M35 55h6M47 55h13" stroke="#f2b127" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="op-stat__num"><span class="op-num__val" data-count="130">130</span> <span class="op-stat__unit">km autem</span></span>
+          <span class="op-stat__label">tyle CO₂ kosztuje wyprodukowanie jednej pary jeansów</span>
+        </div>
+
+        <!-- PAPIER w recyklingu -->
+        <div class="op-stat op-stat--card">
+          <div class="op-stat__icon op-stat__icon--lg">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="21" y="17" width="21" height="27" rx="2" fill="#e8f5e2" stroke="#3e6034" stroke-width="2.4"/>
+              <path d="M26 25h11M26 30h11M26 35h7" stroke="#3e6034" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+              <path d="M47 25a18 18 0 1 1-7-6.5" fill="none" stroke="#f2b127" stroke-width="3" stroke-linecap="round"/>
+              <path d="M40 11l7 6-6.5 4.5" fill="none" stroke="#f2b127" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <span class="op-stat__num"><span class="op-num__val" data-count="1">1</span> <span class="op-stat__unit">kg papieru</span></span>
+          <span class="op-stat__label">w recyklingu = ok. 1 kg gazów cieplarnianych mniej</span>
+        </div>
+      </div>
+
+      <!-- Motyw emisji: dymiące kominy + wielka strzałka spadku -->
+      <div class="op-emit">
+        <figure class="op-emit__art" aria-hidden="true">
+          <svg viewBox="0 0 240 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 142h180" stroke="#3e6034" stroke-width="2" opacity=".28" stroke-linecap="round"/>
+            <rect x="30" y="88" width="94" height="54" rx="3" fill="#e8f5e2" stroke="#3e6034" stroke-width="3"/>
+            <rect x="46" y="56" width="16" height="34" fill="#b6d5aa" stroke="#3e6034" stroke-width="3"/>
+            <rect x="84" y="44" width="16" height="46" fill="#b6d5aa" stroke="#3e6034" stroke-width="3"/>
+            <path d="M40 128h74M40 116h74M40 104h74" stroke="#3e6034" stroke-width="1.6" opacity=".35"/>
+            <g fill="#c6d0c4">
+              <circle cx="54" cy="46" r="9"/><circle cx="67" cy="37" r="11"/><circle cx="52" cy="33" r="8"/>
+              <circle cx="92" cy="34" r="10"/><circle cx="105" cy="25" r="12.5"/><circle cx="90" cy="21" r="9"/>
+            </g>
+            <g stroke="#e0891c" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <path d="M188 36v58"/>
+              <path d="M167 76l21 24 21-24"/>
+            </g>
+          </svg>
+        </figure>
+        <p class="op-sub op-emit__text">Resztki organiczne w czarnym worku gniją bez tlenu i uwalniają
+        <strong>metan</strong> — gaz cieplarniany dziesiątki razy silniejszy od CO₂.
+        Dlatego segregacja i PSZOK-i realnie <strong>obniżają emisje</strong>
+        i pomagają chłodzić planetę.</p>
+      </div>
+    </div>
+
+    <!-- ═══ HISTORIA 4: GOZ + Olejomaty — czytelny układ 2-kolumnowy ═══ -->
+    <div class="op-story">
+      <p class="op-line op-fit">W NATURZE NIE MA</p>
+      <p class="op-line op-fit op-line--accent">POJĘCIA „ODPAD"</p>
+
+      <div class="op-goz">
+        <div class="op-goz__lead">
+          <!-- Linijki odsłaniane kolejno (góra→dół) — wypełniają wysokość kolumny kart -->
+          <p class="op-gline">To istota <strong>Gospodarki Obiegu Zamkniętego</strong>:</p>
+          <p class="op-gline">naprawiaj zamiast wyrzucać,</p>
+          <p class="op-gline">współdziel zamiast kupować,</p>
+          <p class="op-gline">a posegregowany odpad traktuj jak <strong>cenny surowiec</strong>.</p>
+          <p class="op-gline">Najbardziej namacalny przykład? <strong>Olejomaty</strong>.</p>
+          <p class="op-gline">Zlej zimny tłuszcz do darmowej butelki i oddaj —</p>
+          <p class="op-gline">przez aplikację zbierasz punkty i wymieniasz je</p>
+          <p class="op-gline">na nagrody, np. <strong>sadzonki drzew</strong>.</p>
+        </div>
+
+        <div class="op-goz__stats">
+          <div class="op-stat op-stat--card op-stat--row">
+            <div class="op-stat__icon op-stat__icon--lg">
+              <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M32 10c8.5 12.5 14.5 19.5 14.5 27.5a14.5 14.5 0 0 1-29 0C17.5 29.5 23.5 22.5 32 10Z" fill="#f2b127" stroke="#3e6034" stroke-width="2.5"/>
+                <path d="M24 39c0 5 3 8.5 7.5 9.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".75"/>
+              </svg>
+            </div>
+            <div class="op-stat__body">
+              <span class="op-stat__num"><span class="op-num__val" data-count="42">42</span> <span class="op-stat__unit">mln ton</span></span>
+              <span class="op-stat__label">zużytego oleju posmażalniczego powstaje rocznie na świecie</span>
+            </div>
+          </div>
+
+          <div class="op-stat op-stat--card op-stat--row">
+            <div class="op-stat__icon op-stat__icon--lg">
+              <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M48 12C29 12 17 25 17 43c0 2 .2 3.8.6 5.6C31 39 41 33 51 29 41 37 31 45 23 53c14.5 4 30-6.5 30-27 0-5.6-1.8-10-5-14Z" fill="#b6d5aa" stroke="#3e6034" stroke-width="2.5" stroke-linejoin="round"/>
+                <path d="M49 42v11M43 48l6 6 6-6" stroke="#3e6034" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="op-stat__body">
+              <span class="op-stat__num">do <span class="op-num__val" data-count="90">90</span><span class="op-stat__unit">% mniej</span></span>
+              <span class="op-stat__label">emisji CO₂ daje biodiesel z oleju oddanego do Olejomatu</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ FINAŁ SEKCJI: interaktywna mapa gmin — wyśrodkowana, pełna szerokość ═══ -->
+    <div class="section-inner op-layout op-layout--map">
+
+      <!-- Nagłówek wyśrodkowany nad mapą -->
+      <div class="op-content op-content--center">
+        <div class="op-header op-header--center">
+          <span class="section-chip">Twoja gmina</span>
+          <h2 class="section-title">Sprawdź swoją gminę</h2>
+          <div class="op-text">
+            <p>Najedź kursorem lub przesuń palcem po mapie — każda gmina Związku SELEKT
+            pokaże Ci adres swojego PSZOK-u i najbliższego Olejomatu.</p>
+          </div>
+        </div>
+        <!-- Mobile: treść gminy pod dotykiem — podmienia op-text bez niszczenia jego animacji -->
+        <div class="op-text-gmina" id="op-text-gmina"></div>
+      </div>
+
+      <!-- Interaktywna mapa gmin — pełna szerokość, wyśrodkowana -->
+      <div class="op-map-col op-map-col--wide">
+        <div class="op-map" id="op-map">
+
+          <!-- Bazowa mapa — zawsze widoczna -->
+          <img class="op-map__img" id="op-map-img"
+               src="assets/images/mapa_gmin_ok_3D.webp"
+               alt="Mapa gmin Związku Międzygminnego SELEKT" draggable="false">
+
+          <!-- Warstwy gmin — pełny canvas, hover pixel-detection -->
+          <img class="gmina-img" data-name="Gmina Zbąszyń"               src="assets/images/gminy/zbaszyn_3D.png"        alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Kuślin"                src="assets/images/gminy/kuslin_3D.png"         alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Duszniki"              src="assets/images/gminy/duszniki_3D.png"       alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Kaźmierz"              src="assets/images/gminy/kazmierz_3D.png"       alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Buk"                   src="assets/images/gminy/buk_3D.png"            alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Dopiewo"               src="assets/images/gminy/dopiewo_3D.png"        alt="" draggable="false">
+          <img class="gmina-img" data-name="Miasto Puszczykowo"          src="assets/images/gminy/puszczykowo_3D.png"    alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Komorniki"             src="assets/images/gminy/komorniki_3D.png"      alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Stęszew"               src="assets/images/gminy/steszew_3D.png"        alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Czempiń"               src="assets/images/gminy/czempin_3D.png"        alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Kościan"               src="assets/images/gminy/koscian_3D.png"        alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Dolsk"                 src="assets/images/gminy/dolsk_3D.png"          alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Brodnica"              src="assets/images/gminy/brodnica_3D.png"       alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Granowo"               src="assets/images/gminy/granowo_3D.png"        alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Rakoniewice"           src="assets/images/gminy/rakoniewice_3D.png"    alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Opalenica"             src="assets/images/gminy/opalenica_3D.png"      alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Grodzisk Wielkopolski" src="assets/images/gminy/grodziskWlkp_3D.png"   alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Kamieniec"             src="assets/images/gminy/kamieniec_3D.png"      alt="" draggable="false">
+          <img class="gmina-img" data-name="Gmina Wielichowo"            src="assets/images/gminy/wielichowo_3D.png"     alt="" draggable="false">
+
+          <!-- Tooltip nazwy gminy -->
+          <div class="gmina-tooltip" id="gmina-tooltip"></div>
+
+        </div>
+        <p class="op-map__hint">Najedź na gminę, aby zobaczyć szczegóły</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================================================
+       SEKCJA 3 — EDUKACJA
+       ================================================ -->
+  <section class="section section--dark" id="edukacja">
+
+    <!-- Animowane gradientowe tło — zielenie + nuta bursztynu, powolny dryf -->
+    <div class="edu-aurora" aria-hidden="true"></div>
+
+    <div class="section-inner">
+      <div class="section-header section-header--center">
+        <!-- Jedna linia, rozciągana do niemal pełnej szerokości (fitText) -->
+        <h2 class="section-title section-title--light op-fit" data-fit-cap="140">Wybierz swoją ścieżkę</h2>
+      </div>
+      <div class="c3d-wrap" id="c3d-edukacja">
+        <div class="c3d-stage">
+          <div class="card-3d" data-idx="0">
+            <a href="#kino" class="card-3d__face card-3d__face--image card-3d__face--link">
+              <img src="assets/images/button-selekciaki-przedszkole.webp" alt="Przedszkole i kl. 1–3 — Selekciaki: Filmowe przygody. Kolekcja filmów edukacyjnych z serii Selekciaki i Porady na odpady. Oglądaj." loading="lazy">
+            </a>
+          </div>
+          <div class="card-3d" data-idx="1">
+            <a href="edukacja/klasy-4-5.html" class="card-3d__face card-3d__face--image card-3d__face--link">
+              <img src="assets/images/button-ekodetektyw-4-5.webp" alt="Klasy 4–5 — EKO-DETEKTYWI: Misja tajny agent. Segregacja, Olejomaty, PSZOK — przejdź misję i zdobądź dyplom! Zacznij misję." loading="lazy">
+            </a>
+          </div>
+          <div class="card-3d" data-idx="2">
+            <a href="edukacja/klasy-6-7.html" class="card-3d__face card-3d__face--image card-3d__face--link">
+              <img src="assets/images/button-ekspercigoz-6-7.webp" alt="Klasy 6–7 — Eksperci GOZ: Zamknij krąg. Gospodarka o obiegu zamkniętym — od surowca do produktu i z powrotem. Odkryj GOZ." loading="lazy">
+            </a>
+          </div>
+          <div class="card-3d" data-idx="3">
+            <a href="edukacja/mieszkancy.html" class="card-3d__face card-3d__face--image card-3d__face--link">
+              <img src="assets/images/button-mieszkancy.webp" alt="Mieszkańcy — Segregujesz? Sprawdź co i jak. Krótki przewodnik po zasadach segregacji w gminach SELEKT. Sprawdź." loading="lazy">
+            </a>
+          </div>
+        </div>
+        <div class="c3d-controls c3d-controls--light">
+          <button class="c3d-btn c3d-btn--prev" aria-label="Poprzedni">‹</button>
+          <div class="c3d-dots"></div>
+          <button class="c3d-btn c3d-btn--next" aria-label="Następny">›</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================
+       SEKCJA 4 — SEGREGACJA
+       ================================================ -->
+  <section class="section section--seg" id="segregacja">
+    <div class="section-inner">
+      <div class="section-header section-header--center" id="seg-header">
+        <h2 class="section-title section-title--seg op-fit" data-fit-cap="140" id="seg-title">Jak segregować odpady?</h2>
+        <h2 id="seg-title-blue" class="section-title section-title--seg op-fit seg-title-img seg-title-blue-text" data-fit-cap="140">Jak segregować odpady?</h2>
+      </div>
+      <div class="bin-stage-wrap">
+        <div class="bin-stage" id="bin-stage">
+          <div class="bin-card" data-bin="0" tabindex="0" role="button" aria-label="Papier — pojemnik niebieski">
+            <img src="assets/images/bins/kosz-blue.webp" alt="Pojemnik niebieski — Papier" draggable="false">
+          </div>
+          <div class="bin-card" data-bin="1" tabindex="0" role="button" aria-label="Metale i tworzywa — pojemnik żółty">
+            <img src="assets/images/bins/kosz-yellow.webp" alt="Pojemnik żółty — Metale i tworzywa" draggable="false">
+          </div>
+          <div class="bin-card" data-bin="2" tabindex="0" role="button" aria-label="Szkło — pojemnik zielony">
+            <img src="assets/images/bins/kosz-green.webp" alt="Pojemnik zielony — Szkło" draggable="false">
+          </div>
+          <div class="bin-card" data-bin="3" tabindex="0" role="button" aria-label="Bioodpady — pojemnik brązowy">
+            <img src="assets/images/bins/kosz-brown.webp" alt="Pojemnik brązowy — Bioodpady" draggable="false">
+          </div>
+          <div class="bin-card" data-bin="4" tabindex="0" role="button" aria-label="Zmieszane — pojemnik czarny">
+            <img src="assets/images/bins/kosz-black.webp" alt="Pojemnik czarny — Zmieszane" draggable="false">
+          </div>
+        </div>
+        <div class="bin-hint" id="bin-hint">Kliknij środkowy pojemnik, aby zobaczyć szczegóły</div>
+      </div>
+      <div class="bin-controls" id="bin-controls">
+        <button class="bin-btn bin-btn--prev" id="bin-prev" aria-label="Poprzedni">‹</button>
+        <div class="bin-dots" id="bin-dots"></div>
+        <button class="bin-btn bin-btn--next" id="bin-next" aria-label="Następny">›</button>
+      </div>
+    </div>
+
+    <!-- Panel szczegółów — widoczny po kliknięciu kosza -->
+    <div class="bin-detail" id="bin-detail" aria-hidden="true">
+      <div class="bin-detail__content">
+        <div class="bin-detail__header" id="bin-detail-head"></div>
+        <div class="bin-detail__body">
+          <div class="bin-detail__col">
+            <div class="bin-detail__label">Co tu wyrzucasz:</div>
+            <ul class="bin-detail__ok" id="bin-detail-ok"></ul>
+          </div>
+          <div class="bin-detail__col">
+            <div class="bin-detail__label bin-detail__label--no">Czego NIE wyrzucasz:</div>
+            <ul class="bin-detail__no" id="bin-detail-no"></ul>
+          </div>
+        </div>
+        <div class="bin-detail__back">← kliknij pojemnik, aby wrócić</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================
+       SEKCJA 5 — KINO EKOLOGA
+       ================================================ -->
+  <section class="section section--cinema" id="kino">
+    <div class="section-inner">
+      <div class="section-header section-header--center">
+        <h2 class="section-title section-title--light op-fit" data-fit-cap="140">Filmy, które uczą i bawią</h2>
+      </div>
+      <div class="c3d-wrap" id="c3d-kino">
+        <div class="c3d-stage">
+          <div class="card-3d" data-idx="0">
+            <div class="card-3d__face card-3d__face--film" data-vid="sqi7qHz0-jA">
+              <div class="film-thumb-wrap">
+                <img src="https://img.youtube.com/vi/sqi7qHz0-jA/mqdefault.jpg" alt="Kim są Selekciaki?" loading="lazy">
+                <button class="film-play-btn" data-vid="sqi7qHz0-jA" aria-label="Odtwórz">▶</button>
+                <img class="film-tv-frame" src="assets/images/telewizor_3D_retro_wlasciwy.png" alt="" aria-hidden="true">
+              </div>
+              <div class="film-info">
+                <span class="film-tag">Selekciaki</span>
+                <h3>Kim są Selekciaki?</h3>
+                <p>Poznaj bohaterów – strażników klimatu walczących o czystą planetę!</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-3d" data-idx="1">
+            <div class="card-3d__face card-3d__face--film" data-vid="-AC9Hl5Ru7c">
+              <div class="film-thumb-wrap">
+                <img src="https://img.youtube.com/vi/-AC9Hl5Ru7c/mqdefault.jpg" alt="Papier" loading="lazy">
+                <button class="film-play-btn" data-vid="-AC9Hl5Ru7c" aria-label="Odtwórz">▶</button>
+                <img class="film-tv-frame" src="assets/images/telewizor_3D_retro_wlasciwy.png" alt="" aria-hidden="true">
+              </div>
+              <div class="film-info">
+                <span class="film-tag">Porady na odpady</span>
+                <h3>Papier</h3>
+                <p>Co trafia do niebieskiego kosza? Selekciaki tłumaczą zasady segregacji papieru.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-3d" data-idx="2">
+            <div class="card-3d__face card-3d__face--film" data-vid="y-XDEfwjo2A">
+              <div class="film-thumb-wrap">
+                <img src="https://img.youtube.com/vi/y-XDEfwjo2A/mqdefault.jpg" alt="Metale i tworzywa" loading="lazy">
+                <button class="film-play-btn" data-vid="y-XDEfwjo2A" aria-label="Odtwórz">▶</button>
+                <img class="film-tv-frame" src="assets/images/telewizor_3D_retro_wlasciwy.png" alt="" aria-hidden="true">
+              </div>
+              <div class="film-info">
+                <span class="film-tag">Porady na odpady</span>
+                <h3>Metale i tworzywa</h3>
+                <p>Żółty kosz — plastik, puszki i folie. Jak odróżnić co tam trafia?</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-3d" data-idx="3">
+            <div class="card-3d__face card-3d__face--film" data-vid="qOI6vSXOs4s">
+              <div class="film-thumb-wrap">
+                <img src="https://img.youtube.com/vi/qOI6vSXOs4s/mqdefault.jpg" alt="Szkło" loading="lazy">
+                <button class="film-play-btn" data-vid="qOI6vSXOs4s" aria-label="Odtwórz">▶</button>
+                <img class="film-tv-frame" src="assets/images/telewizor_3D_retro_wlasciwy.png" alt="" aria-hidden="true">
+              </div>
+              <div class="film-info">
+                <span class="film-tag">Porady na odpady</span>
+                <h3>Szkło</h3>
+                <p>Zielony kosz i butelki bez nakrętki. Selekciaki wyjaśniają całą prawdę o szkle.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-3d" data-idx="4">
+            <div class="card-3d__face card-3d__face--film" data-vid="sTzrfdev7NQ">
+              <div class="film-thumb-wrap">
+                <img src="https://img.youtube.com/vi/sTzrfdev7NQ/mqdefault.jpg" alt="Porady na odpady" loading="lazy">
+                <button class="film-play-btn" data-vid="sTzrfdev7NQ" aria-label="Odtwórz">▶</button>
+                <img class="film-tv-frame" src="assets/images/telewizor_3D_retro_wlasciwy.png" alt="" aria-hidden="true">
+              </div>
+              <div class="film-info">
+                <span class="film-tag">Porady na odpady</span>
+                <h3>Bioodpady</h3>
+                <p>Brązowy kosz, kompostowanie i co naprawdę jest bioodpadem — sprawdź zasady.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-3d" data-idx="5">
+            <div class="card-3d__face card-3d__face--film" data-vid="zfW2-ikMIhY">
+              <div class="film-thumb-wrap">
+                <img src="https://img.youtube.com/vi/zfW2-ikMIhY/mqdefault.jpg" alt="Porady na odpady" loading="lazy">
+                <button class="film-play-btn" data-vid="zfW2-ikMIhY" aria-label="Odtwórz">▶</button>
+                <img class="film-tv-frame" src="assets/images/telewizor_3D_retro_wlasciwy.png" alt="" aria-hidden="true">
+              </div>
+              <div class="film-info">
+                <span class="film-tag">Porady na odpady</span>
+                <h3>Odpady zmieszane</h3>
+                <p>Czarny kosz — co tam naprawdę trafia, gdy inne pojemniki są pełne możliwości.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-3d" data-idx="6">
+            <div class="card-3d__face card-3d__face--film" data-vid="xiZpbPQ-s6A">
+              <div class="film-thumb-wrap">
+                <img src="https://img.youtube.com/vi/xiZpbPQ-s6A/mqdefault.jpg" alt="Porady na odpady" loading="lazy">
+                <button class="film-play-btn" data-vid="xiZpbPQ-s6A" aria-label="Odtwórz">▶</button>
+                <img class="film-tv-frame" src="assets/images/telewizor_3D_retro_wlasciwy.png" alt="" aria-hidden="true">
+              </div>
+              <div class="film-info">
+                <span class="film-tag">Porady na odpady</span>
+                <h3>Segregacja — podsumowanie</h3>
+                <p>Pięć koszy, pięć zasad. Powtórz z Selekiciakami co i gdzie wyrzucić.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-3d" data-idx="7">
+            <div class="card-3d__face card-3d__face--film" data-vid="cpxdzEymKYA">
+              <div class="film-thumb-wrap">
+                <img src="https://img.youtube.com/vi/cpxdzEymKYA/mqdefault.jpg" alt="Selekciaki" loading="lazy">
+                <button class="film-play-btn" data-vid="cpxdzEymKYA" aria-label="Odtwórz">▶</button>
+                <img class="film-tv-frame" src="assets/images/telewizor_3D_retro_wlasciwy.png" alt="" aria-hidden="true">
+              </div>
+              <div class="film-info">
+                <span class="film-tag">Selekciaki</span>
+                <h3>Selekciaki w akcji</h3>
+                <p>Kolejna przygoda strażników klimatu — tym razem misja na osiedlu SELEKT.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-3d" data-idx="8">
+            <div class="card-3d__face card-3d__face--film" data-vid="AoCsifrYKGY">
+              <div class="film-thumb-wrap">
+                <img src="https://img.youtube.com/vi/AoCsifrYKGY/mqdefault.jpg" alt="Selekciaki" loading="lazy">
+                <button class="film-play-btn" data-vid="AoCsifrYKGY" aria-label="Odtwórz">▶</button>
+                <img class="film-tv-frame" src="assets/images/telewizor_3D_retro_wlasciwy.png" alt="" aria-hidden="true">
+              </div>
+              <div class="film-info">
+                <span class="film-tag">Selekciaki</span>
+                <h3>Misja czysta planeta</h3>
+                <p>Selekciaki wyruszają na misję ratowania planety — dołącz do drużyny!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="c3d-controls c3d-controls--light">
+          <button class="c3d-btn c3d-btn--prev" aria-label="Poprzedni">‹</button>
+          <div class="c3d-dots"></div>
+          <button class="c3d-btn c3d-btn--next" aria-label="Następny">›</button>
+        </div>
+      </div>
+      <a href="kino.html" class="btn btn--outline-sage">Zobacz wszystkie filmy →</a>
+    </div>
+  </section>
+
+  <!-- ================================================
+       SEKCJA 6 — BAZA WIEDZY
+       ================================================ -->
+  <section class="section section--light" id="baza-wiedzy">
+    <div class="section-inner">
+      <div class="section-header section-header--center" id="know-header">
+        <h2 class="section-title op-fit" data-fit-cap="140">Wszystko co musisz wiedzieć</h2>
+      </div>
+      <p class="know-hint" id="know-hint">Kliknij kafelek, aby dowiedzieć się więcej</p>
+      <div class="know-wrap" id="know-wrap">
+
+        <!-- Karuzela ikon -->
+        <div class="know-carousel-area" id="know-carousel-area">
+          <div class="know-stage" id="know-stage">
+            <div class="know-card" data-idx="0" data-know="olejomaty">
+              <img src="assets/images/Olejomat_3D_v1.png" alt="Olejomaty" loading="lazy">
+              <h3>Olejomaty</h3>
+            </div>
+            <div class="know-card" data-idx="1" data-know="pszok">
+              <img src="assets/images/PSZOK_3D.png" alt="PSZOK" loading="lazy">
+              <h3>PSZOK</h3>
+            </div>
+            <div class="know-card" data-idx="2" data-know="goz">
+              <img src="assets/images/goz_schemat_grafika_3D.png" alt="GOZ" loading="lazy">
+              <h3>GOZ</h3>
+            </div>
+            <div class="know-card" data-idx="3" data-know="klimat">
+              <img src="assets/images/odpady_i_klimat_grafika_3D.png" alt="Odpady a klimat" loading="lazy">
+              <h3>Odpady a klimat</h3>
+            </div>
+          </div>
+          <div class="know-controls" id="know-controls">
+            <button class="c3d-btn c3d-btn--prev know-btn-prev" aria-label="Poprzedni">‹</button>
+            <div class="know-dots" id="know-dots"></div>
+            <button class="c3d-btn c3d-btn--next know-btn-next" aria-label="Następny">›</button>
+          </div>
+        </div>
+
+        <!-- Panel detalu (pojawia się po kliknięciu) -->
+        <div class="know-detail" id="know-detail" aria-hidden="true">
+          <button class="know-detail__back" id="know-detail-back">← Wróć</button>
+          <h3 class="know-detail__title" id="know-detail-title"></h3>
+          <div class="know-detail__body" id="know-detail-body">
+            <p class="know-detail__placeholder">Treść zostanie wkrótce uzupełniona.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================
+       SEKCJA 7 — NAUCZYCIEL
+       ================================================ -->
+  <section class="section section--sage" id="nauczyciel">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-chip section-chip--dark">Strefa nauczyciela</span>
+        <h2 class="section-title section-title--dark">Materiały<br>dydaktyczne</h2>
+      </div>
+      <div class="c3d-wrap" id="c3d-nauczyciel">
+        <div class="c3d-stage">
+          <div class="card-3d" data-idx="0">
+            <a href="nauczyciel.html#scenariusze" class="card-3d__face card-3d__face--teacher card-3d__face--link">
+              <div class="teacher-icon">📋</div>
+              <h3>Scenariusze lekcji</h3>
+              <p>Gotowe plany zajęć z celami operacyjnymi dla klas 4–5 i 6–7. Zgodne z podstawą programową.</p>
+              <span class="teacher-badge">Do pobrania</span>
+            </a>
+          </div>
+          <div class="card-3d" data-idx="1">
+            <a href="nauczyciel.html#karty" class="card-3d__face card-3d__face--teacher card-3d__face--link">
+              <div class="teacher-icon">📝</div>
+              <h3>Karty pracy</h3>
+              <p>Ćwiczenia i zadania do wydruku — gotowe dla uczniów, bez dodatkowego przygotowania.</p>
+              <span class="teacher-badge">PDF / DOCX</span>
+            </a>
+          </div>
+          <div class="card-3d" data-idx="2">
+            <a href="nauczyciel.html#prezentacje" class="card-3d__face card-3d__face--teacher card-3d__face--link">
+              <div class="teacher-icon">📊</div>
+              <h3>Prezentacje</h3>
+              <p>Gotowe slajdy do wyświetlenia w klasie — PowerPoint i Google Slides. Do edycji.</p>
+              <span class="teacher-badge">PPTX / Slides</span>
+            </a>
+          </div>
+        </div>
+        <div class="c3d-controls c3d-controls--dark">
+          <button class="c3d-btn c3d-btn--prev" aria-label="Poprzedni">‹</button>
+          <div class="c3d-dots"></div>
+          <button class="c3d-btn c3d-btn--next" aria-label="Następny">›</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================
+       MODAL VIDEO
+       ================================================ -->
+  <div class="video-modal" id="video-modal" role="dialog" aria-modal="true" aria-label="Odtwarzacz wideo" hidden>
+    <div class="video-modal__overlay" id="modal-overlay"></div>
+    <div class="video-modal__box">
+      <button class="video-modal__close" id="modal-close" aria-label="Zamknij">✕</button>
+      <div class="video-modal__frame" id="modal-frame"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="script.js?v=20260707k"></script>
+
+</body>
+</html>

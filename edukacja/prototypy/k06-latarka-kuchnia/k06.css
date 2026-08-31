@@ -1,0 +1,745 @@
+/* ═══════════════════════════════════════════════════════════════
+   „Przeszukanie kuchni” — gra śledcza e-lekcji SELEKT (klasy 4–5)
+   Klocek K06, Trop 4. Latarka odsłania pięć śladów w ciemnej kuchni.
+
+   Paleta projektu: #02468d  #1b9dd8  #3669ac  #afdaea
+   Światło latarki: #ffe6a8 / #e8a020
+
+   ZASADA WARSTW (kolejność od spodu):
+     .pic            — jasny render kuchni (2 klatki: szafka zamknięta / otwarta)
+     .veil           — ciemność rgba(6,10,20,.93), bez maski
+     .reveal--memory — kopia renderu, maska = odkryte ślady (rośnie w trakcie gry)
+     .reveal--spot   — kopia renderu, maska = ruchoma plama latarki
+   Ciemność zostaje nietknięta, a jasność „przebija się” przez maski. Dzięki temu
+   dziury sumują się same (domyślne kompozytowanie warstw maski), bez
+   `mask-composite`, którego starsze tablety mogą nie znać.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --c-navy:   #02468d;
+  --c-blue:   #1b9dd8;
+  --c-steel:  #3669ac;
+  --c-ice:    #afdaea;
+  --c-text:   #0d2340;
+  --c-white:  #ffffff;
+  --c-light:  #ffe6a8;   /* światło latarki */
+  --c-amber:  #e8a020;
+
+  --dark: rgba(6, 10, 20, 0.93);
+
+  --hud-h: 62px;
+  --radius: 18px;
+  --shadow: 0 10px 30px rgba(2, 70, 141, 0.28);
+
+  /* Sterowane z k06.js (px względem KADRU, nie okna — patrz measure()) */
+  --r: 120px;          /* promień plamy światła */
+  --r-fade: 39px;      /* miękkie zejście krawędzi — skaluje się z promieniem */
+  --mx: 50%;           /* środek plamy */
+  --my: 50%;
+  --scene-w: 100%;
+  --scene-h: auto;
+  --torch-w: 190px;
+  --beam-len: 200px;
+  --beam-h: 240px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  color: var(--c-text);
+  background: #071021;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+.game {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ══════════════ HUD ══════════════ */
+
+.hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  min-height: var(--hud-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+  pointer-events: none;
+  z-index: 20;
+}
+
+.hud-counter {
+  background: rgba(255, 255, 255, 0.94);
+  border: 2px solid var(--c-navy);
+  border-radius: 14px;
+  padding: 7px 14px 8px;
+  box-shadow: var(--shadow);
+}
+.counter {
+  font-size: clamp(0.82rem, 2.5vw, 1rem);
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--c-navy);
+  white-space: nowrap;
+}
+.counter strong { font-size: 1.1em; }
+
+.slots {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  list-style: none;
+}
+.slot {
+  width: 26px;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--c-ice);
+  border: 1.5px solid var(--c-steel);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+.slot.is-found {
+  background: linear-gradient(90deg, var(--c-amber), var(--c-light));
+  border-color: var(--c-amber);
+}
+.slot.is-just-found { transform: scale(1.18); }
+
+.hud-hint {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--c-steel);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--c-navy);
+  box-shadow: 0 4px 12px rgba(2, 70, 141, 0.18);
+  transition: opacity 0.4s ease;
+}
+.hud-hint.is-faded { opacity: 0; visibility: hidden; }
+
+/* ══════════════ KADR ══════════════ */
+
+.stage {
+  position: absolute;
+  inset: var(--hud-h) 0 0 0;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+}
+
+.scene {
+  position: relative;
+  width: var(--scene-w);
+  height: var(--scene-h);
+  aspect-ratio: 43 / 24;          /* proporcja renderu 2752×1536 — zanim policzy k06.js */
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #0a1424;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: none;
+}
+.game[data-state="intro"] .scene,
+.game[data-state="final"] .scene { cursor: default; }
+
+/* ── Warstwy obrazu ── */
+
+.pic { position: absolute; inset: 0; }
+
+.pic-frame {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.pic-frame--open { opacity: 0; transition: opacity 0.4s ease; }
+.scene.is-open .pic-frame--open { opacity: 1; }
+
+.veil {
+  position: absolute;
+  inset: 0;
+  background: var(--dark);
+  transition: opacity 0.7s ease;
+}
+/* finał: cała kuchnia w pełnym świetle */
+.scene.is-lit .veil { opacity: 0; }
+
+.reveal {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+}
+
+.reveal--spot {
+  -webkit-mask-image: radial-gradient(circle at var(--mx) var(--my),
+                        #000 0 var(--r), rgba(0, 0, 0, 0) calc(var(--r) + var(--r-fade)));
+          mask-image: radial-gradient(circle at var(--mx) var(--my),
+                        #000 0 var(--r), rgba(0, 0, 0, 0) calc(var(--r) + var(--r-fade)));
+}
+/* w finale plama przestaje być potrzebna */
+.scene.is-lit .reveal--spot { opacity: 0; transition: opacity 0.5s ease; }
+
+/* maskę listą gradientów buduje k06.js; do pierwszego odkrycia warstwy nie ma */
+.reveal--memory { display: none; }
+.reveal--memory.is-active { display: block; }
+
+/* ── Zastępnik CSS (useImages = false) ── */
+
+.mock { position: absolute; inset: 0; overflow: hidden; }
+.pic-frame--filled ~ .mock { display: none; }   /* są prawdziwe rendery → zastępnik znika */
+
+.mock-wall {
+  position: absolute; inset: 0 0 38% 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 7%),
+    repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 1px, transparent 1px 14%),
+    linear-gradient(180deg, #efe6d8 0%, #e6dccb 100%);
+}
+.mock-cabinets {
+  position: absolute; left: 2%; right: 24%; top: 6%; height: 22%;
+  background: repeating-linear-gradient(90deg, #f4ead6 0 11%, #dfd2b8 11% 11.6%);
+  border-bottom: 3px solid #c9b590;
+  border-radius: 4px;
+}
+.mock-counter {
+  position: absolute; left: 0; right: 22%; top: 61%; height: 3.5%;
+  background: #f6efe2;
+  border-top: 2px solid #fff;
+  box-shadow: 0 3px 8px rgba(0,0,0,.15);
+}
+.mock-fridge {
+  position: absolute; left: 75%; right: 6%; top: 22%; bottom: 4%;
+  background: linear-gradient(180deg, #fdfdfb 0%, #eceae4 100%);
+  border-radius: 8px 8px 4px 4px;
+}
+.mock-doors {
+  position: absolute; left: 0; right: 22%; top: 64.5%; bottom: 3%;
+  background: repeating-linear-gradient(90deg, #f2e7d2 0 13%, #d9cbb0 13% 13.7%);
+  border-radius: 3px;
+  transition: opacity 0.4s ease;
+}
+.mock-bins {
+  position: absolute; left: 50%; width: 23%; top: 67%; height: 16%;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background:
+    linear-gradient(90deg,
+      #e3c531 0 18%, transparent 18% 20%,
+      #3f8f45 20% 38%, transparent 38% 40%,
+      #8a5a3b 40% 58%, transparent 58% 60%,
+      #2f6fb5 60% 78%, transparent 78% 80%,
+      #3b3b40 80% 98%);
+  border-radius: 3px;
+}
+.scene.is-open .mock-doors { opacity: 0; }
+.scene.is-open .mock-bins  { opacity: 1; }
+
+.mock-sink {
+  position: absolute; left: 60%; width: 12%; top: 57.5%; height: 5%;
+  background: #dfdfe0;
+  border-radius: 4px;
+}
+
+.mock-item { position: absolute; transform: translate(-50%, -50%); }
+.mock-item--funnel {
+  left: 57.5%; top: 52.9%;
+  width: 5%; height: 9%;
+  background: #f2cf2b;
+  clip-path: polygon(0 0, 100% 0, 58% 52%, 58% 100%, 42% 100%, 42% 52%);
+}
+.mock-item--bottle {
+  left: 71.5%; top: 52.4%;
+  width: 3.6%; height: 11%;
+  background: #5aa02c;
+  border-radius: 3px 3px 2px 2px;
+}
+.mock-item--poster {
+  left: 82.6%; top: 50.6%;
+  width: 7.5%; height: 19%;
+  background: #fbfdf8;
+  border: 1px solid #cfe0c2;
+  border-radius: 2px;
+  background-image: linear-gradient(180deg, #3f7d3a 0 14%, transparent 14%),
+                    repeating-linear-gradient(90deg, #8fb8d8 22% 30%, transparent 30% 34%);
+}
+.mock-item--battery {
+  left: 83.4%; top: 20.5%;
+  width: 4%; height: 7.5%;
+  background: #cfd4d8;
+  border: 1px solid #9aa3ab;
+  border-radius: 2px;
+}
+
+/* ── Latarka i snop ── */
+
+.beam {
+  position: absolute;
+  left: 0; top: 0;
+  width: var(--beam-len);
+  height: var(--beam-h);
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg,
+      rgba(255, 230, 168, 0.34) 0%,
+      rgba(255, 230, 168, 0.16) 55%,
+      rgba(255, 230, 168, 0) 100%);
+  clip-path: polygon(0 44%, 100% 0, 100% 100%, 0 56%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 26%, #000 74%, transparent 100%);
+          mask-image: linear-gradient(180deg, transparent 0, #000 26%, #000 74%, transparent 100%);
+  pointer-events: none;
+  z-index: 6;
+}
+
+.torch {
+  position: absolute;
+  left: 0; top: 0;
+  width: var(--torch-w);
+  pointer-events: none;
+  z-index: 7;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.55));
+}
+.torch img, .torch svg { display: block; width: 100%; height: auto; }
+.torch img { pointer-events: none; }
+.torch.has-image .torch-mock { display: none; }
+
+/* Latarka i jej plama pojawiają się dopiero po włączeniu; w finale
+   ustępują miejsca pełnemu światłu. */
+.game[data-state="intro"] .torch,
+.game[data-state="intro"] .beam,
+.game[data-state="intro"] .reveal--spot,
+.game[data-state="final"] .torch,
+.game[data-state="final"] .beam {
+  opacity: 0;
+}
+.torch, .beam { transition: opacity 0.4s ease; }
+
+/* ── Pinezki, podpowiedzi, wskaźnik przytrzymania ── */
+
+.marks { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+
+/* Rozmiary skalują się z kadrem (k06.js ustawia zmienne w measure), inaczej
+   pinezka zasłaniałaby pół kuchni na telefonie. */
+.mark {
+  position: absolute;
+  width: var(--mark-size, 30px);
+  height: var(--mark-size, 30px);
+  margin: calc(var(--mark-size, 30px) / -2) 0 0 calc(var(--mark-size, 30px) / -2);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.mark.is-found {
+  opacity: 1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='%237a4a05' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 56% no-repeat,
+    radial-gradient(circle at 35% 30%, var(--c-light) 0%, var(--c-amber) 72%);
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 2px var(--c-amber), 0 6px 16px rgba(0, 0, 0, 0.45);
+  animation: mark-pop 0.45s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+@keyframes mark-pop {
+  0%   { transform: scale(0.2); }
+  60%  { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
+/* delikatny puls po 45 s bez postępu — nie zdradza szczegółu, tylko okolicę */
+.mark.is-hinted {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(255, 230, 168, 0.55) 0%, rgba(255, 230, 168, 0) 70%);
+  border: 0;
+  box-shadow: none;
+  width: var(--hint-size, 96px);
+  height: var(--hint-size, 96px);
+  margin: calc(var(--hint-size, 96px) / -2) 0 0 calc(var(--hint-size, 96px) / -2);
+  animation: hint-pulse 2.4s ease-in-out infinite;
+}
+@keyframes hint-pulse {
+  0%, 100% { opacity: 0.18; transform: scale(0.86); }
+  50%      { opacity: 0.55; transform: scale(1.06); }
+}
+
+.dwell {
+  position: absolute;
+  width: var(--dwell-size, 54px);
+  height: var(--dwell-size, 54px);
+  margin: calc(var(--dwell-size, 54px) / -2) 0 0 calc(var(--dwell-size, 54px) / -2);
+  border-radius: 50%;
+  border: 3px solid rgba(255, 230, 168, 0.85);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: conic-gradient(rgba(255, 230, 168, 0.5) calc(var(--p, 0) * 360deg), rgba(0, 0, 0, 0) 0);
+}
+.dwell.is-on { opacity: 1; }
+
+/* ── Klapka szafki ── */
+
+.door {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: inherit;
+  font-size: clamp(0.78rem, 2.2vw, 0.94rem);
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--c-navy);
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid var(--c-amber);
+  border-radius: 999px;
+  padding: 8px 15px;
+  min-height: 40px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  animation: door-in 0.3s ease both;
+}
+.door[hidden] { display: none; }
+.door-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--c-amber);
+  animation: door-dot 1.4s ease-in-out infinite;
+}
+@keyframes door-in { from { opacity: 0; transform: translate(-50%, -40%); } }
+@keyframes door-dot { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+/* ── Karta odkrytego śladu ── */
+
+/* Pozycję i szerokość ustawia k06.js (layoutCard) — zależnie od tego, czy
+   karta mieści się w kadrze, czy musi zejść pod niego. */
+.card {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: min(90%, 520px);
+  max-height: 44vh;
+  overflow-y: auto;
+  z-index: 12;
+  background: rgba(255, 255, 255, 0.97);
+  border-left: 7px solid var(--c-amber);
+  border-radius: 12px;
+  padding: 12px 16px 13px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  text-align: left;
+  animation: card-in 0.32s ease both;
+}
+.card[hidden] { display: none; }
+@keyframes card-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(14px); }
+}
+.card-kicker {
+  font-size: clamp(0.82rem, 2.4vw, 0.95rem);
+  font-weight: 900;
+  color: var(--c-navy);
+  margin-bottom: 3px;
+}
+.card-text {
+  font-size: clamp(0.85rem, 2.6vw, 1rem);
+  line-height: 1.45;
+}
+.card-close {
+  margin-top: 9px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--c-navy);
+  background: var(--c-ice);
+  border: 2px solid var(--c-steel);
+  border-radius: 999px;
+  padding: 7px 16px;
+  min-height: 38px;
+  cursor: pointer;
+}
+.card-close:hover { background: #c9e6f2; }
+
+/* ── Tryb debug (?debug=1) ── */
+
+.debug { position: absolute; inset: 0; z-index: 9; pointer-events: none; }
+.debug[hidden] { display: none; }
+.debug-spot {
+  position: absolute;
+  border: 2px dashed rgba(255, 120, 120, 0.95);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 120, 120, 0.1);
+}
+.debug-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(200, 40, 40, 0.9);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+.debug-readout {
+  position: absolute;
+  left: 8px; top: 8px;
+  font: 700 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  padding: 5px 8px;
+  white-space: pre;
+}
+
+/* ══════════════ DRUGI TOR: ŚLADY JAKO PRZYCISKI ══════════════ */
+
+.traces { position: absolute; z-index: 25; left: 0; right: 0; bottom: 0; pointer-events: none; }
+.traces ul { list-style: none; }
+.traces button {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  font: inherit;
+  border: 0;
+  pointer-events: auto;
+}
+/* przy fokusie przycisk staje się widoczny także dla osoby patrzącej */
+.traces button:focus-visible,
+.traces button:focus {
+  position: static;
+  display: block;
+  width: auto; height: auto;
+  clip: auto;
+  margin: 0 auto 10px;
+  max-width: min(92vw, 520px);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--c-navy);
+  background: var(--c-white);
+  border: 3px solid var(--c-amber);
+  border-radius: 999px;
+  padding: 11px 18px;
+  min-height: 44px;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+.traces button[disabled]:focus,
+.traces button[disabled]:focus-visible {
+  border-color: var(--c-steel);
+  background: var(--c-ice);
+  cursor: default;
+}
+
+/* ══════════════ NAKŁADKI ══════════════ */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(2, 24, 48, 0.72);
+  backdrop-filter: blur(3px);
+  overflow-y: auto;
+}
+.overlay.is-hidden { display: none; }
+.game[data-state="search"] #screenIntro { display: none; }
+
+.panel {
+  width: min(94vw, 470px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  background: var(--c-white);
+  border-radius: var(--radius);
+  border-top: 8px solid var(--c-blue);
+  box-shadow: 0 24px 60px rgba(0, 12, 30, 0.55);
+  padding: clamp(18px, 4.2vw, 32px);
+  text-align: center;
+  animation: panel-in 0.35s ease both;
+}
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+}
+.overlay--final .panel { border-top-color: var(--c-amber); }
+
+.panel-title {
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  font-weight: 900;
+  color: var(--c-navy);
+  margin-bottom: 12px;
+  line-height: 1.15;
+}
+.panel-text {
+  font-size: clamp(0.92rem, 3vw, 1.05rem);
+  line-height: 1.55;
+  margin-bottom: 13px;
+}
+.panel-text--verdict {
+  font-weight: 700;
+  color: var(--c-navy);
+  background: #fff6e4;
+  border-left: 5px solid var(--c-amber);
+  border-radius: 0 10px 10px 0;
+  padding: 11px 14px;
+  text-align: left;
+}
+.panel-text--label { font-weight: 700; color: var(--c-steel); margin-bottom: 4px; }
+
+.panel-info {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+  background: var(--c-ice);
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin-bottom: 18px;
+  font-size: clamp(0.84rem, 2.8vw, 0.96rem);
+  line-height: 1.5;
+}
+.panel-info-icon { flex: 0 0 22px; width: 22px; height: 22px; color: var(--c-navy); margin-top: 2px; }
+.panel-hint { margin-top: 13px; font-size: 0.83rem; color: #4d647e; }
+
+.btn {
+  font: inherit;
+  font-size: clamp(0.98rem, 3.2vw, 1.12rem);
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 13px 28px;
+  min-height: 52px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn--primary {
+  background: linear-gradient(180deg, var(--c-blue) 0%, var(--c-navy) 100%);
+  color: var(--c-white);
+  box-shadow: 0 8px 20px rgba(2, 70, 141, 0.45);
+}
+.btn--primary:hover { transform: translateY(-2px); }
+.btn--primary:active { transform: translateY(0); }
+.btn:focus-visible,
+.card-close:focus-visible,
+.door:focus-visible {
+  outline: 4px solid var(--c-amber);
+  outline-offset: 3px;
+}
+
+.reward-letter {
+  width: clamp(92px, 23vw, 132px);
+  height: clamp(92px, 23vw, 132px);
+  margin: 6px auto 13px;
+  display: grid;
+  place-items: center;
+  font-size: clamp(3.2rem, 11vw, 5rem);
+  font-weight: 900;
+  color: var(--c-navy);
+  background: radial-gradient(circle at 32% 28%, var(--c-light) 0%, var(--c-amber) 70%);
+  border: 6px solid var(--c-white);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--c-amber), 0 14px 34px rgba(184, 122, 18, 0.5);
+  animation: letter-pop 0.9s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes letter-pop {
+  0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* ══════════════ PODPOWIEDŹ O OBROCIE (wąski ekran w pionie) ══════════════ */
+
+.rotate-tip {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  z-index: 22;
+  max-width: 92vw;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  color: #fff;
+  background: rgba(20, 30, 42, 0.9);
+  border-radius: 999px;
+  pointer-events: none;
+}
+.rotate-tip[hidden] { display: none; }
+
+/* ══════════════ EKRANY WĄSKIE I NISKIE ══════════════ */
+
+/* Telefon w pionie: kadr 16:9 jest niski, więc zamiast pływać na środku
+   pustego ekranu siada tuż pod HUD. Dół zostaje dla podpowiedzi o obrocie
+   i przycisków listy śladów. */
+@media (max-width: 560px) and (orientation: portrait) {
+  .stage { align-items: start; padding-top: 10px; }
+}
+
+@media (max-width: 560px) {
+  :root { --hud-h: 96px; }
+  .hud { flex-wrap: wrap; row-gap: 6px; }
+  .hud-counter { flex: 1 1 100%; padding: 6px 12px 7px; }
+  .hud-hint {
+    flex: 1 1 100%;
+    text-align: center;
+    font-size: 0.72rem;
+    padding: 4px 10px;
+  }
+  .slot { width: 22px; height: 9px; }
+  .card { width: min(96%, 520px); padding: 10px 13px 11px; }
+  .card-close { margin-top: 7px; }
+}
+
+@media (max-height: 460px) {
+  :root { --hud-h: 54px; }
+  .panel { padding: 13px 17px; }
+  .panel-title { margin-bottom: 6px; }
+  .panel-text { margin-bottom: 8px; }
+  .panel-info { margin-bottom: 10px; }
+  .reward-letter { width: 76px; height: 76px; font-size: 2.8rem; margin: 3px auto 7px; }
+}
+
+/* Tryb tablicy: lekcja daje własną ramkę, więc gra zdejmuje swoje zaokrąglenie i cień */
+.k06-embed .scene { border-radius: 0; box-shadow: none; }
+.k06-embed .stage { padding: 0; }
+
+/* ══════════════ DOSTĘPNOŚĆ: ograniczenie ruchu ══════════════
+   Wyłącza puls i ozdobne animacje, skraca przejścia. Sterowanie
+   (krok klawiatury, rozpędzanie) to nie animacja — zostaje bez zmian. */
+
+@media (prefers-reduced-motion: reduce) {
+  .mark.is-hinted { animation: none; opacity: 0.34; }
+  .mark.is-found { animation: none; }
+  .door { animation: none; }
+  .door-dot { animation: none; opacity: 1; }
+  .card { animation: none; }
+  .panel { animation: none; }
+  .reward-letter { animation: none; }
+  .pic-frame--open { transition-duration: 0.15s; }
+  .veil { transition-duration: 0.2s; }
+  .slot { transition: none; }
+  .btn--primary:hover { transform: none; }
+}

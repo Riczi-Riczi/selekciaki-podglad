@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Eko-detektyw: Tajemnica zakorkowanego miasta — struktura integracyjna K01–K18 | SELEKT</title>
+<meta name="description" content="Równoległa strona integracyjna e-lekcji dla klas 4–5. Pełna kolejność klocków K01–K18 do przeglądu kompozycji przed podmianą produkcyjną.">
+<link rel="stylesheet" href="lekcja-4-5-integracja.css?v=79">
+
+<!-- Tablica śledztwa jest wariantem DOMYŚLNYM. Skrypt startowy stoi na końcu
+     <body>, więc bez tej blokady stara lekcja zdążyłaby mignąć przed jej
+     ukryciem. Rozstrzygnięcie trybu jest w kodzie strony, nie w przekierowaniu
+     serwera — `serve` gubi query string przy 301 z adresu z rozszerzeniem. -->
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var h = (location.hash || "").toLowerCase();
+  if (q.get("legacy") === "1" || h === "#legacy") return;
+  document.documentElement.className += " bd-booting";
+  var s = document.createElement("style");
+  s.id = "bd-antiflash";
+  s.textContent = ".bd-booting body{visibility:hidden}";
+  document.head.appendChild(s);
+  /* gdyby silnik tablicy nie wystartował (błąd sieci, zablokowany JS),
+     strona po chwili i tak pokazuje starą lekcję zamiast pustego ekranu */
+  setTimeout(function () {
+    var st = document.getElementById("bd-antiflash");
+    if (st && !document.body.classList.contains("bd-on")) st.remove();
+  }, 1200);
+})();
+</script>
+</head>
+<body>
+
+<a class="skip-link" href="#k01">Przejdź do treści lekcji</a>
+
+<!-- ═══════════ STAŁY INTERFEJS ═══════════ -->
+<header class="hud">
+  <a class="hud__exit" href="klasy-4-5.html">← <span>Wyjdź z lekcji</span></a>
+  <nav class="hud__chapters" aria-label="Rozdziały lekcji">
+    <a class="hud__chapter" href="#k01">Start</a>
+    <a class="hud__chapter" href="#k04">Olej</a>
+    <a class="hud__chapter" href="#k13">PSZOK</a>
+    <a class="hud__chapter" href="#k16">Drugie życie</a>
+    <a class="hud__chapter" href="#k17">Finał</a>
+  </nav>
+</header>
+<div class="scrollmeter" aria-hidden="true"><span id="scroll-bar"></span></div>
+
+<p class="preview-flag" id="preview-flag" hidden>
+  TRYB PODGLĄDU — brakujące elementy można zasymulować
+  <button type="button" id="preview-reset" hidden>Reset postępu</button>
+</p>
+
+<!-- POSTĘP ŚLEDZTWA -->
+<section class="progress" id="progress-panel" aria-labelledby="progress-title">
+  <div class="progress__body">
+    <h2 class="progress__title" id="progress-title">Postęp śledztwa</h2>
+    <ol class="progress__slots">
+      <li class="prog__slot" data-letter="P"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 4" hidden><span class="prog__check" hidden>✓</span></li>
+      <li class="prog__slot" data-letter="S"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 6" hidden><span class="prog__check" hidden>✓</span></li>
+      <li class="prog__slot" data-letter="Z"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 8" hidden><span class="prog__check" hidden>✓</span></li>
+      <li class="prog__slot" data-letter="O"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 15" hidden><span class="prog__check" hidden>✓</span></li>
+      <li class="prog__slot" data-letter="K"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 16" hidden><span class="prog__check" hidden>✓</span></li>
+    </ol>
+    <p class="progress__counter" id="progress-counter">Ukończono 0 z 5 punktów</p>
+    <p class="progress__msg" id="progress-msg"></p>
+  </div>
+  <button type="button" class="progress__toggle" id="progress-toggle" aria-expanded="false"
+          aria-controls="progress-panel">Postęp śledztwa</button>
+</section>
+
+<!-- GLOBALNY PANEL AUDIO -->
+<aside class="audio-panel" id="audio-panel" aria-labelledby="audio-panel-title">
+  <div class="audio-panel__body">
+    <h2 class="audio-panel__title" id="audio-panel-title">Audio lekcji</h2>
+    <p class="audio-panel__scene">Scena: <span id="audio-current-title">—</span></p>
+    <p class="audio-panel__status" id="audio-status" role="status" aria-live="polite"></p>
+    <div class="audio-panel__row">
+      <button type="button" class="ap__btn" id="audio-play" aria-pressed="false">
+        <span class="ap__btn-label">Odtwórz</span></button>
+      <button type="button" class="ap__btn" id="audio-restart">Od początku</button>
+    </div>
+    <!-- osobna nazwa grupy: panel i K03 to dwie niezależne grupy radiowe
+         opisujące to samo ustawienie; JS trzyma je w zgodzie -->
+    <fieldset class="audio-modes">
+      <legend>Tryb</legend>
+      <label class="audio-mode"><input type="radio" name="audio-mode-panel" value="read" checked>
+        <span class="audio-mode__name">Czytam</span></label>
+      <label class="audio-mode"><input type="radio" name="audio-mode-panel" value="both">
+        <span class="audio-mode__name">Czytam i słucham</span></label>
+    </fieldset>
+  </div>
+  <button type="button" class="audio-panel__toggle" id="audio-panel-toggle" aria-expanded="false"
+          aria-controls="audio-panel">
+    <span aria-hidden="true">🔊</span> Audio<span class="ap__scene" id="audio-toggle-scene"></span>
+  </button>
+</aside>
+
+<p class="sr-only" id="lk-live" role="status" aria-live="polite"></p>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     K01 — EKRAN PROJEKTU
+     ═══════════════════════════════════════════════════════════ -->
+<section class="scene scene--hero" id="k01" data-tone="dark" data-block="k01"
+         aria-labelledby="k01-title"
+         data-audio-src="../assets/audio/lekcja45/01-wprowadzenie/01-wprowadzenie-tajemnica.mp3"
+         data-audio-title="Tajemnica zakorkowanego miasta">
+  <div class="ph ph--wide" data-ph="k01-tlo" style="max-width:900px;margin-bottom:32px">
+    <span class="ph__label">DO UZUPEŁNIENIA</span><span class="ph__meta"></span>
+  </div>
+  <p class="kicker">E-lekcja dla klas 4–5</p>
+  <h1 class="lead" id="k01-title">Eko-detektyw: Tajemnica&nbsp;zakorkowanego&nbsp;miasta</h1>
+  <p class="body-text">W centrum miasta pojawił się zator w kanalizacji, wskutek czego ruch
+    został sparaliżowany, a samochody utknęły w wielkim korku. Co zatkało rury i jak do tego
+    doszło? Sprawdź tropy i zostań eko-detektywem.</p>
+  <div class="lk-footer__logos" style="margin:18px 0 10px">
+    <img src="../assets/logos/Logo_Selekt_2026_full%20logo.svg"
+         alt="Logo Związku Międzygminnego SELEKT" width="220" height="56">
+    <img src="../assets/logos/wfosigw-poznan-logo.webp"
+         alt="Logo Wojewódzkiego Funduszu Ochrony Środowiska i Gospodarki Wodnej w Poznaniu"
+         width="180" height="56">
+  </div>
+  <p class="note" style="max-width:52ch;margin-inline:auto">
+    Projekt dofinansowano ze środków Wojewódzkiego Funduszu Ochrony Środowiska
+    i&nbsp;Gospodarki Wodnej w&nbsp;Poznaniu.
+  </p>
+  <a class="btn" href="#k02">Zobacz początek sprawy</a>
+</section>
+
+<div class="trail" data-tone="dark" aria-hidden="true"><span class="trail__label">Trop 1</span></div>
+
+<!-- ═══════════ K02 — FILM OTWIERAJĄCY ═══════════ -->
+<section class="scene" id="k02" data-tone="dark" data-block="k02" aria-labelledby="k02-title"
+         data-audio-src="../assets/audio/lekcja45/02-poczatek-sprawy/01-wstep.mp3"
+         data-audio-title="Początek sprawy">
+  <h2 class="lead" id="k02-title">Początek sprawy</h2>
+  <p class="body-text">Obejrzyj uważnie nagranie. Każdy szczegół może okazać się ważny.</p>
+
+  <div class="ph ph--video" data-ph="k02-film" data-stops-audio style="max-width:960px;margin:26px 0">
+    <span class="ph__label">DO UZUPEŁNIENIA</span>
+    <span class="ph__meta">K02 • film otwierający YouTube</span>
+  </div>
+
+  <!-- Napisy i transkrypcja są dostępne bezpośrednio w odtwarzaczu YouTube —
+       osobna transkrypcja tekstowa na stronie została celowo usunięta. -->
+
+  <p><button type="button" class="btn" id="k02-seen">Film obejrzany — przejdź do odprawy</button></p>
+</section>
+
+<!-- ═══════════ K03 — ODPRAWA ═══════════ -->
+<section class="scene" id="k03" data-tone="navy" data-block="k03" aria-labelledby="k03-title"
+         data-audio-src="../assets/audio/lekcja45/02-poczatek-sprawy/02-odprawa.mp3"
+         data-audio-title="Sprawa czeka na rozwiązanie">
+  <div class="scene__grid scene__grid--2">
+    <div>
+      <p class="kicker">Odprawa</p>
+      <h2 class="lead" id="k03-title">Sprawa czeka na rozwiązanie</h2>
+      <p class="body-text">Nagranie pokazało tylko fragment większego problemu. To za mało, aby
+        wskazać, kto za niego odpowiada. Wciel się w&nbsp;rolę eko-detektywa, przejdź wszystkie
+        etapy śledztwa, sprawdź dowody i&nbsp;odblokuj finałowy dowód w&nbsp;sprawie.</p>
+      <p class="body-text">Przed Tobą pięć punktów kontrolnych.</p>
+
+
+      <a class="btn" href="#k04">Rozpocznij śledztwo</a>
+    </div>
+    <div class="ph" data-ph="k03-teczka">
+      <span class="ph__label">DO UZUPEŁNIENIA</span><span class="ph__meta"></span>
+    </div>
+  </div>
+</section>
+
+<div class="trail" data-tone="navy" aria-hidden="true"><span class="trail__label">Rozdział: olej</span></div>
+
+<!-- ═══════════ K04 — GRA 1: AGENT ŚLEDCZY W KANALIZACJI ═══════════ -->
+<section class="scene" id="k04" data-tone="navy" data-block="k04" aria-labelledby="k04-title"
+         data-audio-src="../assets/audio/lekcja45/03-punkt-kontrolny/03-punkt-kontrolny-01.mp3"
+         data-audio-title="Pierwszy trop prowadzi pod ziemię">
+  <p class="kicker">Punkt kontrolny</p>
+  <h2 class="lead" id="k04-title">Pierwszy trop prowadzi pod ziemię</h2>
+  <p class="body-text"><strong>Agent śledczy w kanalizacji.</strong>
+    W&nbsp;kanalizacji powstał tłusty zator, który zatrzymał przepływ wody.
+    Pomóż odnaleźć drogę do miejsca blokady.</p>
+  <p class="body-text">Wyznacz właściwą drogę przez kanalizację. Gdy dotrzesz do miejsca
+    blokady, zaliczysz pierwszy punkt śledztwa.</p>
+
+  <!-- Gra Genially dostarczona przez użytkownika (05.08.2026).
+       Genially nie wysyła zdarzenia ukończenia do strony — zgodnie z dokumentem 09
+       ekran końcowy gry pokazuje literę P, a uczeń wpisuje ją w polu postępu;
+       pole otwiera się po załadowaniu gry. -->
+  <div class="genially" data-genially="k04" data-letter="P" data-stops-audio
+       style="max-width:900px;margin:22px 0">
+    <div class="genially__box">
+      <iframe title="Gra Genially: Agent śledczy w kanalizacji"
+              data-src="https://view.genially.com/6a60646fa4b38d2b26bd3b8a"
+              frameborder="0" allowfullscreen scrolling="yes"></iframe>
+    </div>
+    <p class="genially__status" role="status" aria-live="polite"></p>
+  </div>
+  <p class="note">Po ukończeniu gry zobaczysz zdobytą literę — wpisz ją w&nbsp;pierwszym polu
+    postępu śledztwa. Link awaryjny:
+    <a href="https://view.genially.com/6a60646fa4b38d2b26bd3b8a" target="_blank"
+       rel="noopener">otwórz grę w nowej karcie ↗</a></p>
+</section>
+
+<!-- ═══════════ K05 — DOWÓD NR 1: ZLEW I RURY ═══════════ -->
+<!-- Etap A2: nagranie dowodu nr 1 opowiada CAŁĄ scenę (31 s). Zastąpiło trzy
+     nagrania krokowe (`01-rura-drozna`, `02-olej-w-odplywie`, `03-powstaje-zator`),
+     których użytkownik nie nagrał — pliki nie istnieją, więc atrybuty przy
+     krokach zostały zdjęte, żeby nie generować 404. Kroki nadal sterują
+     klatkami sekwencji; zmienia się tylko to, że mówi jeden głos do całości. -->
+<section class="scene seq" id="k05-seq" data-tone="deep" data-block="k05" aria-labelledby="k05-title"
+         data-audio-src="../assets/audio/lekcja45/03-punkt-kontrolny/03-dowod-zlew-02.mp3"
+         data-audio-title="Dowód nr 1: Olej nie znika">
+  <div class="seq__stage">
+    <div>
+      <p class="kicker">Klocek 5 • dowód</p>
+      <h2 class="lead" id="k05-title">Dowód nr 1: Olej nie znika</h2>
+      <p class="body-text">Zator został odnaleziony. Teraz sprawdźmy, jak olej mógł zablokować
+        drogę wody.</p>
+      <img class="seq__frame" alt="Sekwencja: rura, olej i powstawanie zatoru" width="960" height="526">
+      <div class="seq__steps">
+        <p class="seq__step is-on" data-from="0" data-to="0.3" data-audio-manual>
+          Rura jest drożna. Woda może swobodnie odpływać.</p>
+        <p class="seq__step" data-from="0.3" data-to="0.72" data-audio-manual>
+          Olej spływa do syfonu, ale nie zachowuje się tak jak woda. Zaczyna osadzać się w&nbsp;instalacji.</p>
+        <p class="seq__step" data-from="0.72" data-to="1.01" data-audio-manual>
+          Olej stygnie, gęstnieje i&nbsp;zatrzymuje kolejne resztki. Wolnego miejsca jest coraz mniej,
+          aż przepływ zostaje ograniczony.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" data-tone="deep" aria-hidden="false">
+  <p class="note" style="max-width:56ch">Taki zator nie musi powstać od razu. Narasta
+    stopniowo — warstwa po warstwie.</p>
+  <p class="body-text" style="margin-top:18px">Wiemy już, jak mógł powstać zator. Nadal nie wiemy
+    jednak, kto wylał olej. Czas sprawdzić kuchenne poszlaki.</p>
+  <p><a class="btn" href="#k06">Przeszukaj kuchnię</a></p>
+</section>
+
+<!-- ═══════════ K06 — GRA 2: PRZESZUKANIE KUCHNI ═══════════ -->
+<section class="scene" id="k06" data-tone="navy" data-block="k06" aria-labelledby="k06-title"
+         data-audio-src="../assets/audio/lekcja45/04-slad-do-kuchni/04-slad-do-kuchni-01.mp3"
+         data-audio-title="Ślad prowadzi do kuchni">
+  <p class="kicker">Klocek 6 • punkt kontrolny</p>
+  <h2 class="lead" id="k06-title">Ślad prowadzi do kuchni</h2>
+  <p class="body-text">Przeszukaj kuchnię i&nbsp;znajdź pięć poszlak. Komplet dowodów pokaże,
+    czy domownicy rzeczywiście wylewają olej do zlewu.</p>
+
+  <!-- Etap A5: gra „Latarka w kuchni" zastąpiła materiał Genially. Genially był
+       cross-origin i nigdy nie mówił stronie, że uczeń skończył — dlatego klocek
+       zaliczało się ręcznym przyciskiem, a litera S otwierała się już przy
+       ZAŁADOWANIU gry. Prototyp emituje `k06:completed` (kontrakt w jego README),
+       więc litera S należy się dopiero po odnalezieniu pięciu śladów. Ramka
+       ładuje się leniwie i wypełnia się sama (gra jest `position:fixed`). -->
+  <div class="frame" data-frame="k06" data-stops-audio style="max-width:960px;margin:22px 0">
+    <div class="frame__box">
+      <iframe title="Gra: Przeszukanie kuchni — latarka"
+              data-src="prototypy/k06-latarka-kuchnia/" loading="lazy"
+              allow="fullscreen" scrolling="no"></iframe>
+    </div>
+  </div>
+  <p class="frame__status" role="status" aria-live="polite"></p>
+  <p class="note">Po odnalezieniu wszystkich pięciu śladów zobaczysz zdobytą literę — wpisz ją
+    w&nbsp;drugim polu postępu śledztwa. Jeśli gra się nie wczyta, otwórz ją w&nbsp;osobnej karcie:
+    <a class="frame__open" href="prototypy/k06-latarka-kuchnia/" target="_blank"
+       rel="noopener">Otwórz grę w nowej karcie ↗</a>. Uwaga: w&nbsp;osobnej karcie gra nie przekaże
+    wyniku lekcji, więc po powrocie literę S trzeba będzie wpisać samodzielnie
+    w&nbsp;polu postępu śledztwa.</p>
+
+  <details style="max-width:62ch">
+    <summary style="cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center">
+      Pięć poszlak — opis tekstowy</summary>
+    <ul class="body-text" style="margin-top:10px;padding-left:20px">
+      <li>plakat o segregacji odpadów — domownicy znają zasady segregacji;</li>
+      <li>pojemniki na frakcje pod zlewem — odpady są segregowane;</li>
+      <li>lejek — służy do bezpiecznego przelewania ostudzonego oleju;</li>
+      <li>zielona butelka systemu Olejomatów — służy do zbierania i&nbsp;oddawania zużytego oleju;</li>
+      <li>oznaczony pojemnik „Zużyte baterie” — baterie są odkładane osobno.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ═══════════ K07 — DROGA BUTELKI (prototyp) ═══════════ -->
+<section class="scene" id="k07" data-tone="light" data-block="k07" aria-labelledby="k07-title">
+  <p class="kicker">Klocek 7 • zadanie obowiązkowe</p>
+  <h2 class="lead" id="k07-title">Droga butelki</h2>
+  <p class="body-text">Zielona butelka należy do systemu Olejomatów. Ułóż sześć kroków
+    właściwego postępowania — od rejestracji aż po oddanie pełnej butelki.</p>
+
+  <div class="frame" data-frame="k07" style="margin-top:22px">
+    <div class="frame__box">
+      <iframe title="Droga butelki — układanka sześciu kroków"
+              data-src="prototypy/k07-droga-butelki/" loading="lazy"></iframe>
+    </div>
+  </div>
+  <p class="frame__status" role="status" aria-live="polite"></p>
+  <p class="note"><a class="frame__open" href="prototypy/k07-droga-butelki/" target="_blank"
+    rel="noopener">Otwórz moduł w nowej karcie ↗</a></p>
+</section>
+
+<!-- ═══════════ K08 — ZŁAP ZUŻYTY OLEJ (prototyp) ═══════════ -->
+<!-- Etap A2: polecenie gry czyta lektor u góry sceny. Gdy plansza gry
+     wypełni kadr (obserwator ramki, 45% widoczności), narracja milknie —
+     dźwięk zostaje przy grze. -->
+<section class="scene" id="k08" data-tone="light" data-block="k08" aria-labelledby="k08-title"
+         data-audio-src="../assets/audio/lekcja45/04-slad-do-kuchni/04-zlap-krople-02.mp3"
+         data-audio-title="Złap zużyty olej">
+  <p class="kicker">Klocek 8 • punkt kontrolny</p>
+  <h2 class="lead" id="k08-title">Złap zużyty olej</h2>
+  <p class="body-text">Każda kropla zużytego oleju powinna zostać zebrana. Złap dwadzieścia
+    kropli — masz trzy życia w&nbsp;każdej próbie.</p>
+
+  <div class="frame" data-frame="k08" style="margin-top:22px">
+    <div class="frame__box">
+      <iframe title="Złap zużyty olej — gra zręcznościowa"
+              data-src="prototypy/k08-zlap-olej/" loading="lazy"></iframe>
+    </div>
+  </div>
+  <p class="frame__status" role="status" aria-live="polite"></p>
+  <p class="note"><a class="frame__open" href="prototypy/k08-zlap-olej/" target="_blank"
+    rel="noopener">Otwórz moduł w nowej karcie ↗</a> · Po ukończeniu wpisz literę
+    w&nbsp;trzecim polu postępu śledztwa.</p>
+</section>
+
+<!-- ═══════════ K09 — CO MOŻE TRAFIĆ DO OLEJOMATU? ═══════════ -->
+<!-- Etap A2: nagranie K09 dostarczone (Trop 5). -->
+<section class="scene" id="k09" data-tone="warm" data-block="k09" aria-labelledby="k09-title"
+         data-audio-src="../assets/audio/lekcja45/05-sprawa-oleju/05-co-trafia-do-butelki-03.mp3"
+         data-audio-title="Co może trafić do butelki?">
+  <p class="kicker">Klocek 9 • kuchenna stacja kontroli</p>
+  <h2 class="lead" id="k09-title">Co może trafić do butelki?</h2>
+  <p class="body-text">Do zielonej butelki zbieramy zużyte oleje i&nbsp;tłuszcze spożywcze.
+    Sprawdź 11 produktów i&nbsp;zdecyduj, które z&nbsp;nich można bezpiecznie oddać
+    do Olejomatu.</p>
+
+  <div class="k09" id="k09-game">
+    <!-- Warstwa dekoracyjna tła (Etap 2D.1) — wyłącznie tryb tablicy.
+         Tło wchodzi przez background-image w CSS (media query wybiera wariant
+         desktop/mobile, więc pobierany jest tylko jeden plik) i nigdy nie
+         blokuje interakcji: gra działa, zanim grafika dojedzie. -->
+    <div class="k09sc__tlo" aria-hidden="true"></div>
+
+    <div class="k09__board">
+      <div class="k09__zone k09__zone--bottle">
+        <!-- WARIANT LEGACY: mała ikona strefy (w trybie tablicy ukryta) -->
+        <img class="k09__zone-img" src="../assets/images/lekcja45/butelka-lejek-3d.png"
+             alt="" loading="lazy">
+        <span class="k09__zone-label">Do butelki Olejomatu</span>
+
+        <!-- WARIANT TABLICY: zielona butelka z lejkiem na neutralnym podeście.
+             Butelka to grafika (klatka 000 sekwencji zakręcania), a poziom
+             oleju — nakładka SVG w tym samym kadrze 732×882, przycięta maską
+             do korpusu. Kolejność warstw ma znaczenie: olej leży NAD grafiką
+             (pod spodem byłby całkowicie zasłonięty). -->
+        <div class="k09sc k09sc--bottle" aria-hidden="true">
+          <span class="k09sc__swiatlo"></span>
+          <span class="k09sc__obiekt">
+            <img class="k09sc__butelka" loading="lazy"
+                 src="../assets/images/lekcja45/09-stacja-kontroli/butelka-lejek.webp" alt="">
+            <!-- FINAŁ (KROK 5): warstwa klatek zakręcania. Ten sam kadr 732×882
+                 co grafika wyżej, więc leży na niej co do piksela. Bez `src`,
+                 dopóki gra nie dojdzie do końca — nie generuje żadnego żądania.
+                 Grafika bazowa zostaje POD spodem: gdy sekwencja się nie wczyta,
+                 uczeń nadal widzi butelkę, a finał niesie samo światło. -->
+            <img class="k09sc__klatka" alt="" aria-hidden="true">
+            <svg class="k09sc__olej" viewBox="0 0 732 882" preserveAspectRatio="xMidYMid meet"
+                 focusable="false">
+              <defs>
+                <clipPath id="k09-korpus">
+                  <!-- korpus butelki bez lejka i leżącej zakrętki (pomiar 2D.1) -->
+                  <path d="M 34 425 H 272 L 262 864 H 51 Z"/>
+                </clipPath>
+                <linearGradient id="k09-olejg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ffcf5a"/>
+                  <stop offset="1" stop-color="#e0921a"/>
+                </linearGradient>
+              </defs>
+              <g clip-path="url(#k09-korpus)">
+                <!-- poziom: JS ustawia y i height (poziomButelki) -->
+                <rect class="k09s__olej" x="20" y="864" width="692" height="0"
+                      fill="url(#k09-olejg)"/>
+              </g>
+            </svg>
+          </span>
+          <img class="k09sc__podest" loading="lazy"
+               src="../assets/images/lekcja45/09-stacja-kontroli/podest-cel.webp" alt="">
+        </div>
+      </div>
+
+      <div class="k09__stagearea" tabindex="0" role="group">
+        <!-- strzałki kierunkowe (grafiki zatwierdzone): podpowiedź,
+             nie jedyny nośnik znaczenia -->
+        <img class="k09sc__strzalka k09sc__strzalka--ok" alt="" aria-hidden="true" loading="lazy"
+             src="../assets/images/lekcja45/09-stacja-kontroli/strzalka-do-butelki.webp">
+        <div class="k09__object"></div>
+        <p class="k09__name"></p>
+        <p class="k09__counter"></p>
+        <img class="k09sc__strzalka k09sc__strzalka--no" alt="" aria-hidden="true" loading="lazy"
+             src="../assets/images/lekcja45/09-stacja-kontroli/strzalka-nie-do-butelki.webp">
+      </div>
+
+      <div class="k09__zone k09__zone--reject">
+        <span class="k09__zone-ico" aria-hidden="true">🚫</span>
+        <span class="k09__zone-label">Nie do Olejomatu</span>
+        <!-- WARIANT TABLICY: czerwony znak X na tym samym podeście -->
+        <div class="k09sc k09sc--reject" aria-hidden="true">
+          <span class="k09sc__swiatlo"></span>
+          <span class="k09sc__obiekt">
+            <img class="k09sc__x" loading="lazy"
+                 src="../assets/images/lekcja45/09-stacja-kontroli/x-nie-do-butelki.webp" alt="">
+          </span>
+          <img class="k09sc__podest" loading="lazy"
+               src="../assets/images/lekcja45/09-stacja-kontroli/podest-cel.webp" alt="">
+        </div>
+      </div>
+    </div>
+
+    <div class="k09__buttons">
+      <button type="button" class="btn" data-k09="bottle">Do butelki</button>
+      <button type="button" class="btn btn--ghost" data-k09="reject">Nie do butelki</button>
+    </div>
+    <div class="k09__fill"><span class="k09__fill-bar"></span></div>
+    <p class="k09__feedback" role="status" aria-live="polite"></p>
+
+    <!-- Rozwinięcie dla tłuszczów stałych: pełna informacja o bezpiecznym
+         postępowaniu + etapy (przy prefers-reduced-motion czytane statycznie). -->
+    <div class="k09__wiecej" id="k09-tluszcze" hidden>
+      <p class="k09__wiecej-txt">Masło, smalec lub margarynę roztop z&nbsp;pomocą osoby
+        dorosłej, następnie przestudź i&nbsp;przelej do zielonej butelki, gdy tłuszcz
+        nadal jest płynny, ale nie jest gorący.</p>
+      <ol class="k09__etapy">
+        <li class="k09__etap" data-etap="1">
+          <span class="k09__etap-ico" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><rect x="6" y="11" width="20" height="12" rx="2"
+              fill="#f4e2a8" stroke="#c9a227" stroke-width="2"/></svg>
+          </span>Tłuszcz jest stały
+        </li>
+        <li class="k09__etap" data-etap="2">
+          <span class="k09__etap-ico" aria-hidden="true">
+            <!-- symbol pomocy osoby dorosłej: dorosły i dziecko; dekoracyjny —
+                 informację niesie tekst obok -->
+            <svg viewBox="0 0 32 32">
+              <circle cx="11" cy="8" r="4" fill="#3e6034"/>
+              <path d="M5 27v-6a6 6 0 0 1 12 0v6z" fill="#3e6034"/>
+              <circle cx="23" cy="13" r="3" fill="#8aab7a"/>
+              <path d="M19 27v-4a4 4 0 0 1 8 0v4z" fill="#8aab7a"/>
+            </svg>
+          </span>Z pomocą osoby dorosłej
+        </li>
+        <li class="k09__etap" data-etap="3">
+          <span class="k09__etap-ico" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M6 20c4-2 6 2 10 0s6-4 10-2v6H6z"
+              fill="#e8a020"/><path d="M11 8v4M16 6v6M21 8v4" stroke="#c98d18"
+              stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+          </span>Roztopiony, jeszcze gorący
+        </li>
+        <li class="k09__etap" data-etap="4">
+          <span class="k09__etap-ico" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M6 20c4-2 6 2 10 0s6-4 10-2v6H6z"
+              fill="#f2b23a"/><path d="M16 5l3 4h-6z" fill="#4a7d52"/></svg>
+          </span>Przestudzony, nadal płynny
+        </li>
+        <li class="k09__etap" data-etap="5">
+          <span class="k09__etap-ico" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><rect x="11" y="9" width="10" height="18" rx="3"
+              fill="#5cb85f" stroke="#2f6f3a" stroke-width="2"/><rect x="13" y="4"
+              width="6" height="5" rx="1" fill="#f2b23a"/></svg>
+          </span>Trafia do zielonej butelki
+        </li>
+      </ol>
+    </div>
+
+    <div class="k09__done" hidden>
+      <p class="k09__done-txt">Gotowe. W&nbsp;butelce są tylko zużyte oleje
+        i&nbsp;tłuszcze spożywcze.</p>
+      <p class="body-text" style="max-width:none">Do butelki Olejomatu nie dolewamy wody,
+        detergentów, paliwa ani olejów technicznych.</p>
+    </div>
+  </div>
+  <p class="note">Oleje techniczne, paliwa i&nbsp;chemikalia wymagają innego miejsca zbiórki.
+    W&nbsp;dalszej części śledztwa sprawdzimy, czym jest PSZOK.</p>
+</section>
+
+<!-- ═══════════ K10 — OLEJ RUSZA W DALSZĄ DROGĘ ═══════════ -->
+<!-- Etap A2: nagranie K10 dostarczone (Trop 5). W tablicy scena zaczyna się
+     zdaniem przejścia „Butelka pojechała do Olejomatu" z własnym, krótkim
+     nagraniem — dopiero potem wchodzi narracja całej sekwencji. -->
+<section class="scene seq" id="k10-seq" data-tone="warm" data-block="k10" aria-labelledby="k10-title"
+         data-audio-src="../assets/audio/lekcja45/05-sprawa-oleju/05-olej-rusza-w-droge-schemat-05.mp3"
+         data-audio-title="Olej rusza w dalszą drogę">
+  <div class="seq__stage">
+    <div>
+      <p class="kicker">Klocek 10</p>
+      <h2 class="lead" id="k10-title">Olej rusza w dalszą drogę</h2>
+      <img class="seq__frame" alt="Droga oleju: patelnia, szczelna butelka, Olejomat, oczyszczanie, nowy surowiec i punkty w aplikacji"
+           width="1100" height="618">
+      <!-- Etap 2E.2: hasła są KROKAMI HTML, nie napisami wtopionymi w grafikę
+           (nowa seria proces-seq-v2 przyszła bez napisów). Zakresy `data-from`
+           / `data-to` odpowiadają fazom animacji odczytanym klatka po klatce.
+           Ostatnie 16 klatek (0,83 → 1) to celowe PLATEAU BEZ TEKSTU: zielona
+           kropla wycisza scenę przed przejściem dalej. -->
+      <div class="seq__steps">
+        <p class="seq__step is-on" data-from="0" data-to="0.13">Zużyty olej z patelni</p>
+        <p class="seq__step" data-from="0.13" data-to="0.265">Zlewasz go do szczelnej butelki</p>
+        <p class="seq__step" data-from="0.265" data-to="0.44">Butelkę oddajesz w&nbsp;Olejomacie</p>
+        <p class="seq__step" data-from="0.44" data-to="0.575">Olej jedzie na oczyszczanie</p>
+        <!-- jeden krok, dwa poziomy typografii; czytnik ekranu przeczyta
+             całość jako jedno zdanie, bo myślnik jest w treści akapitu -->
+        <p class="seq__step" data-from="0.575" data-to="0.665">Oczyszczony olej staje się surowcem<span
+          class="sr-only"> — </span><span class="seq__step-sub">np. do produkcji biopaliw</span></p>
+        <p class="seq__step" data-from="0.665" data-to="0.83">Za oddany olej zbierasz punkty —
+          na&nbsp;przykład na sadzonki</p>
+      </div>
+      <p class="seq__caption">Uproszczony schemat drogi surowca, a nie dosłowny obraz instalacji
+        przemysłowej.</p>
+    </div>
+  </div>
+</section>
+
+<section class="scene" data-tone="warm">
+  <div class="scene__grid scene__grid--2">
+    <p class="body-text">Zebrany olej odbiera wyspecjalizowany transport. To element układanki,
+      którego jeszcze nie pokazujemy grafiką.</p>
+    <div class="ph" data-ph="k10-pojazd" style="max-width:320px">
+      <span class="ph__label">DO UZUPEŁNIENIA</span><span class="ph__meta"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ K11 — SKALA PROBLEMU: STADION ═══════════ -->
+<!-- Nagranie narracji K11 NIE ISTNIEJE (Etap 3A) — katalogu
+     06-skala-problemu brak w assets/audio/lekcja45/. Atrybutu
+     data-audio-src celowo tu nie ma: wskazywałby plik, którego pobranie
+     kończy się 404 (wzorzec K09/K10, raporty 51 §10 i 55 §3.5).
+     Planowana ścieżka (do podpięcia, gdy nagranie powstanie):
+     assets/audio/lekcja45/06-skala-problemu/06-skala-stadion-01.mp3
+     (data-audio-title: „Skala problemu: stadion") -->
+<section class="scene seq" id="k11-seq" data-tone="deep" data-block="k11" aria-labelledby="k11-title">
+  <!-- Korekta 3C.1.1: miniatury fazy analitycznej to JEDEN plik WebP
+       (`k11-stadion-mini.webp`, 16,7 KB) użyty 41 razy jako tło CSS —
+       jedno żądanie sieciowe na całą siatkę. Plik zawiera DWA stany
+       ułożone pionowo: górna połowa to stadion pusty, dolna — wypełniony
+       olejem; stan przełącza `background-position`, więc drugi plik nie
+       jest potrzebny. Kadry wycięte z klatek 000 i 047 tej samej sekwencji,
+       którą uczeń widzi wyżej — miniatura to ten sam stadion, nie ikonka.
+       Poprzednia sylwetka rysowana `<symbol>`/`<use>` czytała się przy
+       24 px jako owal, a nie jako stadion (uwaga użytkownika). -->
+  <div class="seq__stage">
+    <div>
+      <p class="kicker">Klocek 11 • skala</p>
+      <h2 class="lead" id="k11-title">Ile to naprawdę jest?</h2>
+      <img class="seq__frame" alt="Stadion PGE Narodowy wypełniający się olejem" width="960" height="540">
+      <!-- Etap 3A: wariant statyczny (prefers-reduced-motion albo brak
+           klatek). Silnik frameSequence sam odsłania `.seq__fallback`
+           przez showStatic() — nie potrzeba drugiego mechanizmu.
+           Dwa kadry sekwencji jako osobne kopie: początek i koniec. -->
+      <div class="seq__fallback k11__static" hidden>
+        <figure class="k11__stat">
+          <img src="../assets/images/lekcja45/stadion-pusty.webp"
+               alt="Pusty Stadion PGE Narodowy" loading="lazy" width="760" height="428">
+          <figcaption>Stadion pusty</figcaption>
+        </figure>
+        <figure class="k11__stat">
+          <img src="../assets/images/lekcja45/stadion-pelny.webp"
+               alt="Ten sam stadion wypełniony zużytym olejem po sam dach"
+               loading="lazy" width="760" height="428">
+          <figcaption>Ten sam stadion wypełniony olejem</figcaption>
+        </figure>
+      </div>
+      <div class="seq__steps">
+        <p class="seq__step is-on" data-from="0" data-to="0.5">
+          Wyobraź sobie Stadion PGE Narodowy w&nbsp;Warszawie — największy stadion w&nbsp;Polsce —
+          wypełniony olejem od podłogi aż po dach.</p>
+        <!-- Etap 3C.1: bez liczby „41" w tym miejscu. Zdanie było widoczne
+             od połowy sceny i przeczyło licznikowi, który pokazywał wtedy
+             dopiero kilkanaście stadionów. Komplet liczb wchodzi na końcu,
+             w bloku #k11-final. -->
+        <p class="seq__step" data-from="0.5" data-to="1.01">
+          Tyle zużytego oleju zbiera się na świecie w&nbsp;ciągu roku.
+          Policzmy, ile to takich stadionów.</p>
+      </div>
+      <div class="k11__meter">
+        <!-- Etap 3C.1: stadion przestaje być ilustracją i staje się
+             JEDNOSTKĄ MIARY — legenda mówi wprost, co znaczy jedna sylwetka. -->
+        <p class="k11__unit">
+          <span class="k11__unit-ikona is-on" aria-hidden="true"></span>
+          <span class="k11__unit-tekst">= jeden stadion wypełniony olejem</span>
+        </p>
+        <!-- Siatka jest czystą ilustracją liczby z licznika: `aria-hidden`,
+             a pełny sens niosą teksty (licznik, podpis, blok finalny). -->
+        <div class="k11__grid" id="k11-grid" aria-hidden="true"></div>
+        <p class="k11__multiplier" id="k11-multiplier">×0</p>
+        <p class="k11__podpis" id="k11-podpis">kubatur Stadionu PGE Narodowego</p>
+        <!-- Etap 3A/3C.1: liczby globalne jako TEKST HTML (nie w grafice).
+             Kanon liczb: dokument 09 — 42 mln t/rok, ≈41 kubatur PGE
+             Narodowego; rachunek i źródła w notce pod sceną.
+             Blok odsłania się DOPIERO po skompletowaniu 41 sylwetek. -->
+        <p class="k11__final" id="k11-final">
+          <span class="k11__final-ton"><span class="k11__final-liczba">42 000 000</span>
+            <span class="k11__final-jedn">ton rocznie</span></span>
+          <span class="k11__final-rownanie">≈ 41 takich stadionów</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" data-tone="deep">
+  <p class="note" style="max-width:64ch">
+    To przybliżenie porównujące <strong>kubatury</strong>, a nie dosłowne wypełnienie wnętrza
+    stadionu. Podstawa obliczenia: 42 000 000 t ÷ 0,92 t/m³ ÷ 1 106 308,8 m³ ≈ 41,3.
+    Podczas największych koncertów stadion może pomieścić ponad 80 tysięcy osób.
+    <!-- Źródła redakcyjne (dokument 09, klocek 11):
+         42 mln ton UCO rocznie — sciencedirect.com/science/article/pii/S2772275926000031
+         gęstość zużytego oleju 920 kg/m³ — pmc.ncbi.nlm.nih.gov/articles/PMC6908722/
+         kubatura PGE Narodowego 1 106 308,8 m³ — pgenarodowy.pl (ogłoszenie o dialogu)
+         do 80 tys. gości podczas koncertów — pgenarodowy.pl/o-stadionie/ -->
+  </p>
+</section>
+
+<!-- ═══════════ K12 — LAS: ODPADY ZOSTAWIAJĄ ŚLADY ═══════════ -->
+<!-- Nagranie narracji K12 NIE ISTNIEJE (Etap 3B) — katalogu
+     06-skala-problemu brak w assets/audio/lekcja45/. Atrybutu
+     data-audio-src celowo tu nie ma: wskazywałby plik, którego pobranie
+     kończy się 404 (wzorzec K09/K10/K11).
+     Planowana ścieżka (do podpięcia, gdy nagranie powstanie):
+     assets/audio/lekcja45/06-skala-problemu/06-las-przed-po-02.mp3
+     (data-audio-title: „Odpady zostawiają ślady") -->
+<section class="scene k12" id="k12-scene" data-tone="deep" data-block="k12" aria-labelledby="k12-title">
+  <div class="k12__stage">
+    <div style="width:100%;max-width:1100px">
+      <p class="kicker">Klocek 12 • przejście</p>
+      <h2 class="lead" id="k12-title">Odpady zostawiają ślady</h2>
+      <!-- ETAP 3C.2 — SKANER W TRZECH WARSTWACH.
+           A. `.k12__swiat` — kadr, lupa i pinezki w JEDNYM kontenerze.
+              Przybliżenie na telefonie transformuje właśnie ten kontener,
+              więc celownik nie może odjechać od obiektu: skalują się razem.
+           B. `.k12__hud` — licznik i karta opisu. NIE podlegają transformacji
+              świata i mają stały rozmiar pisma; karta stoi POZA dioramą
+              (desktop: obok kadru, telefon: pod kadrem), więc nigdy nie
+              zasłania obiektu, który opisuje.
+           C. `.k12__lista` — pełna lista pięciu odpadów w DOM, poza warstwą
+              animowaną. Czytnik ekranu dostaje jedną listę zamiast pięciu
+              kolejnych ogłoszeń przy szybkim przewijaniu. -->
+      <div class="k12__scena">
+        <!-- Korekta 3C.3.1: warstwa świata NIE jest już w całości ukryta dla
+             czytnika. Pinezki przestały być ozdobą narracji — stały się
+             WYMAGANĄ interakcją z bramką, więc są prawdziwymi przyciskami
+             w drzewie dostępności. Ukryte zostają wyłącznie ozdoby: kadr,
+             lupa i miniatura. -->
+        <div class="k12__swiat">
+          <div class="k12__images">
+            <!-- Etap 3B: przemiana lasu jako sekwencja 64 klatek (scrub silnikiem
+                 frameSequence). Obrazy przed/po zostają jako wariant statyczny
+                 dla prefers-reduced-motion i braku klatek. -->
+            <img class="k12__frame" alt="" width="1100" height="619" decoding="async" aria-hidden="true">
+            <div class="k12__static" hidden aria-hidden="true">
+              <img src="../assets/images/lekcja45/zanieczyszczenie-srodowisko/web/srodowisko-czyste.webp"
+                   alt="" loading="lazy">
+              <img class="k12__after"
+                   src="../assets/images/lekcja45/zanieczyszczenie-srodowisko/web/srodowisko-zanieczyszczone.webp"
+                   alt="" loading="lazy">
+            </div>
+            <!-- POZYCJE zmierzone na finalnej klatce sekwencji (Etap 3B) —
+                 lista obiektów odpowiada temu, co realnie widać w renderze. -->
+            <button type="button" class="k12__pin" data-nr="1" style="left:20%;top:62%"
+                    aria-label="Ślad 1: Fotel"></button>
+            <button type="button" class="k12__pin" data-nr="2" style="left:15%;top:75%"
+                    aria-label="Ślad 2: Gruz"></button>
+            <button type="button" class="k12__pin" data-nr="3" style="left:23%;top:57%"
+                    aria-label="Ślad 3: Beczka z chemikaliami"></button>
+            <button type="button" class="k12__pin" data-nr="4" style="left:58%;top:70%"
+                    aria-label="Ślad 4: Puszka po farbie"></button>
+            <!-- Korekta 3C.2.1: ślad 5 był „elektroodpadem" i celował w pustak
+                 z kupki gruzu — rozpoznawalnego elektroodpadu w tym renderze
+                 przy tej skali NIE MA. Zastąpiły go worki: duża, jednoznaczna
+                 grupa czarnych worków w środku dioramy (pozycja zmierzona). -->
+            <button type="button" class="k12__pin" data-nr="5" style="left:46%;top:63%"
+                    aria-label="Ślad 5: Worki pełne odpadów"></button>
+            <span class="k12__lupa" id="k12-lupa" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <div class="k12__hud">
+          <!-- Korekta 3C.3.1: fazę śladów prowadzi UCZEŃ, nie scroll —
+               zaproszenie mówi wprost, co zrobić, a licznik liczy kliknięte. -->
+          <p class="k12__zaproszenie" id="k12-zaproszenie">Kliknij ślady na ilustracji</p>
+          <p class="k12__licznik" id="k12-licznik">Ślad <b>0</b> z 5</p>
+          <div class="k12__karta" id="k12-karta">
+            <p class="k12__karta-nazwa"></p>
+            <p class="k12__karta-tekst"></p>
+          </div>
+          <!-- podpowiedź przy próbie przewinięcia dalej z niekompletem —
+               komunikat, nie cicha ściana -->
+          <p class="k12__brama" id="k12-brama" role="status"></p>
+          <!-- miniatura całej dioramy z pinezkami — orientacja w terenie,
+               gdy telefon pokazuje przybliżony fragment -->
+          <div class="k12__mapka" id="k12-mapka" aria-hidden="true">
+            <span class="k12__mapka-pin" data-nr="1" style="left:20%;top:62%"></span>
+            <span class="k12__mapka-pin" data-nr="2" style="left:15%;top:75%"></span>
+            <span class="k12__mapka-pin" data-nr="3" style="left:23%;top:57%"></span>
+            <span class="k12__mapka-pin" data-nr="4" style="left:58%;top:70%"></span>
+            <span class="k12__mapka-pin" data-nr="5" style="left:46%;top:63%"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Warstwa C: pełna treść dla czytnika ekranu i wariantu statycznego.
+           W trybie animowanym jest dostępna wyłącznie dla czytnika (to samo,
+           co widzi wzrokowo uczeń, tylko naraz); w wariancie statycznym
+           staje się widoczną listą pod kadrem. -->
+      <!-- Korekta 3C.2.1: pozycje listy są PRZYCISKAMI — to ścieżka
+           klawiaturowa do śladów (pinezki obsługują mysz i dotyk, ale leżą
+           w warstwie ukrytej dla czytnika). Lista jest dostępna tylko dla
+           czytnika, a przy fokusie pokazuje się także wzrokowo, żeby osoba
+           korzystająca z klawiatury widziała, gdzie jest. -->
+      <ul class="k12__lista" id="k12-lista">
+        <li><button type="button"><strong>Fotel</strong> — porzucony w lesie zajmuje dużo miejsca i niszczy rośliny pod sobą.</button></li>
+        <li><button type="button"><strong>Gruz</strong> — przysypuje leśną ściółkę i utrudnia roślinom wzrost.</button></li>
+        <li><button type="button"><strong>Beczka z chemikaliami</strong> — jej zawartość może wsiąknąć w ziemię i pozostać tam przez lata.</button></li>
+        <li><button type="button"><strong>Puszka po farbie</strong> — resztki farby mogą zanieczyścić glebę i wodę.</button></li>
+        <li><button type="button"><strong>Worki pełne odpadów</strong> — rozdarte przez zwierzęta rozsypują się po całym lesie.</button></li>
+      </ul>
+      <!-- Dane: Lasy Państwowe — ok. 80 tys. m³ odpadów wywiezionych z lasów
+           w 2024 r. ≈ 820 ładunków TIR ÷ 365 dni ≈ 2,2 ciężarówki dziennie.
+           Źródło: raport „Skala, dynamika i konsekwencje antropogenicznego
+           zanieczyszczenia środowiska naturalnego w Polsce" (docs/). -->
+      <!-- ETAP 3C.3 + korekta 3C.3.1 — SEKCJA FINAŁU.
+           Odsłania się DOPIERO po odkryciu wszystkich pięciu śladów (bramka).
+           Ciężarówki jadą tutaj, pod wielkim tytułem — nie po dioramie —
+           więc nie mają fizycznej możliwości pojawić się przed czasem.
+           Każda linia wchodzi osobno, sterowana postępem przewijania. -->
+      <div class="k12__final" id="k12-final" hidden>
+        <p class="k12__fakt" id="k12-fakt">
+          <span class="k12__fakt-naglowek">Ponad 2 ciężarówki dziennie</span></p>
+        <div class="k12__tiry" id="k12-tiry" aria-hidden="true">
+          <img class="k12__tir k12__tir--1" alt=""
+               src="../assets/images/lekcja45/k12-ciezarowka-1.webp"
+               width="560" height="303" loading="lazy" decoding="async">
+          <img class="k12__tir k12__tir--2" alt=""
+               src="../assets/images/lekcja45/k12-ciezarowka-2.webp"
+               width="563" height="315" loading="lazy" decoding="async">
+        </div>
+        <p class="k12__fakt-podpis" id="k12-podpis">Tyle odpadów leśnicy wywożą
+          z&nbsp;polskich lasów przez <u>cały rok</u>.</p>
+        <p class="k12__pyt-pigulka" id="k12-pyt-pigulka">Co jest najdziwniejsze?</p>
+        <p class="k12__fakt k12__fakt--echo" id="k12-fakt2">Dzikie wysypiska znajdowano
+          kilkaset metrów od miejsc, gdzie te same odpady można oddać za&nbsp;darmo.</p>
+        <p class="k12__question">Skoro nie do lasu ani zwykłego kosza — to dokąd?</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" data-tone="deep">
+  <!-- KOREKTA MERYTORYCZNA (Etap 3B): usunięte zdanie „Zużyty olej spożywczy
+       możesz oddać również do PSZOK-u, jeżeli przewidują to lokalne zasady".
+       Regulamin PSZOK Związku Międzygminnego SELEKT wymienia oleje jadalne
+       na liście odpadów NIEPRZYJMOWANYCH (site/baza-wiedzy/regulamin-PSZOK.md,
+       „Oleje jadalne, oleje silnikowe oraz opakowania po nich"), a osobną
+       ścieżkę dla nich wskazuje w Olejomatach. Droga oleju = Olejomat,
+       dokładnie tak, jak uczy Trop 5. -->
+  <p class="body-text">Do PSZOK-u trafiają odpady, które nie mają miejsca
+    w&nbsp;zwykłych pojemnikach. Dzięki temu fotel, gruz, puszki po farbie, elektroodpady
+    czy opony nie muszą trafiać do lasu ani przypadkowego kosza. Zużyty olej spożywczy
+    ma własną drogę — Olejomat.</p>
+  <div class="ph ph--wide" data-ph="k12-las" style="max-width:760px;margin-top:22px">
+    <span class="ph__label">DO UZUPEŁNIENIA</span><span class="ph__meta"></span>
+  </div>
+</section>
+
+<div class="trail" data-tone="sage" aria-hidden="true"><span class="trail__label">Rozdział: PSZOK</span></div>
+
+<!-- ═══════════ K13 — CO TO JEST PSZOK? ═══════════ -->
+<!-- Nagranie narracji K13 NIE ISTNIEJE (Etap 4A) — katalogu
+     07-pszok brak w assets/audio/lekcja45/. Atrybutu data-audio-src
+     celowo tu nie ma: wskazywałby plik, którego pobranie kończy się 404
+     (wzorzec z K09–K12, raport 51 §10). Planowana ścieżka (do podpięcia,
+     gdy nagranie powstanie):
+     assets/audio/lekcja45/07-pszok/07-co-to-pszok-01.mp3
+     (data-audio-title: „Co to jest PSZOK?") -->
+<section class="scene" id="k13" data-tone="sage" data-block="k13" aria-labelledby="k13-title">
+  <p class="kicker">Klocek 13</p>
+  <h2 class="lead" id="k13-title" style="margin-inline:auto;text-align:center">Co kryje się za skrótem?</h2>
+
+  <div class="k13" id="k13-expand">
+    <p class="body-text" style="text-align:center">Rozwiń kolejno każdą literę.</p>
+    <div class="k13__letters">
+      <button type="button" class="k13__letter" data-letter="P" aria-expanded="false">
+        <span class="k13__big">P</span><span class="k13__word"></span></button>
+      <button type="button" class="k13__letter" data-letter="S" aria-expanded="false">
+        <span class="k13__big">S</span><span class="k13__word"></span></button>
+      <button type="button" class="k13__letter" data-letter="Z" aria-expanded="false">
+        <span class="k13__big">Z</span><span class="k13__word"></span></button>
+      <button type="button" class="k13__letter" data-letter="O" aria-expanded="false">
+        <span class="k13__big">O</span><span class="k13__word"></span></button>
+      <button type="button" class="k13__letter" data-letter="K" aria-expanded="false">
+        <span class="k13__big">K</span><span class="k13__word"></span></button>
+    </div>
+    <p class="k13__hint" role="status" aria-live="polite"></p>
+    <div class="k13__reveal" hidden>
+      <!-- Etap 4A: ten sam obiekt co w scenie wejścia — jeden plik na obie
+           sceny. Master PNG (1,1 MB, 72% płótna to pusta biel) zastąpiony
+           przyciętym WebP-em 125 KB z zachowaną przezroczystością. -->
+      <!-- `min(340px,100%)`, bo sztywne 340 px rozpychało jasną kolumnę
+           na 320 px (pomiar 4A: nadmiar 10 px poza ekran) -->
+      <img src="../assets/images/lekcja45/pszok-plac.webp"
+           alt="" loading="lazy" style="max-width:min(340px,100%);margin:0 auto 16px">
+      <p class="k13__full">PSZOK to Punkt Selektywnego Zbierania Odpadów Komunalnych.</p>
+      <p class="body-text" style="margin-inline:auto">To specjalne miejsce, do którego mieszkańcy mogą
+        przywozić wybrane odpady powstające w&nbsp;domu. Każdy rodzaj odpadu trafia do odpowiedniej strefy.</p>
+      <p class="note" style="margin-inline:auto">Szczegółowy wykaz przyjmowanych odpadów i&nbsp;zasady
+        korzystania mogą zależeć od lokalnego regulaminu.</p>
+      <a class="btn" href="#k14">Zajrzyjmy do środka</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     K14 — SPACER PO PSZOK-u
+     Markup przeniesiony 1:1 z zaakceptowanej lekcji (lekcja-4-5.html).
+     Host niżej dodaje tylko identyfikator klocka dla centralnego stanu;
+     samego modułu nie modyfikujemy.
+     ═══════════════════════════════════════════════════════════ -->
+<!-- Nagranie narracji K14 NIE ISTNIEJE (Etap 4B) — katalogu
+     07-pszok brak w assets/audio/lekcja45/. Atrybutu data-audio-src
+     celowo tu nie ma: wskazywałby plik, którego pobranie kończy się 404
+     (wzorzec z K09–K13, raport 51 §10). Planowana ścieżka (do podpięcia,
+     gdy nagranie powstanie):
+     assets/audio/lekcja45/07-pszok/07-spacer-pszok-02.mp3
+     (data-audio-title: „Spacer po PSZOK-u") -->
+<div class="k14-host" id="k14" data-block="k14">
+  <section class="act act--three pszok-journey" id="rail-pszok" data-bg="sage"
+           aria-labelledby="pj-title">
+    <div class="pj__head">
+      <h3 class="pj__title" id="pj-title">Spacer po PSZOK-u</h3>
+      <p class="pj__lead">PSZOK to nie jedno wielkie miejsce na wszystko naraz.
+      To zbiór oznaczonych stref. Każda frakcja jest oddzielona ze względu na
+      rozmiar, budowę, możliwość odzysku albo potrzebę ostrożnego postępowania.
+      Przejdź przez 14 stref po kolei.</p>
+      <!-- KOREKTA 4A.3: przycisk „Pomiń animację →" usunięty z OBU wariantów
+           tej strony. Prowadził do kotwicy, której w tym dokumencie nie ma
+           (istnieje wyłącznie w starej lekcja-4-5.html, gdzie ten sam
+           odnośnik działa i zostaje nietknięty). Spacer domyka się
+           wartownikiem #k14-end, więc skrót wyjścia niczemu nie służył. -->
+    </div>
+
+    <!-- Scena: przypięta CSS-owym sticky (bez pinu GSAP — brak pin-spacerów
+         i brak ryzyka rozjazdu kolejności odświeżania istniejących pinów) -->
+    <div class="pj__stage">
+
+      <!-- ══ WARSTWA A: TŁO — gradient i jasny punkt zaniku ══ -->
+      <div class="pj__background" aria-hidden="true">
+        <div class="pj__bg-inner"></div>
+      </div>
+
+      <!-- ══ WARSTWA B: ŚWIAT — droga, kontenery, odpady, dekoracje ══
+           Tylko ta warstwa dostaje skalę kamery i pełną paralaksę. -->
+      <div class="pj__world">
+        <div class="pj__world-inner">
+
+          <!-- Droga: jedna wstęga budowana co klatkę z linii środkowej trasy
+               (getRoutePoint). Punkty kontrolne interpolują się między
+               wariantami, więc kształt zmienia się płynnie, bez przeskoku
+               i bez podwójnego konturu. -->
+          <svg class="pj__road" viewBox="0 0 1000 1000" preserveAspectRatio="none"
+               aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="pjRoadFade" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0"    stop-color="#e6d8ba" stop-opacity="0.80"/>
+                <stop offset="0.36" stop-color="#ece1c9" stop-opacity="0.66"/>
+                <stop offset="0.74" stop-color="#f3ecdc" stop-opacity="0.36"/>
+                <stop offset="1"    stop-color="#f8f4ea" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path class="pj__road-path" d=""/>
+          </svg>
+
+          <!-- Dekoracje (lampy, drzewa, ogrodzenie, tablica, liście, ptak)
+               usunięte z modułu decyzją użytkownika po przeglądzie nagrania:
+               w kadrze były niewidoczne albo nie wspierały prezentacji.
+               Pliki graficzne pozostają w projekcie jako niewykorzystywane
+               zasoby (dekoracje/webp/ oraz source-png/). -->
+
+          <!-- 14 STACJI — pełna treść w DOM, także bez JavaScriptu.
+               W trybie sceny kontroler przenosi numer i tekst każdej stacji
+               do warstwy UI, żeby nie dziedziczyły ruchu kamery. -->
+          <div class="pj__stations">
+
+        <article class="pj-station" data-station="1">
+          <p class="pj-station__no"><b>1</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="867"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-brazowy.webp"
+                 alt="Otwarty brązowy kontener">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="994"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-01-odpady-zielone-bio.webp"
+                 alt="Gałęzie, trawa, liście i resztki roślinne">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="867"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-brazowy.webp"
+                   alt="Otwarty brązowy kontener">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="994"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-01-odpady-zielone-bio.webp"
+                   alt="Gałęzie, trawa, liście i resztki roślinne">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Odpady zielone i bioodpady</h4>
+            <p class="pj-station__desc">Gałęzie, trawa, liście i resztki roślinne trafiają
+            do oznaczonej strefy. Zebrane osobno mogą zostać właściwie zagospodarowane.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="2">
+          <p class="pj-station__no"><b>2</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="840"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-szary.webp"
+                 alt="Otwarty szary kontener">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1094"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-02-gruz-odpady-remontowe.webp"
+                 alt="Cegły, beton, płytki i ceramika">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="840"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-szary.webp"
+                   alt="Otwarty szary kontener">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1094"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-02-gruz-odpady-remontowe.webp"
+                   alt="Cegły, beton, płytki i ceramika">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Gruz i odpady remontowe</h4>
+            <p class="pj-station__desc">Cegły, beton, płytki i ceramika są ciężkie i nie
+            pasują do zwykłego pojemnika. W PSZOK-u mają oddzielne miejsce.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="3">
+          <p class="pj-station__no"><b>3</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="840"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-szary.webp"
+                 alt="Otwarty szary kontener">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1001"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-03-zuzyte-opony.webp"
+                 alt="Stos zużytych opon samochodowych">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="840"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-szary.webp"
+                   alt="Otwarty szary kontener">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1001"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-03-zuzyte-opony.webp"
+                   alt="Stos zużytych opon samochodowych">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Zużyte opony</h4>
+            <p class="pj-station__desc">Opony są trwałe i zbudowane z kilku materiałów.
+            Zbiera się je osobno, aby przekazać je do właściwego procesu.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="4">
+          <p class="pj-station__no"><b>4</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="946"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-niebieski.webp"
+                 alt="Niebieski kontener z klapami">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1252"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-04-papier-karton-tektura.webp"
+                 alt="Kartony, tektura falista i gazety">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="946"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-niebieski.webp"
+                   alt="Niebieski kontener z klapami">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1252"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-04-papier-karton-tektura.webp"
+                   alt="Kartony, tektura falista i gazety">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Papier, karton i tektura</h4>
+            <p class="pj-station__desc">Papier zwykle segregujemy w domu. Większe ilości
+            kartonu i tektury mogą mieć także osobną strefę w PSZOK-u — zgodnie
+            z lokalnymi zasadami.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="5">
+          <p class="pj-station__no"><b>5</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="1197"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-zielony.webp"
+                 alt="Zielony kontener z klapami">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1309"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-05-szklo.webp"
+                 alt="Szklane butelki i słoiki">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="1197"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-zielony.webp"
+                   alt="Zielony kontener z klapami">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1309"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-05-szklo.webp"
+                   alt="Szklane butelki i słoiki">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Szkło</h4>
+            <p class="pj-station__desc">Butelki i słoiki powinny pozostać oddzielone
+            od ceramiki, luster i innych rodzajów szkła. Sprawdź oznaczenie strefy.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="6">
+          <p class="pj-station__no"><b>6</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="946"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-zolty.webp"
+                 alt="Żółty kontener z klapami">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="984"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-06-tworzywa-folie-metale-kolorowe.webp"
+                 alt="Butelki i opakowania z tworzyw, folie oraz puszki">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="946"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-zolty.webp"
+                   alt="Żółty kontener z klapami">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="984"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-06-tworzywa-folie-metale-kolorowe.webp"
+                   alt="Butelki i opakowania z tworzyw, folie oraz puszki">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Tworzywa, folie i metale kolorowe</h4>
+            <p class="pj-station__desc">Folie, opakowania z tworzyw i drobne metale
+            kolorowe trafiają do wskazanej strefy. Nie łączymy ich z przypadkowymi
+            odpadami.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="7">
+          <p class="pj-station__no"><b>7</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="898"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-zamkniety-drzwi-zielony.webp"
+                 alt="Zielony kontener zamknięty, z drzwiami">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1141"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-07-odpady-wielkogabarytowe.webp"
+                 alt="Fotel, szafka, materac i inne duże meble">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="898"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-zamkniety-drzwi-zielony.webp"
+                   alt="Zielony kontener zamknięty, z drzwiami">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1141"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-07-odpady-wielkogabarytowe.webp"
+                   alt="Fotel, szafka, materac i inne duże meble">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Odpady wielkogabarytowe</h4>
+            <p class="pj-station__desc">Meble, materace i duże płyty są za duże
+            do pojemnika przy domu. Dlatego trafiają do strefy gabarytów.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="8">
+          <p class="pj-station__no"><b>8</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1025" height="1600"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-tekstylia.webp"
+                 alt="Pojemnik na odzież i tekstylia">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="965"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-08-odziez-tekstylia.webp"
+                 alt="Ubrania, pościel i ręczniki">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1025" height="1600"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-tekstylia.webp"
+                   alt="Pojemnik na odzież i tekstylia">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="965"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-08-odziez-tekstylia.webp"
+                   alt="Ubrania, pościel i ręczniki">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Odzież i tekstylia</h4>
+            <p class="pj-station__desc">Ubrania, pościel, ręczniki i inne tekstylia
+            zbieramy osobno. Rzeczy nadal sprawne warto najpierw przekazać
+            do ponownego użycia.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="9">
+          <p class="pj-station__no"><b>9</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="947"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-szary.webp"
+                 alt="Szary kontener z klapami">
+            <img class="pj-station__waste" loading="lazy" width="1368" height="866"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-09-styropian.webp"
+                 alt="Płyty i kształtki styropianowe">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="947"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-szary.webp"
+                   alt="Szary kontener z klapami">
+              <img class="pj-station__waste" loading="lazy" width="1368" height="866"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-09-styropian.webp"
+                   alt="Płyty i kształtki styropianowe">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Styropian</h4>
+            <p class="pj-station__desc">Styropian zajmuje dużo miejsca i łatwo rozpada się
+            na drobne kawałki. W punkcie powinien trafić do oznaczonego, osobnego
+            kontenera.</p>
+          </div>
+        </article>
+
+        <!-- Stacja 10: od 04.08.2026 używa poprawionej grafiki `_v2` (usunięte
+             luźne igły u podstawy stosu). Pierwotny render bez sufiksu `_v2`
+             pozostaje w projekcie jako niewykorzystywany. -->
+        <article class="pj-station" data-station="10">
+          <p class="pj-station__no"><b>10</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="711" height="1073"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pojemnik-specjalny-maly.webp"
+                 alt="Mały specjalny pojemnik na przeterminowane leki i odpady ostre">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1059"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-10-leki-igly-strzykawki_v2.webp"
+                 alt="Przeterminowane leki w blistrach i opakowaniach, butelki po syropach oraz strzykawki">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="711" height="1073"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pojemnik-specjalny-maly.webp"
+                   alt="Mały specjalny pojemnik na przeterminowane leki i odpady ostre">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1059"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-10-leki-igly-strzykawki_v2.webp"
+                   alt="Przeterminowane leki w blistrach i opakowaniach, butelki po syropach oraz strzykawki">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Leki, igły i strzykawki</h4>
+            <p class="pj-station__desc">Przeterminowane leki oddajemy osobno. Domowe igły
+            i strzykawki przekazujemy wyłącznie w zamkniętym pojemniku odpornym
+            na przekłucie.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="11">
+          <p class="pj-station__no"><b>11</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="794"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-maly-otwarty-szary.webp"
+                 alt="Mały otwarty szary kontener">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1495"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-11-baterie-akumulatory.webp"
+                 alt="Baterie, akumulatorki i akumulator samochodowy">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="794"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-maly-otwarty-szary.webp"
+                   alt="Mały otwarty szary kontener">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1495"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-11-baterie-akumulatory.webp"
+                   alt="Baterie, akumulatorki i akumulator samochodowy">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Baterie i akumulatory</h4>
+            <p class="pj-station__desc">Baterie i akumulatory zbieramy oddzielnie od innych
+            odpadów oraz od chemikaliów. Nie rozbieramy ich i nie uszkadzamy.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="12">
+          <p class="pj-station__no"><b>12</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="1403"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pojemnik-mauser.webp"
+                 alt="Zabezpieczony pojemnik typu Mauser">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1323"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-12-chemikalia-oleje-techniczne.webp"
+                 alt="Puszki farb, rozpuszczalniki i kanistry olejów technicznych">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="1403"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pojemnik-mauser.webp"
+                   alt="Zabezpieczony pojemnik typu Mauser">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1323"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-12-chemikalia-oleje-techniczne.webp"
+                   alt="Puszki farb, rozpuszczalniki i kanistry olejów technicznych">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Chemikalia i oleje techniczne</h4>
+            <p class="pj-station__desc">Farb, rozpuszczalników i olejów technicznych
+            nie wylewamy do odpływu ani nie mieszamy ze sobą. Przekazujemy
+            je zabezpieczone.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="13">
+          <p class="pj-station__no"><b>13</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="898"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-zamkniety-drzwi-zielony.webp"
+                 alt="Zielony kontener zamknięty, z drzwiami">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1196"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-13-elektroodpady.webp"
+                 alt="Monitor, pralka, drobne AGD i przewody">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="898"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-zamkniety-drzwi-zielony.webp"
+                   alt="Zielony kontener zamknięty, z drzwiami">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1196"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-13-elektroodpady.webp"
+                   alt="Monitor, pralka, drobne AGD i przewody">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Elektroodpady</h4>
+            <p class="pj-station__desc">Telefony, przewody i urządzenia mają wiele różnych
+            części. Oddane osobno mogą zostać bezpiecznie rozebrane, a część materiałów
+            odzyskana.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="14">
+          <p class="pj-station__no"><b>14</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="1065"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pawilon-drugie-zycie_lewo.webp"
+                 alt="Pawilon „Drugie życie odpadów” z drzwiami i oknem">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1217"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-14-drugie-zycie.webp"
+                 alt="Sprawna lampa, krzesła, rower i zabawki">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="1065"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pawilon-drugie-zycie_lewo.webp"
+                   alt="Pawilon „Drugie życie odpadów” z drzwiami i oknem">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1217"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-14-drugie-zycie.webp"
+                   alt="Sprawna lampa, krzesła, rower i zabawki">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Drugie Życie</h4>
+            <p class="pj-station__desc">Sprawna lampa, krzesło lub półka nie muszą jeszcze
+            stać się odpadem. Mogą służyć kolejnej osobie.</p>
+          </div>
+        </article>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ WARSTWA C: UI — stabilna, bez skali kamery i bez paralaksy ══
+           Kontroler przenosi tu numery i teksty stacji na czas trwania sceny. -->
+      <div class="pj__ui">
+        <div class="pj__texts"></div>
+        <p class="pj__note">Dokładny zakres i sposób przyjmowania odpadów określa
+        regulamin lokalnego PSZOK-u.</p>
+      </div>
+    </div>
+  </section>
+</div>
+<div id="k14-end" aria-hidden="true"></div>
+
+<!-- ═══════════ K15 — GRA 4: OBSŁUŻ PSZOK ═══════════ -->
+<section class="scene" id="k15" data-tone="sage" data-block="k15" aria-labelledby="k15-title">
+  <p class="kicker">Klocek 15 • punkt kontrolny</p>
+  <h2 class="lead" id="k15-title">Obsłuż PSZOK</h2>
+  <p class="body-text"><strong>Cel:</strong> dopasuj odpady przywiezione samochodem do właściwych
+    stref PSZOK-u.</p>
+  <p class="body-text">Rozładuj kolejne transporty. Odpad przeznaczony na dalszą planszę zostaje
+    na przyczepie — pojedzie z&nbsp;Tobą dalej.</p>
+
+  <!-- Etap 4C: gra „Obsłuż PSZOK" w finalnej wersji. Ramka ładuje się
+       LENIWIE (przy zbliżeniu do sceny), a po ukończeniu gra wysyła
+       `pszok:completed` przez postMessage — to lekcja odblokowuje literę O.
+       Kontrakt i filtr źródła opisane w README gry. -->
+  <div class="frame frame--pszok" data-frame-pszok data-stops-audio>
+    <!-- Etap 4C: na wąskim pionie gra kurczy się do ~19% swojej planszy
+         (zmierzone: strefa upuszczenia 36 px na 390 px szerokości), więc
+         podpowiadamy obrót. Podpowiedź NIE blokuje gry. -->
+    <p class="pszok-obrot" id="pszok-obrot" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20">
+        <path d="M7 4h7a3 3 0 0 1 3 3v7" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round"/>
+        <path d="M4.5 7.5 7 4l3.5 2.5" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="3" y="10" width="11" height="11" rx="2" fill="none"
+              stroke="currentColor" stroke-width="2"/>
+      </svg>
+      Obróć telefon poziomo — będzie wygodniej.
+    </p>
+    <div class="frame__box frame__box--pszok" id="pszok-kadr">
+      <iframe title="Gra: Obsłuż PSZOK" data-src="gry/pszok/"
+              allow="fullscreen" scrolling="no"></iframe>
+    </div>
+    <!-- przycisk pojawia się TYLKO na dotyku i TYLKO gdy Fullscreen API
+         realnie działa dla elementów (iOS Safari go nie ma — tam zostaje
+         sama podpowiedź o obrocie) -->
+    <p class="pszok-pelny"><button type="button" class="bd-btn bd-btn--maly"
+        id="pszok-pelny-ekran" hidden>Pełny ekran</button></p>
+  </div>
+  <p class="frame__status" role="status" aria-live="polite"></p>
+  <p class="note">Jeśli gra się nie wczyta, otwórz ją w&nbsp;osobnej karcie:
+    <a href="gry/pszok/" target="_blank" rel="noopener">Otwórz grę w nowej karcie ↗</a>.
+    Uwaga: w&nbsp;osobnej karcie gra nie przekaże wyniku lekcji, więc po powrocie
+    literę O trzeba będzie wpisać samodzielnie w&nbsp;polu postępu śledztwa.</p>
+
+  <!-- Uświadomienie PO grze (decyzja użytkownika, etap 4C): krótko,
+       bez liczb i bez morału. -->
+  <div class="k15__po" id="k15-po" hidden>
+    <p class="k15__po-tytul">Każda strefa to inna droga odzysku.</p>
+    <p class="body-text" style="margin-inline:auto">Zmieszane odpady trudno rozdzielić —
+      jedna pomyłka psuje cały pojemnik.</p>
+    <p class="body-text" style="margin-inline:auto">Dlatego PSZOK dzieli je już przy wjeździe,
+      zanim odda dalej.</p>
+  </div>
+</section>
+
+<div class="trail" data-tone="warm" aria-hidden="true"><span class="trail__label">Rozdział: drugie życie</span></div>
+
+<!-- ═══════════ K16 — DRUGIE ŻYCIE MATERIAŁÓW (prototyp) ═══════════ -->
+<!-- Nagranie narracji K16 ISTNIEJE (etap 5B):
+     assets/audio/lekcja45/16-drugie-zycie-materialow/01-wprowadzenie.mp3.
+     Powstało jako wprowadzenie do gry, więc siedzi na tej samej scenie,
+     w której gra stoi. Zero autostartu — narracja rusza tylko w trybie
+     „Słucham", a start gry ją wycisza.
+     Etap A2: to jedyne nagranie spoza konwencji tropowej — zostaje pod
+     obecną ścieżką, bo działa. Docelowo, razem z resztą materiału Tropu 8,
+     przeniesiemy je do `08-drugie-zycie/08-drugie-zycie-01.mp3`. -->
+<section class="scene" id="k16" data-tone="warm" data-block="k16" aria-labelledby="k16-title"
+         data-audio-src="../assets/audio/lekcja45/16-drugie-zycie-materialow/01-wprowadzenie.mp3"
+         data-audio-title="Drugie życie odpadów">
+  <p class="kicker">Klocek 16 • punkt kontrolny</p>
+  <h2 class="lead" id="k16-title">Drugie życie materiałów</h2>
+  <p class="body-text">Wrzuć odpad do maszyny i&nbsp;wskaż, co może z&nbsp;niego powstać.
+    Sześć rund — po nich zdobędziesz ostatnią literę.</p>
+
+  <div class="frame" data-frame="k16" style="margin-top:22px">
+    <div class="frame__box">
+      <iframe title="Drugie życie odpadów — dopasowanie par"
+              data-src="prototypy/k16-drugie-zycie-materialow/" loading="lazy"></iframe>
+    </div>
+  </div>
+  <p class="frame__status" role="status" aria-live="polite"></p>
+  <p class="note"><a class="frame__open" href="prototypy/k16-drugie-zycie-materialow/"
+    target="_blank" rel="noopener">Otwórz moduł w nowej karcie ↗</a> · Moduł otwarty w osobnej
+    karcie nie przekazuje wyniku do lekcji — po ukończeniu wróć tutaj i&nbsp;wpisz literę K
+    w&nbsp;piątym polu postępu śledztwa.</p>
+
+  <!-- Zdanie po wygranej. Odsłania je WYŁĄCZNIE silnik rozdziału (etap 5B),
+       więc ?legacy=1 zostaje bez zmian wizualnych. -->
+  <div class="k15__po" id="k16-po" hidden>
+    <p class="k15__po-tytul">Każda z&nbsp;tych rzeczy powstała z&nbsp;czegoś,
+      co ktoś oddał osobno.</p>
+    <p class="body-text" style="margin-inline:auto">To ostatni dowód w&nbsp;tej sprawie.
+      Wpisz literę K w&nbsp;polu postępu.</p>
+  </div>
+</section>
+
+<div class="trail" data-tone="dark" aria-hidden="true"><span class="trail__label">Finał</span></div>
+
+<!-- ═══════════ K17 — TERMINAL I FILM FINAŁOWY ═══════════ -->
+<section class="scene" id="k17" data-tone="dark" data-block="k17" aria-labelledby="k17-title">
+  <p class="kicker">Klocek 17 • terminal</p>
+  <h2 class="lead" id="k17-title" style="margin-inline:auto;text-align:center">Terminal śledztwa</h2>
+
+  <div class="ph ph--wide" data-ph="k17-terminal" style="max-width:620px;margin:0 auto 22px">
+    <span class="ph__label">DO UZUPEŁNIENIA</span><span class="ph__meta"></span>
+  </div>
+
+  <div class="terminal" id="k17-terminal">
+    <div id="k17-locked">
+      <p class="terminal__msg">Terminal jest zamknięty.</p>
+      <p class="terminal__missing" id="k17-missing" role="status" aria-live="polite"></p>
+    </div>
+    <div id="k17-open" hidden>
+      <p class="terminal__msg">Ukończono wszystkie etapy śledztwa i&nbsp;zebrano komplet dowodów.
+        Pełne nagranie zostało odblokowane.</p>
+      <button type="button" class="btn" id="k17-play">Odtwórz rozwiązanie sprawy</button>
+    </div>
+  </div>
+
+  <div id="k17-film-wrap" hidden style="max-width:960px;margin:26px auto 0">
+    <div class="ph ph--video" data-ph="k17-film" data-stops-audio>
+      <span class="ph__label">DO UZUPEŁNIENIA</span><span class="ph__meta"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ K18 — GRATULACJE, DYPLOM I STOPKA ═══════════ -->
+<section class="scene" id="k18" data-tone="dark" data-block="k18" aria-labelledby="k18-title">
+  <div class="scene__grid scene__grid--2">
+    <div>
+      <p class="kicker">Klocek 18</p>
+      <h2 class="lead" id="k18-title">Sprawa rozwiązana!</h2>
+      <p class="body-text">Zebrane dowody doprowadziły Cię do prawdy.</p>
+
+      <form class="diploma-form" id="k18-form">
+        <div>
+          <label for="k18-name">Twoje imię na dyplomie</label>
+          <input type="text" id="k18-name" name="imie" maxlength="30" autocomplete="off"
+                 placeholder="np. Ola">
+        </div>
+        <button type="submit" class="btn">Przygotuj dyplom</button>
+      </form>
+      <p class="note">Imię pozostaje wyłącznie w&nbsp;Twojej przeglądarce. Nie wysyłamy go nigdzie
+        i&nbsp;nie zapisujemy na serwerze.</p>
+    </div>
+    <div class="ph ph--portrait" data-ph="k18-detektyw">
+      <span class="ph__label">DO UZUPEŁNIENIA</span><span class="ph__meta"></span>
+    </div>
+  </div>
+
+  <!-- ETAP 6B — DYPLOM Z MATERIAŁÓW UŻYTKOWNIKA.
+       Karta to WARSTWY nad grafiką tła (dyplom_v01): animacja, tło, imię
+       w pustym polu i stopka z logotypami. Wszystkie pozycje podaje jedno
+       źródło (stała DYPLOM w skrypcie lekcji), więc to, co widać na
+       ekranie, jest tym samym, co skleja pobranie i wydruk.
+       Poprzednia karta rysowana tekstem odchodzi do historii — dyplom
+       jest treścią wspólną, więc nowa szata obowiązuje też w ?legacy=1. -->
+  <div class="diploma-card" id="k18-card" hidden>
+    <!-- animacja gra tylko w tablicy; w legacy i przy ograniczonym ruchu
+         karta od razu pokazuje gotowy dyplom -->
+    <video class="dyplom__film" id="k18-film" playsinline muted preload="none"
+           poster="../assets/images/lekcja45/18-dyplom-final/dyplom-tlo.webp" hidden>
+      <source src="../assets/video/lekcja45/18-final/dyplom-animacja.mp4" type="video/mp4">
+    </video>
+    <img class="dyplom__tlo" id="k18-tlo" alt="Dyplom Młodego Eko-Detektywa SELEKT"
+         src="../assets/images/lekcja45/18-dyplom-final/dyplom-tlo.webp"
+         width="1054" height="1492">
+    <span class="dyplom__imie" id="k18-card-name"></span>
+    <div class="dyplom__stopka" id="k18-stopka">
+      <div class="dyplom__kol dyplom__kol--lewa">
+        <img class="dyplom__logo dyplom__logo--selekt"
+             src="../assets/logos/Logo_Selekt_2026_full%20logo.svg"
+             alt="Znak Związku Międzygminnego Centrum Zagospodarowania Odpadów SELEKT">
+        <p class="dyplom__nazwa">Związek Międzygminny<br>
+          „Centrum Zagospodarowania Odpadów&nbsp;– SELEKT”<br>
+          w&nbsp;Czempiniu</p>
+      </div>
+      <div class="dyplom__kol dyplom__kol--prawa">
+        <img class="dyplom__logo dyplom__logo--wfos"
+             src="../assets/logos/wfosigw-poznan-logo.webp"
+             alt="Logo Wojewódzkiego Funduszu Ochrony Środowiska i Gospodarki Wodnej w Poznaniu">
+        <p class="dyplom__formula">Projekt dofinansowano ze środków<br>
+          Wojewódzkiego Funduszu Ochrony<br>
+          Środowiska i&nbsp;Gospodarki Wodnej<br>
+          w&nbsp;Poznaniu</p>
+      </div>
+    </div>
+  </div>
+  <p style="text-align:center">
+    <button type="button" class="btn" id="k18-print" hidden>Wydrukuj dyplom</button>
+    <button type="button" class="btn btn--ghost" id="k18-save" hidden>Pobierz dyplom</button>
+  </p>
+</section>
+
+</main>
+
+<footer class="lk-footer">
+  <div class="lk-footer__logos">
+    <img src="../assets/logos/Logo_Selekt_2026_full%20logo.svg"
+         alt="Logo Związku Międzygminnego SELEKT" width="200" height="56">
+    <img src="../assets/logos/wfosigw-poznan-logo.webp"
+         alt="Logo Wojewódzkiego Funduszu Ochrony Środowiska i Gospodarki Wodnej w Poznaniu"
+         width="180" height="56">
+  </div>
+  <p class="lk-footer__fund">Projekt dofinansowano ze środków Wojewódzkiego Funduszu Ochrony
+    Środowiska i&nbsp;Gospodarki Wodnej w&nbsp;Poznaniu.</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script src="lekcja-4-5-integracja/lesson-state.js?v=10"></script>
+<script src="lekcja-4-5-integracja/audio-manager.js?v=14"></script>
+<script src="lekcja-4-5-integracja/modules.js?v=44"></script>
+<script src="lekcja-4-5-integracja.js?v=51"></script>
+<!-- Nowe otwarcie lekcji (intro → tablica → 9 polaroidów) w trybie podglądu.
+     Bez ?boardPreview=1 ten skrypt kończy się natychmiast i niczego nie ładuje. -->
+<script src="lekcja-4-5-integracja/board-boot.js?v=125"></script>
+</body>
+</html>

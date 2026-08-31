@@ -1,0 +1,3 @@
+# Podglad roboczy dla klienta — nie indeksowac.
+User-agent: *
+Disallow: /

@@ -1,0 +1,576 @@
+/* ═══════════════════════════════════════════════════════════════
+   „Złap zużyty olej!” — minigra e-lekcji SELEKT (klasy 4–5)
+   Paleta projektu: #02468d  #1b9dd8  #3669ac  #afdaea
+   Olej: bursztyn #e8a020 / #f6c14d
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --c-navy:   #02468d;
+  --c-blue:   #1b9dd8;
+  --c-steel:  #3669ac;
+  --c-ice:    #afdaea;
+  --c-oil:    #e8a020;
+  --c-oil-hi: #f6c14d;
+  --c-text:   #0d2340;
+  --c-white:  #ffffff;
+  --hud-h: 64px;
+  --radius: 18px;
+  --shadow: 0 10px 30px rgba(2, 70, 141, 0.28);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden; /* gra zajmuje cały ekran, bez przewijania */
+}
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  color: var(--c-text);
+  background: var(--c-navy);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ══════════════ KONTENER GRY ══════════════ */
+
+.game {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ══════════════ PLANSZA ══════════════ */
+
+.board {
+  position: absolute;
+  inset: 0;
+  touch-action: none;      /* blokada przewijania palcem podczas gry */
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: none;            /* butelka podąża za kursorem — kursor zbędny */
+}
+.game[data-state="start"] .board,
+.game[data-state="won"] .board { cursor: default; }
+
+/* ── Tło: uproszczona kuchnia (CSS, podmienialne na background.webp) ── */
+
+.bg-kitchen {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, #d8edf6 0%, var(--c-ice) 46%, #8fc6e0 74%, #6aa8cc 100%);
+  background-size: cover;
+  background-position: center;
+}
+/* Gdy game.js znajdzie assets/images/background.webp, dostaje klasę .has-image */
+.bg-kitchen.has-image > * { display: none; }
+
+.bg-window {
+  position: absolute;
+  top: 6%; left: 50%;
+  transform: translateX(-50%);
+  width: min(34vw, 230px);
+  height: min(22vh, 170px);
+  background: linear-gradient(180deg, #eaf7fd 0%, #bfe4f2 100%);
+  border: 6px solid rgba(2, 70, 141, 0.35);
+  border-radius: 14px;
+  opacity: 0.5;
+}
+.bg-shelf {
+  position: absolute;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(2, 70, 141, 0.25);
+}
+.bg-shelf--1 { top: 14%; left: 4%;  width: 18%; }
+.bg-shelf--2 { top: 20%; right: 4%; width: 15%; }
+.bg-counter {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 13%;
+  background: linear-gradient(180deg, var(--c-steel) 0%, var(--c-navy) 100%);
+  border-top: 5px solid rgba(255, 255, 255, 0.35);
+}
+
+/* ── Patelnia ── */
+
+.pan {
+  position: absolute;
+  width: clamp(110px, 22vw, 190px);
+  will-change: transform, opacity;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+  opacity: 1;
+  filter: drop-shadow(0 8px 10px rgba(2, 35, 64, 0.35));
+}
+.pan.is-hidden { opacity: 0; transform: translateY(-14px); pointer-events: none; }
+.pan.face-right .pan-svg { transform: scaleX(-1); }  /* uchwyt w lewo, wylew w prawo */
+.pan-svg { display: block; width: 100%; height: auto; }
+.pan.tilt-pour { animation: pan-tilt 0.5s ease both; }
+
+@keyframes pan-tilt {
+  0%   { rotate: 0deg; }
+  60%  { rotate: -7deg; }
+  100% { rotate: -4deg; }
+}
+.pan.face-right.tilt-pour { animation-name: pan-tilt-r; }
+@keyframes pan-tilt-r {
+  0%   { rotate: 0deg; }
+  60%  { rotate: 7deg; }
+  100% { rotate: 4deg; }
+}
+
+/* ── Kropla ── */
+
+.drop {
+  position: absolute;
+  width: clamp(26px, 5.4vw, 40px);
+  will-change: transform;
+  filter: drop-shadow(0 4px 6px rgba(120, 70, 0, 0.35));
+}
+.drop.is-hidden { display: none; }
+.drop-svg { display: block; width: 100%; height: auto; }
+
+/* ── Rozbryzg ── */
+
+.splash {
+  position: absolute;
+  width: clamp(110px, 24vw, 190px);
+  transform: translate(-50%, -78%);
+  animation: splash-pop 0.6s ease both;
+}
+.splash.is-hidden { display: none; animation: none; }
+@keyframes splash-pop {
+  0%   { opacity: 0; scale: 0.4; }
+  55%  { opacity: 1; scale: 1.08; }
+  100% { opacity: 1; scale: 1; }
+}
+
+/* ── Efekt „+1” ── */
+
+.fx { position: absolute; inset: 0; pointer-events: none; }
+.fx-plus {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 800;
+  color: var(--c-navy);
+  text-shadow: 0 2px 0 var(--c-white), 0 0 14px var(--c-oil-hi);
+  animation: fx-rise 0.7s ease-out both;
+}
+@keyframes fx-rise {
+  from { opacity: 1; translate: 0 0; }
+  to   { opacity: 0; translate: 0 -44px; }
+}
+
+/* ── Butelka z lejkiem ── */
+
+.bottle {
+  position: absolute;
+  width: clamp(74px, 15vw, 118px);
+  will-change: transform;
+  filter: drop-shadow(0 10px 14px rgba(2, 35, 64, 0.4));
+}
+.bottle img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+.bottle.catch-bounce { animation: bottle-bounce 0.3s ease; }
+@keyframes bottle-bounce {
+  0%   { scale: 1; }
+  40%  { scale: 1.08 0.94; }
+  100% { scale: 1; }
+}
+
+/* ══════════════ HUD ══════════════ */
+
+.hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: var(--hud-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+  pointer-events: none;      /* nie blokuje sterowania… */
+  z-index: 20;
+}
+.hud .sound-btn { pointer-events: auto; }  /* …poza przyciskiem dźwięku */
+
+.hud-counter {
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid var(--c-navy);
+  border-radius: 14px;
+  padding: 7px 14px 9px;
+  box-shadow: var(--shadow);
+  min-width: 210px;
+}
+.counter {
+  font-size: clamp(0.85rem, 2.6vw, 1.05rem);
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--c-navy);
+  white-space: nowrap;
+}
+.progress {
+  margin-top: 5px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--c-ice);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--c-oil) 0%, var(--c-oil-hi) 100%);
+  transition: width 0.25s ease;
+}
+
+.sound-btn {
+  width: 48px;
+  height: 48px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 2px solid var(--c-navy);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--c-navy);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow);
+}
+.sound-btn svg { width: 26px; height: 26px; }
+.sound-btn .icon-sound-off { display: none; }
+.sound-btn[aria-pressed="false"] .icon-sound-on  { display: none; }
+.sound-btn[aria-pressed="false"] .icon-sound-off { display: block; }
+.sound-btn:hover { background: var(--c-ice); }
+
+/* ══════════════ NAKŁADKI (overlaye) ══════════════ */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(2, 70, 141, 0.55);
+  backdrop-filter: blur(3px);
+  overflow-y: auto;
+}
+.overlay.is-hidden { display: none; }
+
+.panel {
+  width: min(94vw, 460px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  background: var(--c-white);
+  border-radius: var(--radius);
+  border-top: 8px solid var(--c-blue);
+  box-shadow: 0 24px 60px rgba(0, 20, 45, 0.45);
+  padding: clamp(20px, 4.5vw, 34px);
+  text-align: center;
+  animation: panel-in 0.35s ease both;
+}
+@keyframes panel-in {
+  from { opacity: 0; translate: 0 18px; scale: 0.97; }
+  to   { opacity: 1; translate: 0 0;    scale: 1; }
+}
+
+.panel-title {
+  font-size: clamp(1.5rem, 5.4vw, 2.1rem);
+  font-weight: 900;
+  color: var(--c-navy);
+  margin-bottom: 12px;
+  line-height: 1.15;
+}
+.panel-text {
+  font-size: clamp(0.95rem, 3.2vw, 1.08rem);
+  line-height: 1.55;
+  margin-bottom: 14px;
+}
+.panel-text--label { font-weight: 700; color: var(--c-steel); margin-bottom: 6px; }
+
+.panel-info {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+  background: var(--c-ice);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  font-size: clamp(0.86rem, 2.9vw, 0.98rem);
+  line-height: 1.5;
+}
+.panel-info-icon { flex: 0 0 22px; width: 22px; height: 22px; color: var(--c-navy); margin-top: 2px; }
+
+.panel-hint {
+  margin-top: 14px;
+  font-size: 0.85rem;
+  color: #4d647e;
+}
+
+/* Ekran pudła — czytelny, ale nie stresujący (bez czerwieni) */
+.overlay--miss .panel { border-top-color: var(--c-oil); }
+
+/* ── Przyciski ── */
+
+.btn {
+  font: inherit;
+  font-size: clamp(1rem, 3.4vw, 1.15rem);
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 14px 30px;
+  min-height: 52px;
+  min-width: 44px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.btn--primary {
+  background: linear-gradient(180deg, var(--c-blue) 0%, var(--c-navy) 100%);
+  color: var(--c-white);
+  box-shadow: 0 8px 20px rgba(2, 70, 141, 0.45);
+}
+.btn--primary:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(2, 70, 141, 0.55); }
+.btn--primary:active { transform: translateY(0); }
+
+.btn:focus-visible,
+.sound-btn:focus-visible {
+  outline: 4px solid var(--c-oil);
+  outline-offset: 3px;
+}
+
+/* ── Litera-nagroda ── */
+
+.reward-letter {
+  width: clamp(96px, 24vw, 140px);
+  height: clamp(96px, 24vw, 140px);
+  margin: 8px auto 14px;
+  display: grid;
+  place-items: center;
+  font-size: clamp(3.4rem, 12vw, 5.2rem);
+  font-weight: 900;
+  color: var(--c-navy);
+  background: radial-gradient(circle at 32% 28%, var(--c-oil-hi) 0%, var(--c-oil) 70%);
+  border: 6px solid var(--c-white);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--c-oil), 0 14px 34px rgba(184, 122, 18, 0.5);
+  animation: letter-pop 0.9s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes letter-pop {
+  0%   { scale: 0; rotate: -30deg; opacity: 0; }
+  60%  { scale: 1.15; rotate: 6deg; opacity: 1; }
+  100% { scale: 1; rotate: 0deg; }
+}
+
+/* ══════════════ ODLICZANIE 3-2-1 ══════════════ */
+
+.countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 70, 141, 0.35);
+  pointer-events: none;
+}
+.countdown.is-hidden { display: none; }
+.countdown span {
+  font-size: clamp(5rem, 22vw, 9rem);
+  font-weight: 900;
+  color: var(--c-white);
+  text-shadow: 0 6px 0 var(--c-navy), 0 14px 40px rgba(0, 20, 45, 0.5);
+  animation: count-pulse 1s ease infinite;
+}
+@keyframes count-pulse {
+  0%   { scale: 0.6; opacity: 0; }
+  25%  { scale: 1.1; opacity: 1; }
+  80%  { scale: 1;   opacity: 1; }
+  100% { scale: 0.95; opacity: 0; }
+}
+
+/* ══════════════ EKRANY POZIOME / NISKIE ══════════════ */
+
+@media (max-height: 480px) {
+  .bottle { width: clamp(60px, 11vh, 90px); }
+  .bg-window { display: none; }
+  .panel { padding: 14px 18px; }
+  .panel-title { margin-bottom: 6px; }
+  .panel-text { margin-bottom: 8px; }
+  .panel-info { margin-bottom: 10px; }
+  .reward-letter { width: 80px; height: 80px; font-size: 3rem; margin: 4px auto 8px; }
+}
+
+/* ══════════════ DOSTĘPNOŚĆ: reduced motion ══════════════ */
+/* Ozdobne animacje wyłączone — mechanika spadania kropli bez zmian (JS). */
+
+@media (prefers-reduced-motion: reduce) {
+  .pan { transition: opacity 0.15s linear; }
+  .pan.is-hidden { transform: none; }
+  .pan.tilt-pour { animation: none; rotate: -4deg; }
+  .pan.face-right.tilt-pour { rotate: 4deg; }
+  .splash { animation: none; }
+  .fx-plus { animation-duration: 0.3s; }
+  .bottle.catch-bounce { animation: none; }
+  .panel { animation: none; }
+  .reward-letter { animation: none; }
+  .countdown span { animation: none; opacity: 1; }
+  .btn--primary:hover { transform: none; }
+}
+
+/* ══════════════ K08 v2: ŻYCIA, TOAST, TRYB POMOCY ══════════════ */
+
+/* trzy krople-życia w HUD (między licznikiem a dźwiękiem) */
+.lives {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  margin-left: auto;
+}
+.lives .life { width: 22px; height: 30px; display: block; }
+.lives .life svg { width: 100%; height: 100%; overflow: visible; }
+.lives .life-drop {
+  fill: #e8a020;
+  stroke: #b97a12;
+  stroke-width: 2.5;
+  transition: fill 0.25s ease, opacity 0.25s ease;
+}
+.lives .life-cross {
+  stroke: #7e2f24;
+  stroke-width: 5;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+/* utracone życie: NIE tylko kolor — kropla pusta w środku + przekreślenie */
+.lives .life.is-lost .life-drop { fill: none; opacity: 0.55; }
+.lives .life.is-lost .life-cross { opacity: 1; }
+
+/* krótki komunikat po utracie życia / o spokojniejszym tempie */
+.toast {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--hud-h) + 14px);
+  transform: translateX(-50%);
+  max-width: min(86vw, 460px);
+  padding: 10px 20px;
+  background: rgba(20, 30, 42, 0.92);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  z-index: 30;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.toast.is-hidden { opacity: 0; visibility: hidden; }
+.toast--assist { background: rgba(31, 84, 66, 0.94); }
+
+/* nota trybu pomocy na ekranie końca próby */
+.panel-text--assist {
+  background: #e7f3ec;
+  border-left: 4px solid #2f7d43;
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+  font-weight: 600;
+}
+.panel-text--assist.is-hidden { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lives .life-drop, .lives .life-cross { transition: none; }
+  .toast { transition: opacity 0.1s linear; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   N3/D — HUD NA WĄSKICH OKNACH (telefon; iframe w P04 ma 277–400 px)
+
+   Jeden rząd (licznik 210 px + życia + dźwięk) potrzebuje ~386 px, więc
+   na telefonie przycisk dźwięku — a przy 320 px także życia — wypadał
+   poza kadr. Zawijamy do DWÓCH rzędów: licznik z paskiem postępu na
+   górze, pod nim życia (lewa) i dźwięk (prawa). Pełna informacja
+   zostaje; logika gry i kontrakt k08:completed nietknięte.
+   `--hud-h` rośnie razem z HUD-em, żeby toast nie wjeżdżał pod spód.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 520px) {
+  :root { --hud-h: 112px; }
+  .hud {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    padding-top: 8px;
+  }
+  .hud-counter {
+    flex: 1 1 100%;
+    min-width: 0;
+    order: 0;
+    padding: 6px 12px 8px;
+  }
+  .counter { font-size: 0.85rem; }
+  .lives { order: 1; margin-left: 2px; }
+  .lives .life { width: 19px; height: 26px; }
+  .sound-btn { order: 2; margin-left: auto; width: 44px; height: 44px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   N4 — STEROWANIE I PRÓG WEJŚCIA
+
+   Test z dzieckiem: kursor wyjeżdżał poza ramkę, butelka zamierała, a
+   kursora nie było widać (`.board { cursor: none }`). Nasłuch przeniesiony
+   na cały dokument (game.js); tutaj zostaje chip z podpowiedzią sterowania
+   w HUD. Korekta N4.1: ekranowe strzałki ◀ ▶ usunięte — sterowanie to
+   mysz/dotyk plus klawiatura z precyzyjnym krokiem.
+   Wygląd planszy, assety i strefa łapania bez zmian.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Chip z podpowiedzią sterowania (HUD) ── */
+.hud-hint {
+  background: rgba(255, 255, 255, 0.88);
+  border: 2px solid var(--c-steel);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--c-navy);
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(2, 70, 141, 0.18);
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+/* po kilku złapanych kroplach podpowiedź przestaje być potrzebna */
+.hud-hint.is-faded { opacity: 0; visibility: hidden; }
+
+/* ── HUD na telefonie: podpowiedź jako trzeci rząd ──
+   Rozszerzenie układu 2-rzędowego z N3; `--hud-h` rośnie razem z HUD-em,
+   żeby toast nie wjeżdżał pod spód. */
+@media (max-width: 520px) {
+  :root { --hud-h: 146px; }
+  .hud-hint {
+    flex: 1 1 100%;
+    order: 3;
+    text-align: center;
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-hint { transition: none; }
+}

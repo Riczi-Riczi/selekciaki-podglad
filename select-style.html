@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wybór stylu 3D — SELEKT</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#0a1a0c;color:#e8f5e2;padding:24px 20px 60px}
+header{text-align:center;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid #1a3020}
+header h1{font-size:20px;color:#b6d5aa;margin-bottom:6px}
+header p{font-size:13px;color:#5a8060;line-height:1.6}
+.sticky-bar{position:sticky;top:0;z-index:100;background:#0a1a0c;border-bottom:1px solid #1a3020;padding:10px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.sticky-bar .count{font-size:13px;color:#b6d5aa}
+.sticky-bar .count span{color:#4cff7c;font-weight:700;font-size:16px}
+#confirm-btn{padding:9px 28px;background:#3e6034;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s}
+#confirm-btn:hover{background:#4c7a40}
+#confirm-btn:disabled{background:#1e3020;color:#3a5a3a;cursor:default}
+.section{margin-bottom:36px}
+.section-title{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#4cff7c;margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid #1a3020;display:flex;align-items:center;gap:8px}
+.section-title em{font-style:normal;color:#5a8060;font-weight:400;letter-spacing:0;text-transform:none;font-size:11px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+@media(max-width:1000px){.grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:700px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:480px){.grid{grid-template-columns:repeat(2,1fr)}}
+.card{position:relative;cursor:pointer;border-radius:9px;overflow:hidden;border:2.5px solid transparent;aspect-ratio:4/3;transition:border-color .18s,transform .15s}
+.card:hover{transform:scale(1.04)}
+.card img{width:100%;height:100%;object-fit:cover;display:block;background:#1a2e1c}
+.card .num{position:absolute;top:5px;left:6px;background:rgba(0,0,0,.72);color:#b6d5aa;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px}
+.card .lbl{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));color:#ccc;font-size:10px;padding:10px 6px 5px;line-height:1.3;text-align:center}
+.card.sel{border-color:#4cff7c;transform:scale(1.05)}
+.card .ck{display:none;position:absolute;top:5px;right:6px;background:#4cff7c;color:#000;font-size:11px;font-weight:900;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center}
+.card.sel .ck{display:flex}
+#result-box{margin-top:20px;background:#0d2010;border:1px solid #1a3020;border-radius:10px;padding:16px 20px;display:none;font-size:13px;line-height:1.8;color:#b6d5aa}
+#result-box strong{color:#4cff7c;display:block;margin-bottom:8px;font-size:14px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Wybierz kierunek stylu 3D dla projektu SELEKT</h1>
+  <p>Kliknij obrazki które Ci się podobają — możesz wybrać kilka lub kilkanaście.<br>Potem wciśnij ZATWIERDŹ — wynik trafi do Claude.</p>
+</header>
+
+<div class="sticky-bar">
+  <div class="count">Wybrano: <span id="cnt">0</span> z 60</div>
+  <button id="confirm-btn" disabled>✓ ZATWIERDŹ WYBÓR</button>
+</div>
+
+<!-- A: Geometryczny / Low-poly -->
+<div class="section">
+  <div class="section-title">A — Geometryczny / Low-poly <em>krajobrazy z wielokątów, styl gry</em></div>
+  <div class="grid">
+    <div class="card" data-id="A1" data-name="Geometryczny las z górami (1)"><img src="https://img.magnific.com/free-photo/view-3d-forest-landscape-with-mountains-sky_23-2150800355.jpg" loading="lazy"><div class="num">A1</div><div class="lbl">Las 3D z górami</div><div class="ck">✓</div></div>
+    <div class="card" data-id="A2" data-name="Geometryczny las z górami (2)"><img src="https://img.magnific.com/free-photo/view-3d-forest-landscape-with-mountains-sky_23-2150800385.jpg" loading="lazy"><div class="num">A2</div><div class="lbl">Las 3D z górami 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="A3" data-name="Geometryczny las z górami (3)"><img src="https://img.magnific.com/free-photo/view-3d-forest-landscape-with-mountains-sky_23-2150800493.jpg" loading="lazy"><div class="num">A3</div><div class="lbl">Las 3D z górami 3</div><div class="ck">✓</div></div>
+    <div class="card" data-id="A4" data-name="Geometryczny las z górami (4)"><img src="https://img.magnific.com/free-photo/view-3d-forest-landscape-with-mountains-sky_23-2150800403.jpg" loading="lazy"><div class="num">A4</div><div class="lbl">Las 3D z górami 4</div><div class="ck">✓</div></div>
+    <div class="card" data-id="A5" data-name="Geometryczny krajobraz z drzewami i skałami"><img src="https://img.magnific.com/free-photo/view-3d-geometric-landscape-with-trees-rocks_23-2150800503.jpg" loading="lazy"><div class="num">A5</div><div class="lbl">Skały i drzewa geo</div><div class="ck">✓</div></div>
+    <div class="card" data-id="A6" data-name="Geometryczny las na pagórku z rzeką"><img src="https://img.magnific.com/free-photo/view-3d-forest-landscape-mound-with-river_23-2150800357.jpg" loading="lazy"><div class="num">A6</div><div class="lbl">Pagórek z rzeką</div><div class="ck">✓</div></div>
+    <div class="card" data-id="A7" data-name="Wielokątne góry (1)"><img src="https://img.magnific.com/free-photo/abstract-mountain-with-polygonal-shapes_23-2151362982.jpg" loading="lazy"><div class="num">A7</div><div class="lbl">Wielokątne góry</div><div class="ck">✓</div></div>
+    <div class="card" data-id="A8" data-name="Wielokątne góry (2)"><img src="https://img.magnific.com/free-photo/abstract-mountain-with-polygonal-shapes_23-2151362980.jpg" loading="lazy"><div class="num">A8</div><div class="lbl">Wielokątne góry 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="A9" data-name="Wielokątne góry (3)"><img src="https://img.magnific.com/free-photo/abstract-mountain-with-polygonal-shapes_23-2151362978.jpg" loading="lazy"><div class="num">A9</div><div class="lbl">Wielokątne góry 3</div><div class="ck">✓</div></div>
+    <div class="card" data-id="A10" data-name="Kolorowe góry na ciemnym tle"><img src="https://img.magnific.com/free-photo/colorful-mountain-dark-background_23-2151363036.jpg" loading="lazy"><div class="num">A10</div><div class="lbl">Góry neon na czerni</div><div class="ck">✓</div></div>
+  </div>
+</div>
+
+<!-- B: Izometryczny / Miniaturowy świat -->
+<div class="section">
+  <div class="section-title">B — Izometryczny / Miniaturowy świat <em>sceny z lotu ptaka, dioramy</em></div>
+  <div class="grid">
+    <div class="card" data-id="B1" data-name="Eco scena izometryczna (1)"><img src="https://img.magnific.com/free-photo/3d-environment-project-scene_23-2148896014.jpg" loading="lazy"><div class="num">B1</div><div class="lbl">Eco scena izo. 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="B2" data-name="Eco scena izometryczna (2)"><img src="https://img.magnific.com/free-photo/3d-environment-project-scene_23-2148896045.jpg" loading="lazy"><div class="num">B2</div><div class="lbl">Eco scena izo. 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="B3" data-name="Eco scena izometryczna (3)"><img src="https://img.magnific.com/free-photo/3d-environment-project-scene_23-2148896016.jpg" loading="lazy"><div class="num">B3</div><div class="lbl">Eco scena izo. 3</div><div class="ck">✓</div></div>
+    <div class="card" data-id="B4" data-name="Eco scena izometryczna (4)"><img src="https://img.magnific.com/free-photo/3d-environment-project-scene_23-2148896013.jpg" loading="lazy"><div class="num">B4</div><div class="lbl">Eco scena izo. 4</div><div class="ck">✓</div></div>
+    <div class="card" data-id="B5" data-name="Eco scena izometryczna (5)"><img src="https://img.magnific.com/free-photo/3d-environment-project-scene_23-2148896007.jpg" loading="lazy"><div class="num">B5</div><div class="lbl">Eco scena izo. 5</div><div class="ck">✓</div></div>
+    <div class="card" data-id="B6" data-name="Miniaturowy świat (1)"><img src="https://img.magnific.com/free-photo/rendering-miniature-world_23-2150879993.jpg" loading="lazy"><div class="num">B6</div><div class="lbl">Miniaturowy świat 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="B7" data-name="Miniaturowy świat (2)"><img src="https://img.magnific.com/free-photo/rendering-miniature-world_23-2150880039.jpg" loading="lazy"><div class="num">B7</div><div class="lbl">Miniaturowy świat 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="B8" data-name="Miniaturowy świat (3)"><img src="https://img.magnific.com/free-photo/rendering-miniature-world_23-2150880021.jpg" loading="lazy"><div class="num">B8</div><div class="lbl">Miniaturowy świat 3</div><div class="ck">✓</div></div>
+    <div class="card" data-id="B9" data-name="Ekosystem 3D (1)"><img src="https://img.magnific.com/free-photo/3d-rendering-ecosystem_23-2149755755.jpg" loading="lazy"><div class="num">B9</div><div class="lbl">Ekosystem 3D 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="B10" data-name="Ekosystem 3D (2)"><img src="https://img.magnific.com/free-photo/3d-rendering-ecosystem_23-2149755751.jpg" loading="lazy"><div class="num">B10</div><div class="lbl">Ekosystem 3D 2</div><div class="ck">✓</div></div>
+  </div>
+</div>
+
+<!-- C: Futurystyczne zielone miasto -->
+<div class="section">
+  <div class="section-title">C — Futurystyczne zielone miasto <em>roślinność + nowoczesna architektura</em></div>
+  <div class="grid">
+    <div class="card" data-id="C1" data-name="Eko-miasto futurystyczne (1)"><img src="https://img.magnific.com/free-photo/futuristic-environmentally-friendly-city-with-green-spaces_23-2150780592.jpg" loading="lazy"><div class="num">C1</div><div class="lbl">Eko-miasto 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="C2" data-name="Eko-miasto futurystyczne (2)"><img src="https://img.magnific.com/free-photo/futuristic-environmentally-friendly-city-with-green-spaces_23-2150780602.jpg" loading="lazy"><div class="num">C2</div><div class="lbl">Eko-miasto 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="C3" data-name="Eko-miasto futurystyczne (3)"><img src="https://img.magnific.com/free-photo/futuristic-environmentally-friendly-city-with-green-spaces_23-2150780620.jpg" loading="lazy"><div class="num">C3</div><div class="lbl">Eko-miasto 3</div><div class="ck">✓</div></div>
+    <div class="card" data-id="C4" data-name="Miasto z roślinnością i zielenią (1)"><img src="https://img.magnific.com/free-photo/view-futuristic-city-with-lots-vegetation-greenery_23-2150842776.jpg" loading="lazy"><div class="num">C4</div><div class="lbl">Miasto + zieleń 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="C5" data-name="Futurystyczne budynki w naturze (1)"><img src="https://img.magnific.com/free-photo/futuristic-buildings-nature_23-2150832569.jpg" loading="lazy"><div class="num">C5</div><div class="lbl">Budynki w naturze 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="C6" data-name="Futurystyczne budynki w naturze (2)"><img src="https://img.magnific.com/free-photo/futuristic-buildings-nature_23-2150832583.jpg" loading="lazy"><div class="num">C6</div><div class="lbl">Budynki w naturze 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="C7" data-name="Futurystyczne miasto z zielenią"><img src="https://img.magnific.com/free-photo/view-futuristic-city-with-greenery-vegetation_23-2150842872.jpg" loading="lazy"><div class="num">C7</div><div class="lbl">Miasto + zieleń 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="C8" data-name="Futurystyczne miasto z roślinnością (2)"><img src="https://img.magnific.com/free-photo/view-futuristic-city-with-lots-vegetation-greenery_23-2150842828.jpg" loading="lazy"><div class="num">C8</div><div class="lbl">Miasto + roślinność</div><div class="ck">✓</div></div>
+    <div class="card" data-id="C9" data-name="Futurystyczne miasto sci-fi"><img src="https://img.magnific.com/free-photo/view-futuristic-looking-city_23-2150946711.jpg" loading="lazy"><div class="num">C9</div><div class="lbl">Miasto sci-fi</div><div class="ck">✓</div></div>
+    <div class="card" data-id="C10" data-name="Spektakularny krajobraz sci-fi"><img src="https://img.magnific.com/free-photo/spectacular-sci-fi-landscape_23-2151954458.jpg" loading="lazy"><div class="num">C10</div><div class="lbl">Krajobraz sci-fi</div><div class="ck">✓</div></div>
+  </div>
+</div>
+
+<!-- D: Cartoon / renderowane krajobrazy -->
+<div class="section">
+  <div class="section-title">D — Cartoon / Renderowane krajobrazy <em>miękkie formy, ciepłe barwy</em></div>
+  <div class="grid">
+    <div class="card" data-id="D1" data-name="Cartoon las 3D (1)"><img src="https://img.magnific.com/free-photo/3d-rendering-cartoon-like-forest-landscape_23-2150991401.jpg" loading="lazy"><div class="num">D1</div><div class="lbl">Cartoon las 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="D2" data-name="Cartoon las 3D (2)"><img src="https://img.magnific.com/free-photo/3d-rendering-cartoon-like-forest-landscape_23-2150991403.jpg" loading="lazy"><div class="num">D2</div><div class="lbl">Cartoon las 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="D3" data-name="Cartoon tło dla dzieci (1)"><img src="https://img.magnific.com/free-photo/3d-cartoon-background-children_23-2150473313.jpg" loading="lazy"><div class="num">D3</div><div class="lbl">Cartoon dziecięce 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="D4" data-name="Cartoon tło dla dzieci (2)"><img src="https://img.magnific.com/free-photo/3d-cartoon-background-children_23-2150473326.jpg" loading="lazy"><div class="num">D4</div><div class="lbl">Cartoon dziecięce 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="D5" data-name="Cartoon góry z rzeką"><img src="https://img.magnific.com/free-photo/cartoon-mountain-landscape-with-river_23-2151363031.jpg" loading="lazy"><div class="num">D5</div><div class="lbl">Cartoon góry + rzeka</div><div class="ck">✓</div></div>
+    <div class="card" data-id="D6" data-name="Krajobraz 3D z pagórkami i niebem"><img src="https://img.magnific.com/free-photo/3d-landscape-with-grassy-hills-blue-cloudy-sky_1048-12332.jpg" loading="lazy"><div class="num">D6</div><div class="lbl">Pagórki + niebo</div><div class="ck">✓</div></div>
+    <div class="card" data-id="D7" data-name="Śniący krajobraz 3D"><img src="https://img.magnific.com/free-photo/3d-rendering-dreamy-landscape_23-2151835561.jpg" loading="lazy"><div class="num">D7</div><div class="lbl">Śniący krajobraz</div><div class="ck">✓</div></div>
+    <div class="card" data-id="D8" data-name="Las 3D z chmurami"><img src="https://img.magnific.com/free-photo/3d-forest-landscape-with-low-clouds_1048-9800.jpg" loading="lazy"><div class="num">D8</div><div class="lbl">Las 3D + chmury</div><div class="ck">✓</div></div>
+    <div class="card" data-id="D9" data-name="Krajobraz 3D z rzeką"><img src="https://img.magnific.com/free-photo/3d-landscape-with-trees-hills-alongside-river_1048-8323.jpg" loading="lazy"><div class="num">D9</div><div class="lbl">Krajobraz 3D + rzeka</div><div class="ck">✓</div></div>
+    <div class="card" data-id="D10" data-name="Realistyczne góry z roślinnością"><img src="https://img.magnific.com/free-photo/realistic-mountain-with-vegetation-natural-landscape_23-2151363004.jpg" loading="lazy"><div class="num">D10</div><div class="lbl">Góry z roślinnością</div><div class="ck">✓</div></div>
+  </div>
+</div>
+
+<!-- E: Paper style / Fantasy -->
+<div class="section">
+  <div class="section-title">E — Paper style / Fantasy <em>warstwowe cięcia, miękkie drzewa 3D</em></div>
+  <div class="grid">
+    <div class="card" data-id="E1" data-name="Paper style drzewa 3D (1)"><img src="https://img.magnific.com/free-photo/view-3d-paper-style-trees_23-2150928821.jpg" loading="lazy"><div class="num">E1</div><div class="lbl">Paper drzewa 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="E2" data-name="Paper style drzewa 3D (2)"><img src="https://img.magnific.com/free-photo/view-3d-paper-style-trees_23-2150928745.jpg" loading="lazy"><div class="num">E2</div><div class="lbl">Paper drzewa 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="E3" data-name="Paper style drzewo 3D (3)"><img src="https://img.magnific.com/free-photo/paper-style-three-dimensional-tree_23-2150928657.jpg" loading="lazy"><div class="num">E3</div><div class="lbl">Paper drzewo 3</div><div class="ck">✓</div></div>
+    <div class="card" data-id="E4" data-name="3D drzewa z roślinnością (1)"><img src="https://img.magnific.com/free-photo/three-dimensional-trees-with-vegetation_23-2150928739.jpg" loading="lazy"><div class="num">E4</div><div class="lbl">Drzewa 3D + zieleń 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="E5" data-name="3D drzewa z roślinnością (2)"><img src="https://img.magnific.com/free-photo/three-dimensional-trees-with-vegetation_23-2150928737.jpg" loading="lazy"><div class="num">E5</div><div class="lbl">Drzewa 3D + zieleń 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="E6" data-name="Paper style białe drzewa 3D"><img src="https://img.magnific.com/free-photo/paper-style-three-dimensional-white-trees_23-2150928641.jpg" loading="lazy"><div class="num">E6</div><div class="lbl">Białe drzewa paper</div><div class="ck">✓</div></div>
+    <div class="card" data-id="E7" data-name="Warstwowy krajobraz zielony"><img src="https://img.magnific.com/free-photo/abstract-wavy-layered-landscape-shades-green_779267-3595.jpg" loading="lazy"><div class="num">E7</div><div class="lbl">Wavy zielony krajobraz</div><div class="ck">✓</div></div>
+    <div class="card" data-id="E8" data-name="Fantasy krajobraz średniowieczny (1)"><img src="https://img.magnific.com/free-photo/beautiful-medieval-fantasy-landscape_23-2150916338.jpg" loading="lazy"><div class="num">E8</div><div class="lbl">Fantasy krajobraz 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="E9" data-name="Fantasy krajobraz średniowieczny (2)"><img src="https://img.magnific.com/free-photo/beautiful-medieval-fantasy-landscape_23-2150916312.jpg" loading="lazy"><div class="num">E9</div><div class="lbl">Fantasy krajobraz 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="E10" data-name="Pastelowy śniący krajobraz górski"><img src="https://img.magnific.com/free-photo/dreamy-pastel-mountain-landscape_23-2151991137.jpg" loading="lazy"><div class="num">E10</div><div class="lbl">Pastelowe góry</div><div class="ck">✓</div></div>
+  </div>
+</div>
+
+<!-- F: Planeta / Ekologia 3D -->
+<div class="section">
+  <div class="section-title">F — Planeta / Ekologia 3D <em>kule ziemskie, organiczne kształty</em></div>
+  <div class="grid">
+    <div class="card" data-id="F1" data-name="Kula ziemska 3D zielona (1)"><img src="https://img.magnific.com/free-photo/3d-rendered-earth-globe-with-green-continents-blue-ocean_23-2152009413.jpg" loading="lazy"><div class="num">F1</div><div class="lbl">Globus 3D zielony</div><div class="ck">✓</div></div>
+    <div class="card" data-id="F2" data-name="Globus pokryty trawą 3D"><img src="https://img.magnific.com/free-photo/3d-render-globe-covered-grass_1048-5511.jpg" loading="lazy"><div class="num">F2</div><div class="lbl">Globus w trawie</div><div class="ck">✓</div></div>
+    <div class="card" data-id="F3" data-name="Planeta Ziemia 3D (1)"><img src="https://img.magnific.com/free-photo/3d-earth-planet-shape_23-2151134175.jpg" loading="lazy"><div class="num">F3</div><div class="lbl">Planeta 3D 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="F4" data-name="Planeta Ziemia 3D (2)"><img src="https://img.magnific.com/free-photo/3d-earth-planet-shape_23-2151134145.jpg" loading="lazy"><div class="num">F4</div><div class="lbl">Planeta 3D 2</div><div class="ck">✓</div></div>
+    <div class="card" data-id="F5" data-name="Globalne ocieplenie 3D"><img src="https://img.magnific.com/free-photo/3d-rendering-global-warming_23-2150846892.jpg" loading="lazy"><div class="num">F5</div><div class="lbl">Globalne ocieplenie</div><div class="ck">✓</div></div>
+    <div class="card" data-id="F6" data-name="Digital art planeta Ziemia (1)"><img src="https://img.magnific.com/free-photo/digital-art-with-planet-earth_23-2151064480.jpg" loading="lazy"><div class="num">F6</div><div class="lbl">Digital art Ziemia 1</div><div class="ck">✓</div></div>
+    <div class="card" data-id="F7" data-name="Planeta otoczona naturą"><img src="https://img.magnific.com/free-photo/planet-earth-surrounded-by-nature-vegetation_23-2151587930.jpg" loading="lazy"><div class="num">F7</div><div class="lbl">Planeta w naturze</div><div class="ck">✓</div></div>
+    <div class="card" data-id="F8" data-name="Globus z drzewami na krajobrazie"><img src="https://img.magnific.com/free-photo/3d-render-globe-trees-grassy-landscape_1048-5700.jpg" loading="lazy"><div class="num">F8</div><div class="lbl">Globus + drzewa</div><div class="ck">✓</div></div>
+    <div class="card" data-id="F9" data-name="Organiczne zielone bąble 3D"><img src="https://img.magnific.com/free-photo/3d-rendering-abstract-green-organic-liquid-glass-bubble-particles_181624-61103.jpg" loading="lazy"><div class="num">F9</div><div class="lbl">Organiczne bąble 3D</div><div class="ck">✓</div></div>
+    <div class="card" data-id="F10" data-name="Zielone kule 3D render"><img src="https://img.magnific.com/free-photo/3d-rendering-illustration-green-balls_181624-58606.jpg" loading="lazy"><div class="num">F10</div><div class="lbl">Zielone kule 3D</div><div class="ck">✓</div></div>
+  </div>
+</div>
+
+<div id="result-box"><strong>Twój wybór zapisany:</strong><div id="result-text"></div></div>
+
+<script>
+const sel = new Set();
+document.querySelectorAll('.card').forEach(c => {
+  c.addEventListener('click', () => {
+    const id = c.dataset.id;
+    sel.has(id) ? (sel.delete(id), c.classList.remove('sel')) : (sel.add(id), c.classList.add('sel'));
+    document.getElementById('cnt').textContent = sel.size;
+    document.getElementById('confirm-btn').disabled = sel.size === 0;
+  });
+});
+document.getElementById('confirm-btn').addEventListener('click', () => {
+  const ids = [...sel].sort();
+  const lines = ids.map(id => {
+    const el = document.querySelector(`.card[data-id="${id}"]`);
+    return `${id}: ${el?.dataset.name || ''}`;
+  });
+  console.log('SELEKT_SELECTION:' + ids.join(','));
+  const rb = document.getElementById('result-box');
+  document.getElementById('result-text').innerHTML = lines.join('<br>') + '<br><br><em style="color:#5a8060">Wróć teraz do Claude i napisz "Zatwierdzone".</em>';
+  rb.style.display = 'block';
+  rb.scrollIntoView({behavior:'smooth'});
+});
+</script>
+</body>
+</html>

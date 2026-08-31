@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Droga butelki — prototyp K07 | SELEKT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Signika:wght@600;700&family=Imprima&display=swap" rel="stylesheet">
+<script>
+/* Tryb osadzenia w rozdziale tablicy (?embed=board): klasa musi być na
+   <html> PRZED pierwszym malowaniem, żeby pełny nagłówek prototypu nawet
+   nie mignął. Samodzielny podgląd (bez parametru) zachowuje pełny układ. */
+if (new URLSearchParams(location.search).get("embed") === "board") {
+  document.documentElement.classList.add("k07-embed");
+}
+</script>
+<link rel="stylesheet" href="k07.css?v=6">
+</head>
+<body>
+
+<p class="k07-proto-note">
+  Prototyp klocka&nbsp;7. Nie jest jeszcze podłączony do lekcji.
+</p>
+
+<main class="k07" id="k07">
+
+  <header class="k07-head">
+    <p class="k07-kicker">Klocek 7</p>
+    <h1 class="k07-title">Ułóż drogę butelki</h1>
+    <p class="k07-lead">
+      Ułóż sześć kart — od rejestracji aż do oddania pełnej butelki.
+      Przeciągnij kartę albo wybierz kartę i&nbsp;pole.
+    </p>
+    <!-- lewa informacja: na szerokim desktopie pozycjonowana absolutnie,
+         na tablecie/telefonie wraca do przepływu -->
+    <p class="k07-note">Bez limitu czasu. Każdą kartę możesz przestawić.</p>
+  </header>
+
+  <!-- ═══ PLANSZA ═══
+       <picture> pobiera WYŁĄCZNIE planszę właściwą dla viewportu.
+       Pola 1–6 to jeden zestaw DOM — media query przestawia tylko ich
+       współrzędne (desktop 3×2 wężowo / mobile 2×3 wężowo). -->
+  <div class="k07-board" id="k07-board">
+    <picture>
+      <source media="(min-width: 901px)"
+              srcset="../../../assets/images/lekcja45/07-droga-butelki/plansza-droga-butelki-3d.webp">
+      <img class="k07-board__img" id="k07-board-img" alt=""
+           src="../../../assets/images/lekcja45/07-droga-butelki/plansza-pion-droga-butelki-3d.webp">
+    </picture>
+
+    <!-- podświetlenie trasy (sukces) — 5 łączników + kontrolka Olejomatu -->
+    <div class="k07-route" aria-hidden="true">
+      <span class="k07-glow" data-seg="1"></span>
+      <span class="k07-glow" data-seg="2"></span>
+      <span class="k07-glow" data-seg="3"></span>
+      <span class="k07-glow" data-seg="4"></span>
+      <span class="k07-glow" data-seg="5"></span>
+      <span class="k07-glow k07-glow--lamp" data-seg="6"></span>
+      <!-- poświaty lamp konsoli: ostrzegawcza (błąd) i zielone (sukces) -->
+      <span class="k07-lampfx k07-lampfx--warn"  data-lamp="warn"></span>
+      <span class="k07-lampfx k07-lampfx--ok1"   data-lamp="ok1"></span>
+      <span class="k07-lampfx k07-lampfx--ok2"   data-lamp="ok2"></span>
+    </div>
+
+    <!-- EKRAN KONSOLI: dynamiczny tekst HTML na niebieskich monitorach planszy.
+         Wizualny feedback; techniczny aria-live jest osobno (niewidoczny). -->
+    <div class="k07-console-message" id="k07-console" aria-hidden="true">
+      Ułóż sześć kart we&nbsp;właściwej kolejności.
+    </div>
+
+    <!-- LUPA = JEDYNY przycisk „Sprawdź kolejność" — nakładka na lupę planszy -->
+    <button type="button" class="k07-lens" id="k07-lens" disabled
+            aria-label="Sprawdź kolejność kart" data-state="idle">
+      <span class="k07-lens__ring" aria-hidden="true"></span>
+      <span class="k07-lens__tip" aria-hidden="true">Sprawdź kolejność</span>
+    </button>
+
+    <!-- sześć pól; generowane karty trafiają do środka pola -->
+    <div class="k07-slots" id="k07-slots" role="group" aria-label="Sześć pól drogi butelki"></div>
+  </div>
+
+  <!-- ═══ BANK KART ═══ -->
+  <section class="k07-bank-wrap" aria-labelledby="k07-bank-title">
+    <h2 class="k07-bank-title" id="k07-bank-title">Karty do ułożenia</h2>
+    <div class="k07-bank" id="k07-bank"></div>
+
+    <!-- Wezwanie do lupy w miejscu pustego banku (Etap 2B.2).
+         Prawdziwy element DOM (nie pseudoelement). NIE jest regionem
+         aria-live — treść dla czytnika ogłasza istniejący #k07-feedback,
+         żeby ten sam komunikat nie zabrzmiał dwa razy. -->
+    <div class="k07-callout" id="k07-bank-info" hidden aria-hidden="true">
+      <p class="k07-callout__txt" id="k07-bank-info-txt"></p>
+      <p class="k07-callout__act">
+        <button type="button" class="k07-callout__btn" id="k07-show-lens" hidden>
+          Pokaż lupę
+        </button>
+      </p>
+    </div>
+  </section>
+
+  <!-- techniczny region czytnika ekranu (niewidoczny — ekran konsoli
+       pokazuje treść wizualnie, ten region ją ogłasza) -->
+  <div class="sr-only" id="k07-feedback" role="status" aria-live="polite"></div>
+
+  <!-- ═══ ZAMYKANE OKNO SUKCESU ═══ -->
+  <dialog class="k07-dialog" id="k07-dialog" aria-labelledby="k07-dialog-title">
+    <h2 class="k07-dialog__title" id="k07-dialog-title">Droga butelki gotowa</h2>
+    <p class="k07-dialog__text">
+      Pamiętaj: smażenie i&nbsp;przelewanie oleju wykonuj z&nbsp;pomocą
+      lub w&nbsp;obecności osoby dorosłej.
+    </p>
+    <button type="button" class="k07-btn" id="k07-dialog-close">Zamknij</button>
+  </dialog>
+
+  <p class="k07-diag is-hidden" id="k07-diag"></p>
+
+</main>
+
+<script src="k07.js?v=6"></script>
+</body>
+</html>

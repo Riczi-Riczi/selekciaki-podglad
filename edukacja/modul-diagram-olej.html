@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>[DEMO] Moduł: Diagram — gdzie wylewamy olej</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="modul-diagram-olej.css?v=3">
+</head>
+<body class="mdo-body">
+
+  <div class="mdo-devnote">🧪 Samodzielny moduł roboczy — jeszcze NIE wpięty do lekcji 4–5. Tekst przed/po to placeholder tylko do testu blokady scrolla.</div>
+
+  <!-- ================================================
+       WPROWADZENIE (placeholder — w lekcji zastąpi to
+       istniejący tekst prowadzący do tego fragmentu)
+       ================================================ -->
+  <section class="mdo-lead">
+    <p class="mdo-lead__kicker">PODGLĄD MODUŁU</p>
+    <p class="mdo-lead__line">GDZIE NAPRAWDĘ</p>
+    <p class="mdo-lead__line mdo-lead__line--accent">TRAFIA ZUŻYTY OLEJ?</p>
+    <p class="mdo-lead__sub">Przewiń w dół — diagram uformuje się razem ze scrollem.</p>
+  </section>
+
+  <!-- ================================================
+       JEDNA CIĄGŁA SCENA: formowanie diagramu (scrub klatek)
+       → w TYM SAMYM miejscu, na TYM SAMYM diagramie, pojawiają
+       się karty. Scroll zablokowany, dopóki karty nie odkryte.
+       Karty to <div role="button"> (nie <button>) — na tylnej
+       stronie siedzi osobny prawdziwy <button> lupki-powiększenia,
+       a zagnieżdżanie <button> w <button> jest niepoprawnym HTML.
+       ================================================ -->
+  <section class="mdo-scene" id="mdo-scene">
+    <div class="mdo-stage" id="mdo-stage">
+      <canvas class="mdo-stage__canvas" id="mdo-canvas" width="1100" height="692"
+              aria-label="Kropla oleju zamienia się w diagram sposobów postępowania z olejem" role="img"></canvas>
+      <img class="mdo-stage__fallback" src="../assets/images/lekcja45/diagram-olej/diagram-static.webp"
+           alt="Diagram: sposoby postępowania ze zużytym olejem" loading="lazy">
+
+      <div class="mdo-cards" id="mdo-cards">
+
+        <div class="mdo-card" tabindex="0" role="button" data-card="olej-do-olejomatu"
+             style="--mdo-x:23.24%; --mdo-y:10.65%; --mdo-pastel:rgb(245,230,216);"
+             aria-label="Karta: korzysta z Olejomatów — kliknij, aby odwrócić">
+          <span class="mdo-card__inner">
+            <span class="mdo-card__face mdo-card__face--front">
+              <img class="mdo-card__hand" src="../assets/images/lekcja45/diagram-olej/hand_click.webp" alt="" aria-hidden="true">
+            </span>
+            <span class="mdo-card__face mdo-card__face--back">
+              <img src="../assets/images/lekcja45/diagram-olej/karty/olej-do-olejomatu.webp" alt="Korzysta z Olejomatów">
+              <button class="mdo-card__zoom" type="button" aria-label="Powiększ kartę: Korzysta z Olejomatów">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.2" y1="15.2" x2="21" y2="21"/><line x1="10.5" y1="7.5" x2="10.5" y2="13.5"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5"/></svg>
+              </button>
+            </span>
+          </span>
+        </div>
+
+        <div class="mdo-card" tabindex="0" role="button" data-card="olej-do-zlewu"
+             style="--mdo-x:80.51%; --mdo-y:11.64%; --mdo-pastel:rgb(252,216,176);"
+             aria-label="Karta: wylewa olej do zlewu lub toalety — kliknij, aby odwrócić">
+          <span class="mdo-card__inner">
+            <span class="mdo-card__face mdo-card__face--front">
+              <img class="mdo-card__hand" src="../assets/images/lekcja45/diagram-olej/hand_click.webp" alt="" aria-hidden="true">
+            </span>
+            <span class="mdo-card__face mdo-card__face--back">
+              <img src="../assets/images/lekcja45/diagram-olej/karty/olej-do-zlewu.webp" alt="Wylewa olej do zlewu lub toalety">
+              <button class="mdo-card__zoom" type="button" aria-label="Powiększ kartę: Wylewa olej do zlewu lub toalety">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.2" y1="15.2" x2="21" y2="21"/><line x1="10.5" y1="7.5" x2="10.5" y2="13.5"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5"/></svg>
+              </button>
+            </span>
+          </span>
+        </div>
+
+        <div class="mdo-card" tabindex="0" role="button" data-card="olej-papierem"
+             style="--mdo-x:4.91%; --mdo-y:40.69%; --mdo-pastel:rgb(219,216,227);"
+             aria-label="Karta: wyciera papierem i wrzuca do papieru — kliknij, aby odwrócić">
+          <span class="mdo-card__inner">
+            <span class="mdo-card__face mdo-card__face--front">
+              <img class="mdo-card__hand" src="../assets/images/lekcja45/diagram-olej/hand_click.webp" alt="" aria-hidden="true">
+            </span>
+            <span class="mdo-card__face mdo-card__face--back">
+              <img src="../assets/images/lekcja45/diagram-olej/karty/olej-papierem.webp" alt="Wyciera papierem i wrzuca do papieru">
+              <button class="mdo-card__zoom" type="button" aria-label="Powiększ kartę: Wyciera papierem i wrzuca do papieru">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.2" y1="15.2" x2="21" y2="21"/><line x1="10.5" y1="7.5" x2="10.5" y2="13.5"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5"/></svg>
+              </button>
+            </span>
+          </span>
+        </div>
+
+        <div class="mdo-card" tabindex="0" role="button" data-card="olej-do-zmieszanych"
+             style="--mdo-x:92.44%; --mdo-y:44.08%; --mdo-pastel:rgb(209,216,198);"
+             aria-label="Karta: wyrzuca do odpadów zmieszanych — kliknij, aby odwrócić">
+          <span class="mdo-card__inner">
+            <span class="mdo-card__face mdo-card__face--front">
+              <img class="mdo-card__hand" src="../assets/images/lekcja45/diagram-olej/hand_click.webp" alt="" aria-hidden="true">
+            </span>
+            <span class="mdo-card__face mdo-card__face--back">
+              <img src="../assets/images/lekcja45/diagram-olej/karty/olej-do-zmieszanych.webp" alt="Wyrzuca do odpadów zmieszanych">
+              <button class="mdo-card__zoom" type="button" aria-label="Powiększ kartę: Wyrzuca do odpadów zmieszanych">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.2" y1="15.2" x2="21" y2="21"/><line x1="10.5" y1="7.5" x2="10.5" y2="13.5"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5"/></svg>
+              </button>
+            </span>
+          </span>
+        </div>
+
+        <div class="mdo-card" tabindex="0" role="button" data-card="inne-sposoby"
+             style="--mdo-x:8.67%; --mdo-y:76.16%; --mdo-pastel:rgb(248,227,187);"
+             aria-label="Karta: inne sposoby — kliknij, aby odwrócić">
+          <span class="mdo-card__inner">
+            <span class="mdo-card__face mdo-card__face--front">
+              <img class="mdo-card__hand" src="../assets/images/lekcja45/diagram-olej/hand_click.webp" alt="" aria-hidden="true">
+            </span>
+            <span class="mdo-card__face mdo-card__face--back">
+              <img src="../assets/images/lekcja45/diagram-olej/karty/inne-sposoby.webp" alt="Inne sposoby">
+              <button class="mdo-card__zoom" type="button" aria-label="Powiększ kartę: Inne sposoby">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.2" y1="15.2" x2="21" y2="21"/><line x1="10.5" y1="7.5" x2="10.5" y2="13.5"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5"/></svg>
+              </button>
+            </span>
+          </span>
+        </div>
+
+        <div class="mdo-card" tabindex="0" role="button" data-card="olej-do-pszok"
+             style="--mdo-x:29.24%; --mdo-y:91.4%; --mdo-pastel:rgb(198,201,209);"
+             aria-label="Karta: oddaje olej do PSZOK — kliknij, aby odwrócić">
+          <span class="mdo-card__inner">
+            <span class="mdo-card__face mdo-card__face--front">
+              <img class="mdo-card__hand" src="../assets/images/lekcja45/diagram-olej/hand_click.webp" alt="" aria-hidden="true">
+            </span>
+            <span class="mdo-card__face mdo-card__face--back">
+              <img src="../assets/images/lekcja45/diagram-olej/karty/olej-do-pszok.webp" alt="Oddaje olej do PSZOK">
+              <button class="mdo-card__zoom" type="button" aria-label="Powiększ kartę: Oddaje olej do PSZOK">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.2" y1="15.2" x2="21" y2="21"/><line x1="10.5" y1="7.5" x2="10.5" y2="13.5"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5"/></svg>
+              </button>
+            </span>
+          </span>
+        </div>
+
+        <div class="mdo-card" tabindex="0" role="button" data-card="nie-wiem"
+             style="--mdo-x:86.87%; --mdo-y:83.99%; --mdo-pastel:rgb(201,205,194);"
+             aria-label="Karta: nie wiem — kliknij, aby odwrócić">
+          <span class="mdo-card__inner">
+            <span class="mdo-card__face mdo-card__face--front">
+              <img class="mdo-card__hand" src="../assets/images/lekcja45/diagram-olej/hand_click.webp" alt="" aria-hidden="true">
+            </span>
+            <span class="mdo-card__face mdo-card__face--back">
+              <img src="../assets/images/lekcja45/diagram-olej/karty/nie-wiem.webp" alt="Nie wiem">
+              <button class="mdo-card__zoom" type="button" aria-label="Powiększ kartę: Nie wiem">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.2" y1="15.2" x2="21" y2="21"/><line x1="10.5" y1="7.5" x2="10.5" y2="13.5"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5"/></svg>
+              </button>
+            </span>
+          </span>
+        </div>
+
+      </div>
+    </div>
+
+    <p class="mdo-nudge" id="mdo-nudge" role="status" aria-live="polite">Odkryj wszystkie karty ↑, żeby przewinąć dalej</p>
+    <p class="mdo-progress" id="mdo-progress" aria-hidden="true">0 / 7 odkrytych</p>
+  </section>
+
+  <!-- ================================================
+       DALSZA CZĘŚĆ (placeholder do testu blokady)
+       ================================================ -->
+  <section class="mdo-after">
+    <p class="mdo-after__line">DALSZA CZĘŚĆ LEKCJI</p>
+    <p class="mdo-after__sub">Jeśli to widzisz i przewinąłeś tu scrollem — blokada zadziałała poprawnie.<br>
+    (ten ekran to tylko placeholder demo — w lekcji zastąpi go kolejny prawdziwy fragment)</p>
+  </section>
+
+  <!-- ================================================
+       LIGHTBOX: powiększenie karty po kliknięciu lupki
+       (jedna wspólna struktura, JS wypełnia treścią i
+       animuje z/do pozycji klikniętej karty)
+       ================================================ -->
+  <div class="mdo-lightbox" id="mdo-lightbox" aria-hidden="true">
+    <div class="mdo-lightbox__backdrop" id="mdo-lightbox-backdrop"></div>
+    <div class="mdo-lightbox__panel" id="mdo-lightbox-panel" role="dialog" aria-modal="true" aria-label="Powiększona karta">
+      <button class="mdo-lightbox__close" id="mdo-lightbox-close" type="button" aria-label="Zamknij powiększenie">✕</button>
+      <img class="mdo-lightbox__img" id="mdo-lightbox-img" src="" alt="">
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+  <script src="modul-diagram-olej.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EKO-DETEKTYWI: Misja tajny agent — e-lekcja klasy 4–5 | SELEKT</title>
+  <meta name="description" content="Interaktywna e-lekcja o Olejomatach i PSZOK dla klas 4–5. Śledztwo krok po kroku: przyczyna, skutek i rozwiązanie. Zbierz 5 liter kodu!">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="lekcja-4-5.css?v=21">
+</head>
+<body class="lk-body" data-bg="dark">
+
+  <!-- ====== PASEK POSTĘPU: AKTA SPRAWY (litery P-S-Z-O-K) ====== -->
+  <aside class="case-file" id="case-file" aria-label="Zebrane litery tajnego hasła">
+    <span class="case-file__label">🗂 AKTA SPRAWY</span>
+    <div class="case-file__letters" id="case-letters">
+      <span class="case-letter" data-slot="0">?</span>
+      <span class="case-letter" data-slot="1">?</span>
+      <span class="case-letter" data-slot="2">?</span>
+      <span class="case-letter" data-slot="3">?</span>
+      <span class="case-letter" data-slot="4">?</span>
+    </div>
+  </aside>
+
+  <a class="lk-exit" href="../index.html#edukacja" aria-label="Wyjście z misji">✕ Wyjdź z misji</a>
+
+  <!-- ====== LISTWA ROZDZIAŁÓW (desktop) + PASEK POSTĘPU (mobile) ====== -->
+  <nav class="chapter-rail" id="chapter-rail" aria-label="Rozdziały śledztwa">
+    <a href="#akt-0"        class="ch-dot" title="Odprawa"></a>
+    <a href="#czesc-a-int"  class="ch-dot" title="Część A — Olej"></a>
+    <a href="#czesc-a2"     class="ch-dot" title="Część A — Olejomat"></a>
+    <a href="#czesc-b-int"  class="ch-dot" title="Część B — PSZOK"></a>
+    <a href="#czesc-c-int"  class="ch-dot" title="Część C — Wielki obraz"></a>
+    <a href="#ekran-hasla"  class="ch-dot" title="Tajny kod"></a>
+  </nav>
+  <div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
+
+  <!-- ================================================
+       WIELKIE OTWARCIE
+       ================================================ -->
+  <section class="act act--intro" id="akt-0" data-bg="dark">
+    <img class="deco deco--lupa-hero" src="../assets/images/lekcja45/lupa-3d.png" alt="" aria-hidden="true">
+    <div class="act-inner">
+      <p class="act-chip">ODPRAWA AGENTA <button class="audio-ph" title="Audioskrypt — wkrótce" disabled>🔊</button></p>
+      <h1 class="mega">
+        <span class="mega-line">EKO-</span>
+        <span class="mega-line">DETEKTYWI</span>
+      </h1>
+      <p class="mega-sub">Misja tajny agent • klasy 4–5 • Olejomaty i PSZOK</p>
+    </div>
+
+    <div class="story">
+      <p class="big-line">MIASTO STANĘŁO.</p>
+      <p class="big-line big-line--accent">KANALIZACJA ZATKANA.</p>
+      <p class="big-line">KTO TO ZROBIŁ?</p>
+      <p class="sub-text">Detektyw SELEKT otwiera akta sprawy. Pójdziesz jego tropem:
+      od kuchni, przez Olejomat, aż po PSZOK. Po drodze <strong>zbierz 5 liter
+      tajnego kodu</strong> — na końcu dowiesz się, kto był winny.</p>
+    </div>
+
+    <div class="story story--narrow">
+      <div class="video-slot" aria-label="Miejsce na film otwarcia">
+        <div class="video-slot__inner">
+          <span class="video-slot__icon">🎬</span>
+          <strong>Film otwarcia (3 min) — w produkcji</strong>
+          <small>Zakorkowane miasto • urwana scena przy zlewie • biuro Detektywa SELEKT</small>
+        </div>
+      </div>
+      <p class="story-cta"><a class="btn-lk" href="#rozgrzewka">Rozpocznij śledztwo ↓</a></p>
+    </div>
+  </section>
+
+  <!-- ================================================
+       ROZGRZEWKA — DOBBLE (bez litery, onboarding)
+       ================================================ -->
+  <section class="act act--warmup" id="rozgrzewka" data-bg="dark">
+    <div class="story">
+      <p class="act-chip">TRENING AGENTA <button class="audio-ph" title="Audioskrypt — wkrótce" disabled>🔊</button></p>
+      <p class="big-line">SOKOLI</p>
+      <p class="big-line big-line--accent">WZROK</p>
+      <p class="sub-text">Zanim ruszysz w teren — znajdź wspólne symbole szybciej niż przeciwnik!</p>
+    </div>
+    <div class="story story--narrow">
+      <div class="genially-frame">
+        <iframe title="Gra Dobble — trening spostrzegawczości"
+                src="https://view.genially.com/697618841a7a505250b031af"
+                allow="fullscreen" loading="lazy"></iframe>
+      </div>
+      <p class="story-cta"><a class="btn-lk btn-lk--ghost" href="#czesc-a-int">Pomiń trening →</a></p>
+    </div>
+  </section>
+
+  <!-- ═══════════ PRZERYWNIK ROZDZIAŁU A ═══════════ -->
+  <section class="interlude act--one" id="czesc-a-int" data-bg="navy">
+    <p class="interlude__kicker">ROZDZIAŁ PIERWSZY</p>
+    <h2 class="interlude__word">CZĘŚĆ&nbsp;A</h2>
+    <p class="interlude__sub">Śledztwo: co robi olej w rurach?</p>
+  </section>
+
+  <!-- ================================================
+       CZĘŚĆ A — KORYTARZ ŚLEDZTWA (poziomy): A0→A1→A2→A2b→A3
+       ================================================ -->
+  <section class="act act--one rail" id="rail-sledztwo" data-bg="navy">
+    <svg class="thread" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path class="thread__path" d="M8,0 C22,25 -4,45 12,68 C22,82 6,92 10,100" />
+    </svg>
+    <div class="rail__track">
+
+      <!-- A0: pytanie otwierające -->
+      <article class="rail__panel" id="blok-a0">
+        <div class="panel-inner">
+          <p class="act-chip">CZĘŚĆ A • ŚLEDZTWO <button class="audio-ph" title="Audioskrypt — wkrótce" disabled>🔊</button></p>
+          <p class="big-line">FRYTKI ZJEDZONE.</p>
+          <p class="big-line big-line--accent">ZOSTAŁ GARNEK OLEJU.</p>
+          <p class="big-line">CO TERAZ?</p>
+          <p class="sub-text">Najprościej - wylać do zlewu. Chwila…
+          <strong>dokładnie tak myśli większość ludzi.</strong> Sprawdźmy, co się wtedy dzieje.</p>
+          <!-- Dowód: zlew (stany opcjonalne — pojawią się, gdy klient dostarczy pliki) -->
+          <div class="evidence evidence--morph evidence--inline" data-fallback="a0-fallback">
+            <div class="evidence__stage">
+              <img class="evidence__state" src="../assets/images/lekcja45/zlew-stan-1.png" alt="Czysty zlew" loading="lazy">
+              <img class="evidence__state" src="../assets/images/lekcja45/zlew-stan-2.png" alt="Olej wlewany do odpływu" loading="lazy">
+            </div>
+          </div>
+          <img class="blk-img blk-img--sm" id="a0-fallback" src="../assets/images/lekcja45/olej-3d.png" alt="Butelka zużytego oleju" loading="lazy">
+        </div>
+      </article>
+
+      <!-- A1: przyczyna → skutek. Tekst z lewej, animacja zlewu z prawej
+           (klatki sterowane scrollem POZIOMYM korytarza) -->
+      <article class="rail__panel" id="blok-a1">
+        <div class="panel-inner panel-inner--split">
+          <!-- nagłówek na całą szerokość panelu: jedna linia, także nad animacją -->
+          <p class="big-line big-line--sm panel-split__lead">GORĄCY OLEJ + ZIMNA RURA =</p>
+          <div class="panel-split__text">
+            <p class="big-line big-line--accent">KOREK TWARDY JAK BETON</p>
+            <p class="sub-text sub-text--lg">W zimnej rurze tłuszcz <strong>zastyga</strong>.
+            Skleja się z resztkami w twardy zator i woda nie ma którędy płynąć.
+            Awaria gotowa. To fizyka - nie pech.</p>
+          </div>
+          <canvas class="panel-anim" id="zlew-canvas" width="960" height="526"
+                  aria-label="Olej wlany do zlewu zastyga w rurze i tworzy zator" role="img"></canvas>
+          <img class="panel-anim-fallback" src="../assets/images/lekcja45/rura-zatkana-3d.png"
+               alt="Zator tłuszczu w rurze kanalizacyjnej" loading="lazy">
+        </div>
+      </article>
+
+      <!-- A2: skala -->
+      <article class="rail__panel" id="blok-a2">
+        <div class="panel-inner">
+          <p class="big-num" data-count="42">42<span class="big-num__unit"> mln ton</span></p>
+          <p class="big-line big-line--sm">TYLE ZUŻYTEGO OLEJU POWSTAJE CO ROKU NA ŚWIECIE</p>
+          <p class="sub-text">A ponad połowa z nas wciąż wylewa go do zlewu albo do czarnego
+          pojemnika. To nie jeden przypadek - <strong>to codzienny nawyk milionów ludzi</strong>.
+          Dlatego potrzeba czegoś więcej niż dobrych chęci.</p>
+        </div>
+      </article>
+
+      <!-- A2b: skala zobrazowana — Stadion Narodowy wypełniany olejem,
+           animacja z lewej, ×45 + treść z prawej (klatki scrollem poziomym) -->
+      <article class="rail__panel" id="blok-a2b">
+        <div class="panel-inner panel-inner--split panel-inner--stadion">
+          <canvas class="panel-anim" id="stadion-canvas" width="760" height="428"
+                  aria-label="Stadion Narodowy wypełniany olejem po sam dach" role="img"></canvas>
+          <div class="panel-split__text panel-split__text--stadion">
+            <p class="big-line big-line--accent stadion-x45">×45</p>
+            <p class="sub-text sub-text--lg">Dla porównania: całkowita ilość światowych odpadów
+              olejowych, tylko z jednego roku, wystarczyłaby, aby wypełnić po sam dach <strong>aż 45 Stadionów Narodowych!</strong></p>
+          </div>
+          <img class="panel-anim-fallback" src="../assets/images/lekcja45/stadion-seq/stadion-047.webp"
+               alt="Stadion Narodowy wypełniony olejem po sam dach" loading="lazy">
+        </div>
+      </article>
+
+      <!-- A3: fałszywe ścieżki -->
+      <article class="rail__panel" id="blok-a3">
+        <div class="panel-inner">
+          <p class="big-line">TO MOŻE DO KOSZA BIO?</p>
+          <p class="big-line big-line--accent">TEŻ NIE.</p>
+          <p class="sub-text">Tłuszcz <strong>psuje kompost</strong> i wabi szkodniki.
+          A olej wylany do rzeki? Tworzy na wodzie warstwę, która odcina tlen —
+          ryby się duszą. Dwa pomysły, które wyglądają OK. <strong>Oba złe.</strong>
+          Musi istnieć trzecia droga.</p>
+        </div>
+      </article>
+
+    </div>
+    <div class="rail__counter" aria-hidden="true"><span class="rail__now">1</span>/<span class="rail__total">5</span></div>
+  </section>
+
+  <!-- 🎮 PUNKT KONTROLNY 1 → P -->
+  <section class="act act--one" data-bg="navy">
+    <article class="screen screen--game" id="zagadka-1">
+      <p class="game-chip">🧩 ZAGADKA 1</p>
+      <h3>Gdzie na pewno NIE wolno?</h3>
+      <p>Znasz już dwie fałszywe ścieżki. Udowodnij, że nikt Cię na nie nie nabierze.</p>
+      <div class="genially-frame genially-frame--placeholder">
+        <span>🎮 Tu wstawimy grę Genially:<br><strong>Quiz prawda/fałsz z uzasadnieniem</strong><br>
+        <small>„Olej można wylać do zlewu" → FAŁSZ (korek jak beton) • „Olej można wlać do kosza BIO" → FAŁSZ (psuje kompost)</small></span>
+      </div>
+      <button class="letter-btn btn-lk" data-letter="P" data-slot="0">🗂 Zapisz literę w aktach sprawy</button>
+    </article>
+  </section>
+
+  <!-- ================================================
+       CZĘŚĆ A — ROZWIĄZANIE (reveal kołem światła)
+       ================================================ -->
+  <section class="act act--two" id="czesc-a2" data-bg="amber">
+    <!-- [ANIM: BUTELKA-WLOT] -->
+    <img class="butelka-fly" id="butelka-fly" src="../assets/images/lekcja45/butelka_olejomat_3D.png" alt="" aria-hidden="true">
+
+    <!-- A4: po to jest Olejomat (clip-path reveal) -->
+    <div class="story reveal-block" id="blok-a4">
+      <p class="act-chip">CZĘŚĆ A • ROZWIĄZANIE <button class="audio-ph" title="Audioskrypt — wkrótce" disabled>🔊</button></p>
+      <p class="big-line">PO TO JEST</p>
+      <p class="big-line big-line--accent">OLEJOMAT</p>
+      <p class="sub-text">Maszyna, która czeka <strong>dokładnie na ten olej</strong>.
+      Nie do rur, nie do BIO — do butelki i do Olejomatu. Problem znika,
+      a olej… dopiero zaczyna karierę.</p>
+      <img class="blk-img blk-img--md" src="../assets/images/Olejomat_3D_v1.png" alt="Olejomat — automat do zbiórki zużytego oleju" loading="lazy">
+    </div>
+
+    <!-- A5: KORYTARZ PROCESU (pozioma infografika) -->
+    <div class="story" id="blok-a5-intro">
+      <p class="big-line big-line--sm">CO SIĘ DZIEJE W ŚRODKU?</p>
+      <p class="big-line big-line--accent">CHEMICZNA PRALKA</p>
+      <p class="sub-text">W rafinerii olej bierze kąpiel: brud zostaje oddzielony,
+      a z czystej reszty powstaje <strong>biodiesel</strong> — paliwo do silników.
+      Dzisiejszy odpad = jutrzejsze paliwo. <strong>Przewiń — zobacz cały proces! ↓</strong></p>
+    </div>
+  </section>
+
+  <!-- A5: SCENA PROCESU — schemat patelnia → biopaliwo (klatki scrollem, pin).
+       Schemat ma białe napisy, więc canvas leży na ciemnej karcie. -->
+  <section class="act act--two anim-scene" id="scena-proces" data-bg="amber">
+    <canvas class="anim-scene__canvas" id="proces-canvas" width="1100" height="618"
+            aria-label="Schemat: olej z patelni przez Olejomat i rafinerię zmienia się w biopaliwo" role="img"></canvas>
+    <img class="panel-anim-fallback" src="../assets/images/lekcja45/Olejomat_dzialanie_proces_beztekstu.png"
+         alt="Proces działania Olejomatu: butelka z olejem → maszyna → rafineria → biodiesel" loading="lazy">
+  </section>
+
+  <section class="act act--two" data-bg="amber">
+    <!-- A6: zasady — KARTY ODWRACANE -->
+    <div class="story" id="blok-a6">
+      <p class="big-line big-line--sm">CO WOLNO WRZUCIĆ?</p>
+      <p class="sub-text">Kliknij kartę i poznaj odpowiedź — oraz <strong>DLACZEGO</strong>.
+      Każda zasada ma swój powód.</p>
+      <div class="flip-grid" role="list">
+        <div class="flip-card" role="listitem" tabindex="0" aria-label="Karta: olej po smażeniu — kliknij, aby odwrócić">
+          <div class="flip-card__inner">
+            <div class="flip-face flip-face--front">
+              <img src="../assets/images/lekcja45/olej-3d.png" alt="" loading="lazy">
+              <h4>Olej po smażeniu?</h4>
+            </div>
+            <div class="flip-face flip-face--back flip-face--yes">
+              <span class="verdict">TAK ✓</span>
+              <p>To czysty tłuszcz roślinny — dokładnie to, co maszyna umie przerobić.
+              Resztki frytek mogą zostać!</p>
+            </div>
+          </div>
+        </div>
+        <div class="flip-card" role="listitem" tabindex="0" aria-label="Karta: olej silnikowy — kliknij, aby odwrócić">
+          <div class="flip-card__inner">
+            <div class="flip-face flip-face--front">
+              <span class="flip-emoji">🛢️</span>
+              <h4>Olej silnikowy?</h4>
+            </div>
+            <div class="flip-face flip-face--back flip-face--no">
+              <span class="verdict">NIE ✗</span>
+              <p>To chemia, nie jedzenie. Jedna taka butelka psuje CAŁĄ partię
+              zebranego oleju.</p>
+            </div>
+          </div>
+        </div>
+        <div class="flip-card" role="listitem" tabindex="0" aria-label="Karta: gorący olej — kliknij, aby odwrócić">
+          <div class="flip-card__inner">
+            <div class="flip-face flip-face--front">
+              <span class="flip-emoji">🔥</span>
+              <h4>Gorący, prosto z patelni?</h4>
+            </div>
+            <div class="flip-face flip-face--back flip-face--no">
+              <span class="verdict">NIE ✗</span>
+              <p>Maksymalnie 70°C. Gorący olej parzy i niszczy butelkę.
+              Poczekaj chwilę — wystygnie.</p>
+            </div>
+          </div>
+        </div>
+        <div class="flip-card" role="listitem" tabindex="0" aria-label="Karta: jaka butelka — kliknij, aby odwrócić">
+          <div class="flip-card__inner">
+            <div class="flip-face flip-face--front">
+              <img src="../assets/images/lekcja45/butelka_olejomat_3D.png" alt="" loading="lazy">
+              <h4>W jakiej butelce?</h4>
+            </div>
+            <div class="flip-face flip-face--back flip-face--yes">
+              <span class="verdict">TAK ✓</span>
+              <p>Czysta, plastikowa, <strong>mocno zakręcona</strong> — żeby nic
+              się nie rozlało po drodze.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="flip-hint">👆 Najedź lub kliknij, żeby odwrócić kartę</p>
+    </div>
+
+    <!-- 🎮 PUNKT KONTROLNY 2 → S -->
+    <article class="screen screen--game" id="zagadka-2">
+      <p class="game-chip">🧩 ZAGADKA 2</p>
+      <h3>Posortuj: TAK czy NIE?</h3>
+      <p>Znasz już karty. Teraz bez podpowiedzi — co wolno wlać do Olejomatu?</p>
+      <div class="genially-frame genially-frame--placeholder">
+        <span>🎮 Tu wstawimy grę Genially:<br><strong>Drag &amp; drop TAK/NIE</strong><br>
+        <small>TAK: olej po smażeniu, oliwa, zalewa z konserw • NIE: olej silnikowy, chemikalia, gorący olej</small></span>
+      </div>
+      <button class="letter-btn btn-lk" data-letter="S" data-slot="1">🗂 Zapisz literę w aktach sprawy</button>
+    </article>
+
+    <!-- A7: skutek dobrego działania -->
+    <div class="story" id="blok-a7">
+      <p class="big-line">OLEJ ZDASZ —</p>
+      <p class="big-line big-line--accent">DRZEWKO MASZ!</p>
+      <p class="sub-text">Za każdą oddaną butelkę dostajesz punkty w aplikacji
+      i wymieniasz je na nagrody — na przykład <strong>sadzonki drzew</strong>.
+      A w Japonii stary olej napędza nawet samoloty!</p>
+      <div class="evidence evidence--morph evidence--inline" id="dowod-sadzonka">
+        <div class="evidence__stage">
+          <img class="evidence__state" src="../assets/images/lekcja45/sadzonka-stan-1-kielek.png" alt="Mały kiełek" loading="lazy">
+          <img class="evidence__state" src="../assets/images/lekcja45/sadzonka-3d.png" alt="Sadzonka drzewka — nagroda za oddany olej" loading="lazy">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <div class="marquee act--two" data-bg="amber" aria-hidden="true">
+    <div class="marquee__track">
+      <span>ELEMENTARNE! ★ OLEJ ZDASZ — DRZEWKO MASZ ★ ELEMENTARNE! ★ OLEJ ZDASZ — DRZEWKO MASZ ★ </span>
+      <span>ELEMENTARNE! ★ OLEJ ZDASZ — DRZEWKO MASZ ★ ELEMENTARNE! ★ OLEJ ZDASZ — DRZEWKO MASZ ★ </span>
+    </div>
+  </div>
+
+  <section class="act act--two" data-bg="amber">
+    <!-- A8: pomost do części B -->
+    <div class="story" id="blok-a8">
+      <p class="big-line big-line--sm">A JEŚLI W OKOLICY</p>
+      <p class="big-line big-line--accent">NIE MA OLEJOMATU?</p>
+      <p class="sub-text">Spokojnie. Jest miejsce, które przyjmie olej — i całą resztę
+      kłopotliwych rzeczy: stary telefon, farby po remoncie, nawet kanapę.
+      <strong>Część B śledztwa — przed Tobą.</strong></p>
+    </div>
+  </section>
+
+  <!-- ═══════════ PRZERYWNIK ROZDZIAŁU B ═══════════ -->
+  <section class="interlude act--one" id="czesc-b-int" data-bg="navy">
+    <p class="interlude__kicker">ROZDZIAŁ DRUGI</p>
+    <h2 class="interlude__word">CZĘŚĆ&nbsp;B</h2>
+    <p class="interlude__sub">Śledztwo: kłopotliwe odpady</p>
+  </section>
+
+  <!-- ================================================
+       CZĘŚĆ B — ŚLEDZTWO (problem)
+       ================================================ -->
+  <section class="act act--one" id="czesc-b" data-bg="navy">
+    <svg class="thread" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path class="thread__path" d="M10,0 C-2,22 24,40 8,60 C0,74 18,88 12,100" />
+    </svg>
+
+    <!-- B0: pytanie otwierające -->
+    <div class="story" id="blok-b0">
+      <p class="big-line big-line--sm">STARY TELEFON. FARBA. KANAPA.</p>
+      <p class="big-line big-line--accent">KTÓRY KOLOROWY POJEMNIK?</p>
+      <p class="big-line">…ŻADEN.</p>
+      <p class="sub-text">Pięć kolorowych pojemników nie wystarcza na wszystko.
+      I właśnie tu zaczynają się kłopoty.</p>
+      <img class="blk-img blk-img--wide" src="../assets/images/lekcja45/kosze_szeregowo_zamkniete_3D.png" alt="Pięć kolorowych pojemników na odpady w rzędzie" loading="lazy">
+    </div>
+
+    <!-- B1: przyczyna → skutek + dowód pod lupą -->
+    <div class="story" id="blok-b1">
+      <p class="big-line big-line--sm">ŚWIETLÓWKA W ZWYKŁYM KOSZU?</p>
+      <p class="big-line big-line--accent">SKAŻONE WSZYSTKO.</p>
+      <p class="sub-text">Chemia z jednej stłuczonej świetlówki brudzi
+      <strong>czyste surowce obok</strong>. A przy taśmie sortowniczej pracują
+      ludzie — dla nich to realne zagrożenie.</p>
+      <div class="evidence evidence--single evidence--zoom" id="dowod-swietlowka">
+        <div class="evidence__stage">
+          <img class="evidence__state" src="../assets/images/lekcja45/swietlowka-3d.png" alt="Świetlówka — odpad niebezpieczny" loading="lazy">
+          <img class="evidence__state" src="../assets/images/lekcja45/pszok-farba-3d.png" alt="Puszka farby — odpad niebezpieczny" loading="lazy">
+        </div>
+      </div>
+    </div>
+
+    <!-- 🎮 PUNKT KONTROLNY 3 → Z -->
+    <article class="screen screen--game" id="zagadka-3">
+      <p class="game-chip">🧩 ZAGADKA 3</p>
+      <h3>Zwykły kosz czy PSZOK?</h3>
+      <p>Sześć przedmiotów. Jedna decyzja przy każdym. Nie daj się zmylić!</p>
+      <div class="genially-frame genially-frame--placeholder">
+        <span>🎮 Tu wstawimy grę Genially:<br><strong>Sortowanie: POJEMNIK vs PSZOK</strong><br>
+        <small>karton → pojemnik • bateria → PSZOK • butelka PET → pojemnik • świetlówka → PSZOK • kanapa → PSZOK</small></span>
+      </div>
+      <button class="letter-btn btn-lk" data-letter="Z" data-slot="2">🗂 Zapisz literę w aktach sprawy</button>
+    </article>
+
+    <!-- B2: skala (tekst + duży PSZOK obok) -->
+    <div class="story story--split" id="blok-b2">
+      <div class="story--split__text">
+        <p class="big-num" data-count="2100">2 100<span class="big-num__unit">+</span></p>
+        <p class="big-line big-line--sm">PUNKTÓW PSZOK DZIAŁA JUŻ W POLSCE</p>
+        <p class="sub-text">Polacy oddają w nich <strong>pół miliona ton</strong> kłopotliwych
+        odpadów rocznie — i z roku na rok coraz więcej. Coraz więcej osób rozumie,
+        po co to miejsce istnieje.</p>
+      </div>
+      <img class="split-img" src="../assets/images/lekcja45/pszok-budynek-3d.png" width="1400" height="788"
+           alt="PSZOK — Punkt Selektywnej Zbiórki Odpadów Komunalnych" loading="lazy">
+    </div>
+  </section>
+
+  <!-- ================================================
+       CZĘŚĆ B — ROZWIĄZANIE
+       ================================================ -->
+  <section class="act act--three" id="czesc-b2" data-bg="sage">
+    <!-- B3: po to jest PSZOK -->
+    <div class="story reveal-block" id="blok-b3">
+      <p class="act-chip">CZĘŚĆ B • ROZWIĄZANIE <button class="audio-ph" title="Audioskrypt — wkrótce" disabled>🔊</button></p>
+      <p class="big-line">PSZOK:</p>
+      <p class="big-line big-line--accent">BEZKOLIZYJNY ZJAZD</p>
+      <p class="sub-text">Zwykłe śmieci to auta na autostradzie — jadą prosto do sortowni.
+      Kanapa czy farba to <strong>ciężarówka pod prąd</strong>: karambol gotowy.
+      PSZOK to bezpieczny zjazd z autostrady, zbudowany specjalnie dla nich.</p>
+    </div>
+
+    <!-- B4: mechanizm -->
+    <div class="story" id="blok-b4">
+      <p class="big-line big-line--sm">A W ŚRODKU?</p>
+      <p class="big-line big-line--accent">MIEJSKA KOPALNIA</p>
+      <p class="sub-text">Tu rozbraja się „chemiczne bomby" — farby i świetlówki, zanim
+      trafią do wody. I odzyskuje skarby: <strong>złoto, srebro i miedź</strong>
+      ze starych telefonów. Dzięki temu nie trzeba kopać nowych kopalni.</p>
+      <img class="blk-img blk-img--md" src="../assets/images/lekcja45/pszok-zsee-3d.png" alt="Stare telefony — elektroodpady pełne cennych metali" loading="lazy">
+    </div>
+
+    <div class="story" id="blok-b5-intro">
+      <p class="big-line big-line--sm">STREFY PSZOK</p>
+      <p class="sub-text">Każda strefa = inny odpad.
+      <strong>Przewiń — przejdziemy przez strefy jedna po drugiej.</strong></p>
+    </div>
+  </section>
+
+  <!-- ================================================
+       K14 — SPACER PO PSZOK-u (14 stacji, scrollytelling sterowany scrollem)
+       Kotwica #rail-pszok zachowana; klasy .rail już NIE ma — moduł ma własny
+       silnik (.pszok-journey), bo ogólny korytarz poziomy go nie obsługuje.
+       Bez JS / bez GSAP / reduced-motion: 14 stacji = czytelny pionowy stos.
+       ================================================ -->
+  <section class="act act--three pszok-journey" id="rail-pszok" data-bg="sage"
+           aria-labelledby="pj-title">
+    <div class="pj__head">
+      <h3 class="pj__title" id="pj-title">Spacer po PSZOK-u</h3>
+      <p class="pj__lead">PSZOK to nie jedno wielkie miejsce na wszystko naraz.
+      To zbiór oznaczonych stref. Każda frakcja jest oddzielona ze względu na
+      rozmiar, budowę, możliwość odzysku albo potrzebę ostrożnego postępowania.
+      Przejdź przez 14 stref po kolei.</p>
+      <a class="btn-lk btn-lk--ghost pj__skip" href="#zagadka-4">Pomiń animację →</a>
+    </div>
+
+    <!-- Scena: przypięta CSS-owym sticky (bez pinu GSAP — brak pin-spacerów
+         i brak ryzyka rozjazdu kolejności odświeżania istniejących pinów) -->
+    <div class="pj__stage">
+
+      <!-- ══ WARSTWA A: TŁO — gradient i jasny punkt zaniku ══ -->
+      <div class="pj__background" aria-hidden="true">
+        <div class="pj__bg-inner"></div>
+      </div>
+
+      <!-- ══ WARSTWA B: ŚWIAT — droga, kontenery, odpady, dekoracje ══
+           Tylko ta warstwa dostaje skalę kamery i pełną paralaksę. -->
+      <div class="pj__world">
+        <div class="pj__world-inner">
+
+          <!-- Droga: jedna wstęga budowana co klatkę z linii środkowej trasy
+               (getRoutePoint). Punkty kontrolne interpolują się między
+               wariantami, więc kształt zmienia się płynnie, bez przeskoku
+               i bez podwójnego konturu. -->
+          <svg class="pj__road" viewBox="0 0 1000 1000" preserveAspectRatio="none"
+               aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="pjRoadFade" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0"    stop-color="#e6d8ba" stop-opacity="0.80"/>
+                <stop offset="0.36" stop-color="#ece1c9" stop-opacity="0.66"/>
+                <stop offset="0.74" stop-color="#f3ecdc" stop-opacity="0.36"/>
+                <stop offset="1"    stop-color="#f8f4ea" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path class="pj__road-path" d=""/>
+          </svg>
+
+          <!-- Dekoracje (lampy, drzewa, ogrodzenie, tablica, liście, ptak)
+               usunięte z modułu decyzją użytkownika po przeglądzie nagrania:
+               w kadrze były niewidoczne albo nie wspierały prezentacji.
+               Pliki graficzne pozostają w projekcie jako niewykorzystywane
+               zasoby (dekoracje/webp/ oraz source-png/). -->
+
+          <!-- 14 STACJI — pełna treść w DOM, także bez JavaScriptu.
+               W trybie sceny kontroler przenosi numer i tekst każdej stacji
+               do warstwy UI, żeby nie dziedziczyły ruchu kamery. -->
+          <div class="pj__stations">
+
+        <article class="pj-station" data-station="1">
+          <p class="pj-station__no"><b>1</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="867"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-brazowy.webp"
+                 alt="Otwarty brązowy kontener">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="994"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-01-odpady-zielone-bio.webp"
+                 alt="Gałęzie, trawa, liście i resztki roślinne">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="867"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-brazowy.webp"
+                   alt="Otwarty brązowy kontener">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="994"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-01-odpady-zielone-bio.webp"
+                   alt="Gałęzie, trawa, liście i resztki roślinne">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Odpady zielone i bioodpady</h4>
+            <p class="pj-station__desc">Gałęzie, trawa, liście i resztki roślinne trafiają
+            do oznaczonej strefy. Zebrane osobno mogą zostać właściwie zagospodarowane.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="2">
+          <p class="pj-station__no"><b>2</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="840"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-szary.webp"
+                 alt="Otwarty szary kontener">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1094"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-02-gruz-odpady-remontowe.webp"
+                 alt="Cegły, beton, płytki i ceramika">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="840"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-szary.webp"
+                   alt="Otwarty szary kontener">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1094"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-02-gruz-odpady-remontowe.webp"
+                   alt="Cegły, beton, płytki i ceramika">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Gruz i odpady remontowe</h4>
+            <p class="pj-station__desc">Cegły, beton, płytki i ceramika są ciężkie i nie
+            pasują do zwykłego pojemnika. W PSZOK-u mają oddzielne miejsce.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="3">
+          <p class="pj-station__no"><b>3</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="840"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-szary.webp"
+                 alt="Otwarty szary kontener">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1001"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-03-zuzyte-opony.webp"
+                 alt="Stos zużytych opon samochodowych">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="840"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-szary.webp"
+                   alt="Otwarty szary kontener">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1001"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-03-zuzyte-opony.webp"
+                   alt="Stos zużytych opon samochodowych">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Zużyte opony</h4>
+            <p class="pj-station__desc">Opony są trwałe i zbudowane z kilku materiałów.
+            Zbiera się je osobno, aby przekazać je do właściwego procesu.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="4">
+          <p class="pj-station__no"><b>4</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="946"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-niebieski.webp"
+                 alt="Niebieski kontener z klapami">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1252"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-04-papier-karton-tektura.webp"
+                 alt="Kartony, tektura falista i gazety">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="946"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-niebieski.webp"
+                   alt="Niebieski kontener z klapami">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1252"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-04-papier-karton-tektura.webp"
+                   alt="Kartony, tektura falista i gazety">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Papier, karton i tektura</h4>
+            <p class="pj-station__desc">Papier zwykle segregujemy w domu. Większe ilości
+            kartonu i tektury mogą mieć także osobną strefę w PSZOK-u — zgodnie
+            z lokalnymi zasadami.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="5">
+          <p class="pj-station__no"><b>5</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="1197"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-zielony.webp"
+                 alt="Zielony kontener z klapami">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1309"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-05-szklo.webp"
+                 alt="Szklane butelki i słoiki">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="1197"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-zielony.webp"
+                   alt="Zielony kontener z klapami">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1309"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-05-szklo.webp"
+                   alt="Szklane butelki i słoiki">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Szkło</h4>
+            <p class="pj-station__desc">Butelki i słoiki powinny pozostać oddzielone
+            od ceramiki, luster i innych rodzajów szkła. Sprawdź oznaczenie strefy.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="6">
+          <p class="pj-station__no"><b>6</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="946"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-zolty.webp"
+                 alt="Żółty kontener z klapami">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="984"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-06-tworzywa-folie-metale-kolorowe.webp"
+                 alt="Butelki i opakowania z tworzyw, folie oraz puszki">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="946"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-zolty.webp"
+                   alt="Żółty kontener z klapami">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="984"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-06-tworzywa-folie-metale-kolorowe.webp"
+                   alt="Butelki i opakowania z tworzyw, folie oraz puszki">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Tworzywa, folie i metale kolorowe</h4>
+            <p class="pj-station__desc">Folie, opakowania z tworzyw i drobne metale
+            kolorowe trafiają do wskazanej strefy. Nie łączymy ich z przypadkowymi
+            odpadami.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="7">
+          <p class="pj-station__no"><b>7</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="898"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-zamkniety-drzwi-zielony.webp"
+                 alt="Zielony kontener zamknięty, z drzwiami">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1141"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-07-odpady-wielkogabarytowe.webp"
+                 alt="Fotel, szafka, materac i inne duże meble">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="898"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-zamkniety-drzwi-zielony.webp"
+                   alt="Zielony kontener zamknięty, z drzwiami">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1141"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-07-odpady-wielkogabarytowe.webp"
+                   alt="Fotel, szafka, materac i inne duże meble">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Odpady wielkogabarytowe</h4>
+            <p class="pj-station__desc">Meble, materace i duże płyty są za duże
+            do pojemnika przy domu. Dlatego trafiają do strefy gabarytów.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="8">
+          <p class="pj-station__no"><b>8</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1025" height="1600"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-tekstylia.webp"
+                 alt="Pojemnik na odzież i tekstylia">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="965"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-08-odziez-tekstylia.webp"
+                 alt="Ubrania, pościel i ręczniki">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1025" height="1600"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-tekstylia.webp"
+                   alt="Pojemnik na odzież i tekstylia">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="965"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-08-odziez-tekstylia.webp"
+                   alt="Ubrania, pościel i ręczniki">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Odzież i tekstylia</h4>
+            <p class="pj-station__desc">Ubrania, pościel, ręczniki i inne tekstylia
+            zbieramy osobno. Rzeczy nadal sprawne warto najpierw przekazać
+            do ponownego użycia.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="9">
+          <p class="pj-station__no"><b>9</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="947"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-szary.webp"
+                 alt="Szary kontener z klapami">
+            <img class="pj-station__waste" loading="lazy" width="1368" height="866"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-09-styropian.webp"
+                 alt="Płyty i kształtki styropianowe">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="947"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-szary.webp"
+                   alt="Szary kontener z klapami">
+              <img class="pj-station__waste" loading="lazy" width="1368" height="866"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-09-styropian.webp"
+                   alt="Płyty i kształtki styropianowe">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Styropian</h4>
+            <p class="pj-station__desc">Styropian zajmuje dużo miejsca i łatwo rozpada się
+            na drobne kawałki. W punkcie powinien trafić do oznaczonego, osobnego
+            kontenera.</p>
+          </div>
+        </article>
+
+        <!-- Stacja 10: od 04.08.2026 używa poprawionej grafiki `_v2` (usunięte
+             luźne igły u podstawy stosu). Pierwotny render bez sufiksu `_v2`
+             pozostaje w projekcie jako niewykorzystywany. -->
+        <article class="pj-station" data-station="10">
+          <p class="pj-station__no"><b>10</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="711" height="1073"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pojemnik-specjalny-maly.webp"
+                 alt="Mały specjalny pojemnik na przeterminowane leki i odpady ostre">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1059"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-10-leki-igly-strzykawki_v2.webp"
+                 alt="Przeterminowane leki w blistrach i opakowaniach, butelki po syropach oraz strzykawki">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="711" height="1073"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pojemnik-specjalny-maly.webp"
+                   alt="Mały specjalny pojemnik na przeterminowane leki i odpady ostre">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1059"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-10-leki-igly-strzykawki_v2.webp"
+                   alt="Przeterminowane leki w blistrach i opakowaniach, butelki po syropach oraz strzykawki">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Leki, igły i strzykawki</h4>
+            <p class="pj-station__desc">Przeterminowane leki oddajemy osobno. Domowe igły
+            i strzykawki przekazujemy wyłącznie w zamkniętym pojemniku odpornym
+            na przekłucie.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="11">
+          <p class="pj-station__no"><b>11</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="794"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-maly-otwarty-szary.webp"
+                 alt="Mały otwarty szary kontener">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1495"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-11-baterie-akumulatory.webp"
+                 alt="Baterie, akumulatorki i akumulator samochodowy">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="794"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-maly-otwarty-szary.webp"
+                   alt="Mały otwarty szary kontener">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1495"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-11-baterie-akumulatory.webp"
+                   alt="Baterie, akumulatorki i akumulator samochodowy">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Baterie i akumulatory</h4>
+            <p class="pj-station__desc">Baterie i akumulatory zbieramy oddzielnie od innych
+            odpadów oraz od chemikaliów. Nie rozbieramy ich i nie uszkadzamy.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="12">
+          <p class="pj-station__no"><b>12</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="1403"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pojemnik-mauser.webp"
+                 alt="Zabezpieczony pojemnik typu Mauser">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1323"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-12-chemikalia-oleje-techniczne.webp"
+                 alt="Puszki farb, rozpuszczalniki i kanistry olejów technicznych">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="1403"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pojemnik-mauser.webp"
+                   alt="Zabezpieczony pojemnik typu Mauser">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1323"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-12-chemikalia-oleje-techniczne.webp"
+                   alt="Puszki farb, rozpuszczalniki i kanistry olejów technicznych">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Chemikalia i oleje techniczne</h4>
+            <p class="pj-station__desc">Farb, rozpuszczalników i olejów technicznych
+            nie wylewamy do odpływu ani nie mieszamy ze sobą. Przekazujemy
+            je zabezpieczone.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="13">
+          <p class="pj-station__no"><b>13</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="898"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-zamkniety-drzwi-zielony.webp"
+                 alt="Zielony kontener zamknięty, z drzwiami">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1196"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-13-elektroodpady.webp"
+                 alt="Monitor, pralka, drobne AGD i przewody">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="898"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-zamkniety-drzwi-zielony.webp"
+                   alt="Zielony kontener zamknięty, z drzwiami">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1196"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-13-elektroodpady.webp"
+                   alt="Monitor, pralka, drobne AGD i przewody">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Elektroodpady</h4>
+            <p class="pj-station__desc">Telefony, przewody i urządzenia mają wiele różnych
+            części. Oddane osobno mogą zostać bezpiecznie rozebrane, a część materiałów
+            odzyskana.</p>
+          </div>
+        </article>
+
+        <article class="pj-station" data-station="14">
+          <p class="pj-station__no"><b>14</b>/14</p>
+          <div class="pj-station__visual">
+            <img class="pj-station__container" loading="lazy" width="1600" height="1065"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pawilon-drugie-zycie_lewo.webp"
+                 alt="Pawilon „Drugie życie odpadów” z drzwiami i oknem">
+            <img class="pj-station__waste" loading="lazy" width="1600" height="1217"
+                 data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-14-drugie-zycie.webp"
+                 alt="Sprawna lampa, krzesła, rower i zabawki">
+            <noscript>
+              <img class="pj-station__container" loading="lazy" width="1600" height="1065"
+                   src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/pawilon-drugie-zycie_lewo.webp"
+                   alt="Pawilon „Drugie życie odpadów” z drzwiami i oknem">
+              <img class="pj-station__waste" loading="lazy" width="1600" height="1217"
+                   src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-14-drugie-zycie.webp"
+                   alt="Sprawna lampa, krzesła, rower i zabawki">
+            </noscript>
+          </div>
+          <div class="pj-station__text">
+            <h4 class="pj-station__title">Drugie Życie</h4>
+            <p class="pj-station__desc">Sprawna lampa, krzesło lub półka nie muszą jeszcze
+            stać się odpadem. Mogą służyć kolejnej osobie.</p>
+          </div>
+        </article>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ WARSTWA C: UI — stabilna, bez skali kamery i bez paralaksy ══
+           Kontroler przenosi tu numery i teksty stacji na czas trwania sceny. -->
+      <div class="pj__ui">
+        <div class="pj__texts"></div>
+        <p class="pj__note">Dokładny zakres i sposób przyjmowania odpadów określa
+        regulamin lokalnego PSZOK-u.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="act act--three" data-bg="sage">
+    <!-- 🎮 PUNKT KONTROLNY 4 → O -->
+    <article class="screen screen--game" id="zagadka-4">
+      <p class="game-chip">🧩 ZAGADKA 4</p>
+      <h3>Przydziel odpad do strefy</h3>
+      <p>Jesteś na miejscu, w PSZOK-u. Rozwieź przedmioty do właściwych stref!</p>
+      <div class="genially-frame genially-frame--placeholder">
+        <span>🎮 Tu wstawimy grę Genially:<br><strong>Interactive Image / drag &amp; drop — plan PSZOK ze strefami</strong><br>
+        <small>telefon → elektroodpady • farba → niebezpieczne • kanapa → gabaryty • opona → opony • bluza → tekstylia</small></span>
+      </div>
+      <button class="letter-btn btn-lk" data-letter="O" data-slot="3">🗂 Zapisz literę w aktach sprawy</button>
+    </article>
+
+    <!-- B6: zasady -->
+    <div class="story" id="blok-b6">
+      <p class="big-line big-line--sm">ILE TO KOSZTUJE?</p>
+      <p class="big-line big-line--accent">NIC.</p>
+      <p class="sub-text">Twoja rodzina <strong>już za to płaci</strong> — w domowym
+      rachunku za śmieci. Wystarczy przywieźć. Bez paragonu, bez opłat.</p>
+    </div>
+
+    <!-- B7: skutek -->
+    <div class="story" id="blok-b7">
+      <p class="big-line">CZYSTE SUROWCE.</p>
+      <p class="big-line big-line--accent">CZYSTY LAS.</p>
+      <p class="sub-text">Nic nie ląduje na dzikim wysypisku, sortownie są bezpieczne,
+      a metale wracają do gry — zamiast nowych kopalni.</p>
+    </div>
+
+    <!-- B8: pomost do części C -->
+    <div class="story" id="blok-b8">
+      <p class="big-line big-line--sm">OLEJOMAT I PSZOK —</p>
+      <p class="big-line big-line--accent">CO JE ŁĄCZY?</p>
+      <p class="sub-text">Dwa różne miejsca, dwie różne maszyny… i <strong>jedna wspólna
+      tajemnica</strong>. Ostatnia część śledztwa — przed Tobą.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ PRZERYWNIK ROZDZIAŁU C ═══════════ -->
+  <section class="interlude act--four" id="czesc-c-int" data-bg="dark">
+    <p class="interlude__kicker">ROZDZIAŁ OSTATNI</p>
+    <h2 class="interlude__word">CZĘŚĆ&nbsp;C</h2>
+    <p class="interlude__sub">Wielki obraz: po co to wszystko?</p>
+  </section>
+
+  <!-- ================================================
+       CZĘŚĆ C — WIELKI OBRAZ
+       ================================================ -->
+
+  <!-- C1: scena planety (canvas — klatki Ziemi sterowane scrollem) -->
+  <section class="planet-scene act--four" id="scena-planeta" data-bg="dark">
+    <canvas id="planet-canvas" aria-label="Obracająca się Ziemia" role="img"></canvas>
+  </section>
+
+  <section class="act act--four" id="czesc-c" data-bg="dark">
+    <div class="story" id="blok-c1">
+      <p class="big-line">W NATURZE NIKT</p>
+      <p class="big-line big-line--accent">NICZEGO NIE WYRZUCA</p>
+      <p class="sub-text">Liść spada z drzewa, karmi owady, staje się nawozem — obieg
+      się zamyka. Olejomat i PSZOK robią to samo z naszymi odpadami. To
+      <strong>Gospodarka Obiegu Zamkniętego</strong>: odpad to surowiec,
+      który pomylił drzwi.</p>
+    </div>
+
+    <!-- C2: most do klimatu -->
+    <div class="story" id="blok-c2">
+      <p class="big-line big-line--sm">A CO TO MA DO KLIMATU?</p>
+      <p class="big-line big-line--accent">METAN.</p>
+      <p class="sub-text">Resztki zakopane w hałdzie śmieci gniją <strong>bez tlenu</strong>
+      i uwalniają metan — gaz cieplarniany dużo mocniejszy od CO₂. Dobra segregacja
+      dosłownie chłodzi planetę.</p>
+      <img class="blk-img blk-img--md" src="../assets/images/lekcja45/odpady_oragniczne_a_metan.png" alt="Odpady organiczne na wysypisku uwalniają metan" loading="lazy">
+    </div>
+
+    <!-- 🎮 PUNKT KONTROLNY 5 → K -->
+    <article class="screen screen--game" id="zagadka-5">
+      <p class="game-chip">🧩 ZAGADKA 5</p>
+      <h3>Połącz wszystkie kropki</h3>
+      <p>Ostatni test Agenta: olej, PSZOK i klimat — jedna układanka. Widzisz całość?</p>
+      <div class="genially-frame genially-frame--placeholder">
+        <span>🎮 Tu wstawimy grę Genially:<br><strong>Quiz finałowy (2–3 pytania łączące całość)</strong><br>
+        <small>„Dlaczego olej w Olejomacie pomaga klimatowi?" • „Co łączy zator w rurze z górą śmieci?"</small></span>
+      </div>
+      <button class="letter-btn btn-lk" data-letter="K" data-slot="4">🗂 Zapisz literę w aktach sprawy</button>
+    </article>
+
+    <!-- C3: sprawczość (tekst + animacja klatkowa butelki jak Ziemia) -->
+    <div class="story story--split" id="blok-c3">
+      <div class="story--split__text">
+        <p class="big-line">MASZ 10 LAT</p>
+        <p class="big-line big-line--accent">I REALNĄ MOC.</p>
+        <p class="sub-text">Butelka z lejkiem na blacie. Słoik na baterie. Wyprawa
+        z rodzicami do PSZOK-u. <strong>Miliony takich decyzji = zmiana, którą widać.</strong>
+        Twoja też się liczy.</p>
+      </div>
+      <canvas class="split-anim" id="butelka-canvas" width="680" height="910"
+              aria-label="Butelka ze zużytym olejem trafia do Olejomatu" role="img"></canvas>
+      <img class="split-anim-fallback" src="../assets/images/lekcja45/butelka-lejek-3d.png"
+           alt="Butelka z lejkiem na zużyty olej — mały nawyk, wielka zmiana" loading="lazy">
+    </div>
+  </section>
+
+  <!-- MARQUEE finałowe -->
+  <div class="marquee marquee--dark act--four" data-bg="dark" aria-hidden="true">
+    <div class="marquee__track">
+      <span>TAJNY KOD: 5 LITER ★ ELEMENTARNE! ★ TAJNY KOD: 5 LITER ★ ELEMENTARNE! ★ </span>
+      <span>TAJNY KOD: 5 LITER ★ ELEMENTARNE! ★ TAJNY KOD: 5 LITER ★ ELEMENTARNE! ★ </span>
+    </div>
+  </div>
+
+  <section class="act act--four" data-bg="dark">
+    <!-- HASŁO -->
+    <div class="story" id="ekran-hasla">
+      <p class="big-line">🔐 WPISZ</p>
+      <p class="big-line big-line--accent">TAJNE HASŁO</p>
+      <p class="sub-text">Masz wszystkie litery? Ułóż je w hasło i otwórz akta sprawy!</p>
+      <form class="password-form" id="password-form" autocomplete="off">
+        <input type="text" id="password-input" class="password-input" maxlength="5"
+               placeholder="_ _ _ _ _" aria-label="Wpisz 5-literowe hasło" spellcheck="false">
+        <button type="submit" class="btn-lk">Otwórz akta 🔓</button>
+      </form>
+      <p class="password-msg" id="password-msg" role="status"></p>
+    </div>
+
+    <!-- FINAŁ (odblokowany hasłem) -->
+    <div id="final-content" class="final-content" hidden>
+      <div class="story">
+        <p class="big-line">KTO BYŁ</p>
+        <p class="big-line big-line--accent">WINNY?</p>
+      </div>
+      <div class="story story--narrow">
+        <div class="video-slot">
+          <div class="video-slot__inner">
+            <span class="video-slot__icon">🎬</span>
+            <strong>Film finałowy — w produkcji</strong>
+            <small>Rozwiązanie zagadki • chłopiec z butelką i lejkiem • odkorkowane miasto</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="story" id="blok-final-rura">
+        <p class="big-line big-line--sm">MIASTO</p>
+        <p class="big-line big-line--accent">ODKORKOWANE.</p>
+        <p class="sub-text">Rury znów czyste — bo setki osób przerwało łańcuch
+        „ten jeden raz się nie liczy". Ty też już wiesz jak.</p>
+        <img class="blk-img blk-img--md" src="../assets/images/lekcja45/rura-odetkana-3d.png" alt="Czysta, odetkana rura kanalizacyjna" loading="lazy">
+      </div>
+
+      <!-- DYPLOM -->
+      <div class="story" id="ekran-dyplomu">
+        <img class="deco deco--medal" src="../assets/images/lekcja45/medal-3d.png" alt="" aria-hidden="true">
+        <p class="big-line big-line--sm">🏅 ODBIERZ DYPLOM</p>
+        <p class="sub-text">Wpisz swoje dane — dyplom przyda się też nauczycielowi
+        jako dowód ukończenia misji.</p>
+        <div class="diploma-form">
+          <input type="text" id="agent-name" maxlength="30" placeholder="Imię"
+                 aria-label="Twoje imię do dyplomu">
+          <input type="text" id="agent-surname" maxlength="40" placeholder="Nazwisko"
+                 aria-label="Twoje nazwisko do dyplomu">
+          <input type="text" id="agent-class" maxlength="6" placeholder="Klasa (np. 4a)"
+                 aria-label="Twoja klasa" class="diploma-input--class">
+          <button class="btn-lk" id="diploma-btn">Wygeneruj dyplom</button>
+        </div>
+        <div class="diploma-card" id="diploma-card" hidden>
+          <p class="diploma-card__brand">SELEKT • EKO-DETEKTYWI</p>
+          <h4>DYPLOM TAJNEGO AGENTA</h4>
+          <p class="diploma-card__name" id="diploma-name"></p>
+          <p class="diploma-card__class" id="diploma-class"></p>
+          <p class="diploma-card__no">Agent <span id="diploma-number"></span></p>
+          <p class="diploma-card__desc">ukończył(a) misję „Olejomaty i PSZOK — odzyskajmy
+          utraconą energię!" i złamał(a) tajny kod P•S•Z•O•K</p>
+          <p class="diploma-card__date" id="diploma-date"></p>
+          <button class="btn-lk btn-lk--ghost" id="print-btn">🖨 Wydrukuj dyplom</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="lk-reset"><a href="#" id="reset-link">↺ Zresetuj misję (tryb testowy)</a></p>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/DrawSVGPlugin.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+  <script src="lekcja-4-5.js?v=22"></script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Złap zużyty olej — minigra edukacyjna e-lekcji SELEKT dla klas 4–5.">
+  <title>Złap zużyty olej! — minigra SELEKT</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 54'%3E%3Cpath d='M20 2 C20 14 4 26 4 38 a16 16 0 0 0 32 0 C36 26 20 14 20 2 Z' fill='%23e8a020' stroke='%23b97a12' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+
+<div id="game" class="game" data-state="start">
+
+  <!-- ══════════════ PLANSZA GRY ══════════════ -->
+  <div id="board" class="board" aria-hidden="true">
+
+    <!-- Tło: uproszczona kuchnia (CSS); podmienialne na assets/images/background.webp -->
+    <div id="bg" class="bg-kitchen">
+      <div class="bg-window"></div>
+      <div class="bg-shelf bg-shelf--1"></div>
+      <div class="bg-shelf bg-shelf--2"></div>
+      <div class="bg-counter"></div>
+    </div>
+
+    <!-- Patelnia (jedna naraz) -->
+    <div id="pan" class="pan is-hidden">
+      <svg class="pan-svg" viewBox="0 0 220 90" aria-hidden="true">
+        <!-- uchwyt -->
+        <rect x="150" y="34" width="66" height="14" rx="7" fill="#243244"/>
+        <rect x="150" y="34" width="66" height="6"  rx="3" fill="#3d5068"/>
+        <!-- korpus patelni -->
+        <ellipse cx="85" cy="46" rx="82" ry="30" fill="#2c3a4e"/>
+        <ellipse cx="85" cy="40" rx="82" ry="28" fill="#46586e"/>
+        <ellipse cx="85" cy="40" rx="68" ry="21" fill="#1f2b3a"/>
+        <!-- olej w patelni -->
+        <ellipse cx="83" cy="41" rx="58" ry="16" fill="#e8a020"/>
+        <ellipse cx="70" cy="38" rx="24" ry="7"  fill="#f6c14d" opacity="0.85"/>
+        <!-- wylew (dzióbek) po lewej -->
+        <path d="M6 38 Q -4 44 4 52 Q 12 48 14 42 Z" fill="#46586e"/>
+      </svg>
+    </div>
+
+    <!-- Kropla oleju (jedna aktywna naraz) -->
+    <div id="drop" class="drop is-hidden">
+      <svg class="drop-svg" viewBox="0 0 40 54" aria-hidden="true">
+        <path d="M20 2 C20 14 4 26 4 38 a16 16 0 0 0 32 0 C36 26 20 14 20 2 Z"
+              fill="#e8a020" stroke="#b97a12" stroke-width="2"/>
+        <ellipse cx="14" cy="36" rx="5" ry="8" fill="#f8cf6e" opacity="0.9"/>
+      </svg>
+    </div>
+
+    <!-- Rozbryzg po pudle -->
+    <div id="splash" class="splash is-hidden">
+      <svg viewBox="0 0 160 60" aria-hidden="true">
+        <ellipse cx="80" cy="44" rx="74" ry="13" fill="#e8a020"/>
+        <ellipse cx="80" cy="42" rx="60" ry="9" fill="#f6c14d" opacity="0.8"/>
+        <circle cx="26" cy="24" r="6" fill="#e8a020"/>
+        <circle cx="60" cy="12" r="8" fill="#e8a020"/>
+        <circle cx="104" cy="16" r="7" fill="#e8a020"/>
+        <circle cx="136" cy="26" r="5" fill="#e8a020"/>
+      </svg>
+    </div>
+
+    <!-- Efekty „+1” -->
+    <div id="fx" class="fx"></div>
+
+    <!-- Butelka z lejkiem (obiekt gracza) -->
+    <div id="bottle" class="bottle">
+      <img src="assets/images/bottle-funnel.webp" alt="" draggable="false">
+    </div>
+  </div>
+
+  <!-- ══════════════ HUD ══════════════ -->
+  <header class="hud">
+    <div class="hud-counter">
+      <div id="counter" class="counter">ZŁAPANE KROPLE: 0&nbsp;/&nbsp;20</div>
+      <div class="progress" role="presentation">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- N4: mała podpowiedź sterowania; treść ustawia game.js zależnie od
+         urządzenia (mysz/klawiatura vs dotyk), znika po 5. złapanej kropli.
+         Duplikat treści z ekranu startowego, więc ukryty przed czytnikiem. -->
+    <div id="hudHint" class="hud-hint" aria-hidden="true">Steruj myszką lub strzałkami ← →</div>
+
+    <!-- Trzy życia jako krople; znaczenie nie zależy od samego koloru:
+         utracone życie dostaje przekreślenie, a stan czyta srStatus -->
+    <div id="livesBox" class="lives" role="img" aria-label="Życia: 3 z 3">
+      <span class="life" data-life="0" aria-hidden="true">
+        <svg viewBox="0 0 40 54"><path class="life-drop" d="M20 2 C20 14 4 26 4 38 a16 16 0 0 0 32 0 C36 26 20 14 20 2 Z"/><line class="life-cross" x1="7" y1="49" x2="33" y2="7"/></svg>
+      </span>
+      <span class="life" data-life="1" aria-hidden="true">
+        <svg viewBox="0 0 40 54"><path class="life-drop" d="M20 2 C20 14 4 26 4 38 a16 16 0 0 0 32 0 C36 26 20 14 20 2 Z"/><line class="life-cross" x1="7" y1="49" x2="33" y2="7"/></svg>
+      </span>
+      <span class="life" data-life="2" aria-hidden="true">
+        <svg viewBox="0 0 40 54"><path class="life-drop" d="M20 2 C20 14 4 26 4 38 a16 16 0 0 0 32 0 C36 26 20 14 20 2 Z"/><line class="life-cross" x1="7" y1="49" x2="33" y2="7"/></svg>
+      </span>
+    </div>
+    <button id="soundBtn" class="sound-btn" type="button"
+            aria-pressed="true" aria-label="Wyłącz dźwięk">
+      <svg class="icon-sound-on" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>
+        <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <svg class="icon-sound-off" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>
+        <path d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- Komunikaty dla czytnika ekranu -->
+  <div id="srStatus" class="sr-only" aria-live="polite"></div>
+
+  <!-- Krótki komunikat po utracie życia / o spokojniejszym tempie.
+       Wizualny duplikat treści z srStatus, więc ukryty przed czytnikiem. -->
+  <div id="toast" class="toast is-hidden" aria-hidden="true"></div>
+
+  <!-- ══════════════ EKRAN STARTOWY ══════════════ -->
+  <section id="screenStart" class="overlay overlay--start" aria-labelledby="startTitle">
+    <div class="panel">
+      <h1 id="startTitle" class="panel-title">Złap zużyty olej!</h1>
+      <p class="panel-text">
+        Przesuwaj butelkę z&nbsp;lejkiem i&nbsp;złap <strong>20&nbsp;kropli</strong> oleju
+        z&nbsp;jeżdżącej patelni. Masz <strong>trzy życia</strong>&nbsp;— pojedyncza
+        zgubiona kropla nie kasuje wyniku.
+      </p>
+      <div class="panel-info">
+        <svg class="panel-info-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 8h.01M12 11v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p>
+          Zużytego oleju nie wylewamy do zlewu. Po&nbsp;<strong>wystudzeniu</strong> należy przelać go
+          do szczelnej butelki i&nbsp;oddać do odpowiedniego punktu zbiórki.
+          Gorący olej zawsze przelewa osoba dorosła!
+        </p>
+      </div>
+      <button id="btnStart" class="btn btn--primary" type="button">ROZPOCZNIJ GRĘ</button>
+      <p id="startHint" class="panel-hint">Steruj myszką lub strzałkami ← →</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ EKRAN KOŃCA PEŁNEJ PRÓBY (3 pudła) ══════════════ -->
+  <section id="screenMiss" class="overlay overlay--miss is-hidden" aria-labelledby="missTitle">
+    <div class="panel">
+      <h2 id="missTitle" class="panel-title">Ta próba dobiegła końca</h2>
+      <p class="panel-text">
+        Trzy krople uciekły do zlewu&nbsp;— zdarza się nawet detektywom!
+        W&nbsp;nowej próbie dostajesz świeże trzy życia.
+      </p>
+      <p id="assistNote" class="panel-text panel-text--assist is-hidden">
+        Włączamy spokojniejsze tempo. Zebrane wskazówki pomogą Ci w&nbsp;kolejnej próbie.
+      </p>
+      <button id="btnRetry" class="btn btn--primary" type="button">NOWA PRÓBA</button>
+    </div>
+  </section>
+
+  <!-- ══════════════ EKRAN ZWYCIĘSTWA ══════════════ -->
+  <section id="screenWin" class="overlay overlay--win is-hidden" aria-labelledby="winTitle">
+    <div class="panel">
+      <h2 id="winTitle" class="panel-title">Udało się!</h2>
+      <p class="panel-text">
+        Złapałeś wszystkie 20&nbsp;kropli zużytego oleju.
+        Olej nie trafił do zlewu ani kanalizacji.
+      </p>
+      <p class="panel-text panel-text--label">Zdobywasz kolejną literę do hasła:</p>
+      <div id="rewardLetter" class="reward-letter" aria-label="Litera Z">Z</div>
+      <p class="panel-text">Zapamiętaj literę „<strong id="rewardLetterInline">Z</strong>”.
+        Będzie potrzebna w&nbsp;finale lekcji.</p>
+      <!-- prototyp: przycisk tylko potwierdza — niczego nie zapisuje w Aktach -->
+      <button id="btnNext" class="btn btn--primary" type="button">LITERA Z GOTOWA</button>
+    </div>
+  </section>
+
+  <!-- ══════════════ EKRAN PAUZY ══════════════ -->
+  <section id="screenPause" class="overlay overlay--pause is-hidden" aria-labelledby="pauseTitle">
+    <div class="panel">
+      <h2 id="pauseTitle" class="panel-title">Gra wstrzymana</h2>
+      <p class="panel-text">Wróciłeś? Kropla czeka!</p>
+      <button id="btnResume" class="btn btn--primary" type="button">WZNÓW GRĘ</button>
+    </div>
+  </section>
+
+  <!-- ══════════════ ODLICZANIE ══════════════ -->
+  <div id="countdown" class="countdown is-hidden" aria-live="assertive">
+    <span id="countdownNum">3</span>
+  </div>
+
+</div>
+
+<script src="game.js?v=3"></script>
+</body>
+</html>

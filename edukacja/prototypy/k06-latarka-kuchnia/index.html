@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Przeszukanie kuchni — gra śledcza e-lekcji SELEKT dla klas 4–5. Latarką odnajdujesz pięć śladów.">
+  <title>Przeszukanie kuchni — gra SELEKT</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%23ffe6a8' stroke='%23e8a020' stroke-width='3'/%3E%3C/svg%3E">
+  <!-- Tryb osadzenia w tablicy lekcji (wzorzec K07/K16): ?embed=board → klasa na <html>,
+       żeby strona lekcji mogła schować własne marginesy gry. Bez parametru nic się nie zmienia. -->
+  <script>
+    try {
+      if (new URLSearchParams(location.search).get("embed") === "board") {
+        document.documentElement.classList.add("k06-embed");
+      }
+    } catch (e) { /* brak URLSearchParams nie może wywrócić gry */ }
+  </script>
+  <link rel="stylesheet" href="k06.css?v=1">
+</head>
+<body>
+
+<div id="game" class="game" data-state="intro">
+
+  <!-- ══════════════ HUD ══════════════ -->
+  <header class="hud">
+    <div class="hud-counter">
+      <p class="counter">ODNALEZIONE ŚLADY: <strong id="counterNum">0</strong>/5</p>
+      <ol class="slots" id="slots" aria-hidden="true">
+        <li class="slot" data-slot="1"></li>
+        <li class="slot" data-slot="2"></li>
+        <li class="slot" data-slot="3"></li>
+        <li class="slot" data-slot="4"></li>
+        <li class="slot" data-slot="5"></li>
+      </ol>
+    </div>
+    <!-- Duplikat treści z ekranu startowego → ukryty przed czytnikiem ekranu. -->
+    <p class="hud-hint" id="hudHint" aria-hidden="true">Prowadź latarkę myszką lub strzałkami</p>
+  </header>
+
+  <!-- ══════════════ KADR KUCHNI ══════════════ -->
+  <div class="stage" id="stage">
+    <div class="scene" id="scene">
+
+      <!-- 1. Jasny render pod spodem. Dwie klatki (szafka zamknięta / otwarta)
+             przechodzą crossfade'em; zastępnik CSS działa, gdy useImages = false.
+             k06.js klonuje ten blok do warstw „pamięci” i „plamy”, więc wszystkie
+             trzy warstwy zawsze pokazują ten sam stan kuchni. -->
+      <div class="pic" id="picBase">
+        <div class="pic-frame pic-frame--closed"></div>
+        <div class="pic-frame pic-frame--open"></div>
+        <div class="mock" aria-hidden="true">
+          <div class="mock-wall"></div>
+          <div class="mock-cabinets"></div>
+          <div class="mock-counter"></div>
+          <div class="mock-fridge"></div>
+          <div class="mock-doors"></div>
+          <div class="mock-bins"></div>
+          <div class="mock-sink"></div>
+          <div class="mock-item mock-item--funnel"></div>
+          <div class="mock-item mock-item--bottle"></div>
+          <div class="mock-item mock-item--poster"></div>
+          <div class="mock-item mock-item--battery"></div>
+        </div>
+      </div>
+
+      <!-- 2. Ciemność: to ona robi z kuchni miejsce do przeszukania -->
+      <div class="veil" aria-hidden="true"></div>
+
+      <!-- 3. Pamięć: odkryte ślady zostają rozjaśnione na stałe (maskę buduje k06.js) -->
+      <div class="reveal reveal--memory" id="revealMemory" aria-hidden="true"></div>
+
+      <!-- 4. Ruchoma plama światła latarki -->
+      <div class="reveal reveal--spot" id="revealSpot" aria-hidden="true"></div>
+
+      <!-- 5. Podpowiedzi, pinezki, wskaźnik przytrzymania (wypełnia k06.js) -->
+      <div class="marks" id="marks" aria-hidden="true"></div>
+      <div class="dwell" id="dwell" aria-hidden="true"></div>
+
+      <!-- 6. Klapka szafki pod zlewem -->
+      <button class="door" id="door" type="button" hidden>
+        <span class="door-dot" aria-hidden="true"></span>Otwórz
+      </button>
+
+      <!-- 7. Latarka ze snopem -->
+      <div class="beam" id="beam" aria-hidden="true"></div>
+      <div class="torch" id="torch" aria-hidden="true">
+        <svg class="torch-mock" viewBox="0 0 120 96" aria-hidden="true">
+          <rect x="6" y="52" width="70" height="30" rx="15" transform="rotate(-39 41 67)" fill="#e8912a"/>
+          <rect x="60" y="18" width="46" height="46" rx="10" transform="rotate(-39 83 41)" fill="#f5a33d"/>
+          <rect x="92" y="14" width="10" height="42" rx="5" transform="rotate(-39 97 35)" fill="#ffe6a8"/>
+        </svg>
+      </div>
+
+      <!-- 8. Obrysy hotspotów w trybie ?debug=1 -->
+      <div class="debug" id="debug" hidden></div>
+
+    </div>
+  </div>
+
+  <!-- Karta odkrytego śladu. Leży poza kadrem, bo na niskim kadrze telefonu
+       (320 px szerokości = 172 px wysokości) każde okno w środku zasłoniłoby
+       całą kuchnię — k06.js kładzie ją wtedy pod kadrem. -->
+  <aside class="card" id="card" hidden>
+    <p class="card-kicker">Świetnie! Masz kolejny trop.</p>
+    <p class="card-text" id="cardText"></p>
+    <button class="card-close" id="cardClose" type="button">Szukam dalej</button>
+  </aside>
+
+  <!-- ══════════════ DRUGI TOR: ŚLADY JAKO PRZYCISKI ══════════════
+       Gra „szukaj wzrokiem” bez alternatywy jest niedostępna. Tab przechodzi
+       po pięciu śladach, Enter odkrywa, aria-live czyta treść karty.
+       Przyciski są poza ekranem, ale przy fokusie stają się widoczne. -->
+  <nav class="traces" aria-label="Ślady w kuchni — lista do zbadania">
+    <ul id="traceList">
+      <li><button type="button" data-trace="1">Butelka z napisem Olejomaty — zbadaj ślad</button></li>
+      <li><button type="button" data-trace="2">Lejek przy zlewie — zbadaj ślad</button></li>
+      <li><button type="button" data-trace="3">Szafka pod zlewem — otwórz i zbadaj</button></li>
+      <li><button type="button" data-trace="4">Plakat o segregacji na lodówce — zbadaj ślad</button></li>
+      <li><button type="button" data-trace="5">Pudełko z bateriami na lodówce — zbadaj ślad</button></li>
+    </ul>
+  </nav>
+
+  <div id="srStatus" class="sr-only" aria-live="polite"></div>
+
+  <!-- Podpowiedź na wąskim ekranie w pionie; nie blokuje gry. -->
+  <p class="rotate-tip" id="rotateTip" hidden>Obróć telefon poziomo — kuchnia będzie większa.</p>
+
+  <!-- ══════════════ EKRAN STARTOWY ══════════════ -->
+  <section id="screenIntro" class="overlay" aria-labelledby="introTitle">
+    <div class="panel">
+      <h1 id="introTitle" class="panel-title">Przeszukaj kuchnię</h1>
+      <p class="panel-text">
+        W kuchni jest ciemno. Masz latarkę i&nbsp;jedno zadanie: znaleźć
+        <strong>pięć śladów</strong>, które powiedzą, co ten dom robi ze&nbsp;zużytym olejem.
+      </p>
+      <div class="panel-info">
+        <svg class="panel-info-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 8h.01M12 11v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p>Przytrzymaj światło na przedmiocie przez chwilę albo go kliknij.
+          Nie ma czasu ani przegranej&nbsp;— to śledztwo, nie wyścig.</p>
+      </div>
+      <button id="btnStart" class="btn btn--primary" type="button">WŁĄCZ LATARKĘ</button>
+      <p id="introHint" class="panel-hint">Prowadź latarkę myszką lub strzałkami ← → ↑ ↓</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ EKRAN FINAŁOWY ══════════════ -->
+  <section id="screenFinal" class="overlay overlay--final is-hidden" aria-labelledby="finalTitle">
+    <div class="panel">
+      <h2 id="finalTitle" class="panel-title">Kuchnia przeszukana</h2>
+      <p class="panel-text panel-text--verdict">
+        Pięć śladów, jeden wniosek&nbsp;— w&nbsp;tej kuchni olej nie trafia do zlewu.
+      </p>
+      <p class="panel-text panel-text--label">Zdobywasz kolejną literę do hasła:</p>
+      <div class="reward-letter">S</div>
+      <p class="panel-text">Zapamiętaj literę „<strong>S</strong>”. Wpiszesz ją w&nbsp;polu postępu śledztwa.</p>
+      <button id="btnFinal" class="btn btn--primary" type="button">LITERA S GOTOWA</button>
+    </div>
+  </section>
+
+</div>
+
+<script src="k06.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>K16 — Drugie życie materiałów | prototyp | SELEKT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Signika:wght@600;700&family=Imprima&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="k16.css?v=7">
+<script>
+/* Tryb osadzenia w rozdziale tablicy (?embed=board) — wzorzec z K07.
+   Klasa musi być na <html> PRZED pierwszym malowaniem, żeby notka
+   prototypowa i zdublowany nagłówek nawet nie mignęły. Samodzielny
+   podgląd (bez parametru) zachowuje pełny układ prototypu.
+   Mechanika gry, pary i assety pozostają nietknięte. */
+if (new URLSearchParams(location.search).get("embed") === "board") {
+  document.documentElement.classList.add("k16-embed");
+}
+</script>
+</head>
+<body>
+
+<p class="k16-proto-note">
+  Prototyp klocka&nbsp;16. Nie jest jeszcze podłączony do lekcji ani do zapisu litery.
+</p>
+
+<main class="k16" id="k16">
+
+  <header class="k16-head">
+    <p class="k16-kicker">Klocek 16</p>
+    <h1 class="k16-title">Drugie życie materiałów</h1>
+    <p class="k16-lead">
+      Wrzuć odpad do maszyny i wskaż, co może z niego powstać.
+      Wybierz jeden z trzech produktów.
+    </p>
+    <p class="k16-progress">
+      Runda <b id="k16-round">1</b> z <b>6</b>
+      <span class="k16-dots" id="k16-dots" aria-hidden="true"></span>
+    </p>
+    <!-- prototyp: efekty dźwiękowe domyślnie WŁĄCZONE, ale nic nie gra przy
+         załadowaniu — pierwszy dźwięk dopiero po interakcji ucznia;
+         przy integracji globalny system Czytam/Słucham może nadpisać stan -->
+    <button type="button" class="k16-sound" id="k16-sound" aria-pressed="true">
+      Dźwięk: włączony
+    </button>
+  </header>
+
+  <!-- ═══ SCENA: maszyna + dwie taśmy ═══ -->
+  <div class="k16-stage">
+    <div class="k16-machine" id="k16-machine" data-state="idle">
+
+      <img class="k16-machine__img" alt=""
+           src="../../../assets/images/lekcja45/16-drugie-zycie-materialow/webp/modul-recyklingu-3d-koncepcja-v5.webp"
+           width="2161" height="862">
+
+      <!-- ekran maszyny: komunikat etapu (pozycje zmierzone z grafiki V5) -->
+      <div class="k16-screen" aria-hidden="true">
+        <span class="k16-screen__txt" id="k16-screen">GOTOWA</span>
+      </div>
+
+      <!-- lampki etapów (V5: kolumna x≈53,2%, y 21–38,5%) -->
+      <div class="k16-lamps" aria-hidden="true">
+        <span class="k16-lamp" data-lamp="0"></span>
+        <span class="k16-lamp" data-lamp="1"></span>
+        <span class="k16-lamp" data-lamp="2"></span>
+        <span class="k16-lamp" data-lamp="3"></span>
+      </div>
+
+      <!-- pierścień + znak recyklingu: dwa niezależne elementy w ciemnym kole,
+           obracają się z różnymi prędkościami wyłącznie w stanie pracy -->
+      <div class="k16-ring" aria-hidden="true"></div>
+      <img class="k16-recycle-sign" alt="" aria-hidden="true"
+           src="../../../assets/images/lekcja45/16-drugie-zycie-materialow/webp/recycle-sign.webp">
+
+      <!-- taśma wejściowa: obiekt jedzie w prawo i znika pod przedsionkiem.
+           Podpis materiału jest dzieckiem poruszającego się obiektu — jedzie
+           i znika razem z nim. Kontener bez aria-hidden, żeby aria-live
+           działało; obraz pozostaje dekoracyjny (pusty alt). -->
+      <div class="k16-belt k16-belt--in">
+        <div class="k16-obj k16-obj--in" id="k16-input-wrap">
+          <span class="k16-inputbar__name" id="k16-input-name" aria-live="polite">—</span>
+          <img class="k16-obj__img" id="k16-input-img" alt="">
+        </div>
+      </div>
+
+      <!-- taśma wyjściowa: produkt wyłania się spod prawego przedsionka -->
+      <div class="k16-belt k16-belt--out" aria-hidden="true">
+        <div class="k16-obj k16-obj--out" id="k16-output-wrap">
+          <img class="k16-obj__img" id="k16-output-img" alt="">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ ODPOWIEDZI ═══ -->
+  <div class="k16-answers" id="k16-answers" role="group"
+       aria-labelledby="k16-answers-legend">
+    <p class="k16-answers__legend" id="k16-answers-legend">
+      Co może powstać z tego materiału?
+    </p>
+    <div class="k16-cards" id="k16-cards"></div>
+  </div>
+
+  <!-- ═══ INFORMACJA ZWROTNA ═══ -->
+  <div class="k16-feedback" id="k16-feedback" role="status" aria-live="polite"></div>
+
+  <div class="k16-actions">
+    <button type="button" class="k16-btn k16-btn--next" id="k16-next" hidden>
+      Następna runda →
+    </button>
+    <button type="button" class="k16-btn k16-btn--save" id="k16-save" hidden>
+      Zapisz literę K
+    </button>
+  </div>
+
+  <p class="k16-model">
+    To uproszczony model. W rzeczywistości odpady są zbierane, sortowane,
+    oczyszczane i przetwarzane na surowce, z których powstają nowe produkty.
+  </p>
+
+  <p class="k16-diag" id="k16-diag" hidden></p>
+
+</main>
+
+<script src="k16.js?v=7"></script>
+</body>
+</html>

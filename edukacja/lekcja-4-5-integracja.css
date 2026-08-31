@@ -1,0 +1,1369 @@
+/* ═══════════════════════════════════════════════════════════════════
+   E-LEKCJA 4–5 — STRONA INTEGRACYJNA K01–K18
+   System wizualny: „LABORATORIUM DOWODÓW SELEKT”
+
+   Reguły systemu:
+   • jeden dominujący obiekt albo jedno działanie na ekran;
+   • duże, krótkie komunikaty prowadzące scroll (.lead);
+   • rytm scen zmienny — nie osiemnaście identycznych kart;
+   • bursztynowa linia (trop) łączy przejścia między rozdziałami;
+   • ciemne tła = tajemnica i problem, ciepłe/jasne = rozwiązanie i PSZOK;
+   • typografia Cabinet Grotesk (display) + Satoshi (tekst), self-hosted.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@font-face { font-family:'Cabinet Grotesk'; src:url('../assets/fonts/CabinetGrotesk-Extrabold.woff2') format('woff2'); font-weight:800; font-display:swap; }
+@font-face { font-family:'Cabinet Grotesk'; src:url('../assets/fonts/CabinetGrotesk-Bold.woff2') format('woff2');      font-weight:700; font-display:swap; }
+@font-face { font-family:'Satoshi'; src:url('../assets/fonts/Satoshi-Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Satoshi'; src:url('../assets/fonts/Satoshi-Medium.woff2')  format('woff2'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Satoshi'; src:url('../assets/fonts/Satoshi-Bold.woff2')    format('woff2'); font-weight:700; font-display:swap; }
+
+:root{
+  --lk-dark:#0b1512; --lk-navy:#10231c; --lk-green:#3e6034;
+  --lk-sage:#b6d5aa; --lk-sage-bg:#e8f5e2;
+  --lk-amber:#f2b127; --lk-amber-bg:#fdf3dc;
+  --lk-paper:#f8fcf6; --lk-text:#1a1f1a;
+  --lk-radius:22px;
+  --font-title:'Cabinet Grotesk','Signika',sans-serif;
+  --font-body:'Satoshi','Imprima',sans-serif;
+  --hud-h:56px;
+}
+
+*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+html{ scroll-behavior:smooth; }
+body{
+  font-family:var(--font-body);
+  background:var(--lk-dark); color:var(--lk-paper);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;                    /* żaden panel nie tworzy poziomego scrolla */
+}
+img{ max-width:100%; display:block; }
+:focus-visible{ outline:3px solid var(--lk-amber); outline-offset:3px; }
+
+.sr-only{
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  border:0; clip:rect(0 0 0 0); overflow:hidden; white-space:nowrap;
+}
+.skip-link{
+  position:fixed; left:12px; top:-60px; z-index:120;
+  padding:10px 18px; background:var(--lk-amber); color:#241a02;
+  font-weight:700; border-radius:0 0 12px 12px; transition:top .15s ease;
+}
+.skip-link:focus{ top:0; }
+
+/* ═══════════ STAŁY INTERFEJS ═══════════ */
+.hud{
+  position:fixed; inset:0 0 auto 0; z-index:100;
+  display:flex; align-items:center; gap:14px;
+  min-height:var(--hud-h); padding:6px 14px;
+  background:rgba(11,21,18,.86); backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(182,213,170,.18);
+}
+.hud__exit{
+  display:inline-flex; align-items:center; min-height:44px; padding:0 14px;
+  color:var(--lk-sage); text-decoration:none; font-weight:600; font-size:14px;
+  border:1px solid rgba(182,213,170,.35); border-radius:999px; white-space:nowrap;
+}
+.hud__exit:hover{ background:rgba(182,213,170,.12); }
+
+.hud__chapters{ display:flex; gap:4px; flex:1; min-width:0; overflow-x:auto; scrollbar-width:none; }
+.hud__chapters::-webkit-scrollbar{ display:none; }
+.hud__chapter{
+  display:inline-flex; align-items:center; min-height:44px; padding:0 12px;
+  color:rgba(248,252,246,.62); text-decoration:none; white-space:nowrap;
+  font-size:13px; font-weight:600; border-radius:999px;
+}
+.hud__chapter:hover{ color:var(--lk-paper); }
+.hud__chapter.is-active{ color:#241a02; background:var(--lk-amber); }
+
+/* pasek postępu scrolla */
+.scrollmeter{ position:fixed; top:var(--hud-h); left:0; right:0; height:3px; z-index:99; background:rgba(182,213,170,.14); }
+.scrollmeter span{ display:block; height:100%; width:0; background:var(--lk-amber); }
+
+/* ── POSTĘP ŚLEDZTWA ── */
+.progress{
+  position:fixed; right:14px; top:calc(var(--hud-h) + 14px); z-index:98;
+  width:min(280px,86vw); padding:14px 16px;
+  background:rgba(16,35,28,.94); border:1px solid rgba(182,213,170,.25);
+  border-radius:16px; box-shadow:0 14px 40px rgba(0,0,0,.4);
+}
+.progress.is-flash{ animation:progFlash 1.4s ease; }
+@keyframes progFlash{ 0%,100%{ box-shadow:0 14px 40px rgba(0,0,0,.4);} 40%{ box-shadow:0 0 0 4px rgba(242,177,39,.55);} }
+.progress__title{
+  font-family:var(--font-title); font-size:11px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--lk-amber); margin-bottom:10px;
+}
+.progress__slots{ display:flex; gap:8px; list-style:none; margin-bottom:10px; }
+.prog__slot{
+  position:relative; flex:1; aspect-ratio:1;
+  display:grid; place-items:center;
+  background:rgba(11,21,18,.7); border:2px dashed rgba(182,213,170,.4);
+  border-radius:12px; min-width:40px;
+}
+.prog__slot.is-ready{ border-style:solid; border-color:var(--lk-amber); background:rgba(242,177,39,.1); }
+.prog__slot.is-done{ border-style:solid; border-color:var(--lk-sage); background:rgba(182,213,170,.16); }
+.prog__slot.is-wrong{ animation:progShake .4s; }
+@keyframes progShake{ 25%{ transform:translateX(-4px);} 75%{ transform:translateX(4px);} }
+.prog__dot{ color:rgba(182,213,170,.45); font-size:20px; line-height:1; }
+.prog__check{ color:var(--lk-sage); font-size:22px; font-weight:700; }
+.prog__input{
+  width:100%; height:100%; padding:0; text-align:center;
+  font-family:var(--font-title); font-size:20px; font-weight:700;
+  color:var(--lk-amber); background:transparent; border:none; border-radius:10px;
+  text-transform:uppercase;
+}
+.prog__input::placeholder{ color:rgba(242,177,39,.4); }
+.progress__counter{ font-size:13px; font-weight:600; color:var(--lk-sage); }
+.progress__msg{ font-size:12px; line-height:1.4; color:rgba(248,252,246,.7); margin-top:6px; min-height:1.2em; }
+.progress__toggle{ display:none; }
+
+/* ── PANEL AUDIO ──
+   Domyślnie kompaktowa kontrolka w rogu (na każdej szerokości), żeby stały
+   panel nigdy nie nachodził na treść sceny. Tytuł aktualnej sceny jest
+   widoczny w samej kontrolce; kliknięcie rozwija pełne sterowanie. */
+.audio-panel{
+  position:fixed; left:14px; bottom:14px; z-index:98;
+  width:auto; padding:0; background:none; border:none; box-shadow:none;
+}
+.audio-panel__body{
+  display:none; margin-bottom:8px; width:min(300px,88vw); padding:14px 16px;
+  background:rgba(16,35,28,.97); border:1px solid rgba(182,213,170,.25);
+  border-radius:16px; box-shadow:0 14px 40px rgba(0,0,0,.4);
+}
+.audio-panel.is-open .audio-panel__body{ display:block; }
+.audio-panel__toggle{
+  display:flex; align-items:center; gap:8px;
+  max-width:min(280px,86vw); min-height:44px; padding:8px 16px;
+  font:inherit; font-size:13px; font-weight:700; color:var(--lk-paper);
+  background:rgba(16,35,28,.97); border:1px solid rgba(182,213,170,.35);
+  border-radius:999px; cursor:pointer; text-align:left;
+}
+.audio-panel__toggle .ap__scene{
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-weight:500; opacity:.8;
+}
+.audio-panel__title{
+  font-family:var(--font-title); font-size:11px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--lk-amber); margin-bottom:8px;
+}
+.audio-panel__scene{ font-size:13px; font-weight:600; margin-bottom:2px; }
+.audio-panel__status{ font-size:12px; line-height:1.4; color:rgba(248,252,246,.7); margin-bottom:10px; min-height:2.4em; }
+.audio-panel__row{ display:flex; gap:6px; flex-wrap:wrap; }
+.ap__btn{
+  flex:1; min-width:76px; min-height:44px; padding:6px 10px;
+  font:inherit; font-size:13px; font-weight:600; color:var(--lk-paper);
+  background:rgba(182,213,170,.12); border:1px solid rgba(182,213,170,.3);
+  border-radius:10px; cursor:pointer;
+}
+.ap__btn:hover:not(:disabled){ background:rgba(182,213,170,.22); }
+.ap__btn:disabled{ opacity:.45; cursor:default; }
+.ap__btn[aria-pressed="true"]{ background:var(--lk-amber); color:#241a02; border-color:var(--lk-amber); }
+
+/* grupa wyboru trybu (K03 i panel) */
+.audio-modes{ display:grid; gap:8px; border:none; }
+.audio-modes legend{ font-size:13px; font-weight:700; margin-bottom:6px; }
+.audio-mode{
+  display:flex; gap:10px; align-items:flex-start; padding:12px 14px;
+  border:2px solid rgba(182,213,170,.3); border-radius:14px; cursor:pointer;
+  min-height:44px;
+}
+.audio-mode:hover{ border-color:var(--lk-sage); }
+.audio-mode input{ margin-top:3px; width:18px; height:18px; accent-color:var(--lk-amber); flex:none; }
+.audio-mode__name{ font-weight:700; display:block; }
+.audio-mode__desc{ font-size:13px; line-height:1.4; opacity:.78; }
+.audio-mode:has(input:checked){ border-color:var(--lk-amber); background:rgba(242,177,39,.1); }
+.audio-mode:has(input:focus-visible){ outline:3px solid var(--lk-amber); outline-offset:2px; }
+.audio-panel .audio-modes{ margin-top:10px; }
+.audio-panel .audio-mode{ padding:8px 10px; font-size:13px; }
+.audio-panel .audio-mode__desc{ display:none; }
+
+/* flaga trybu podglądu */
+.preview-flag{
+  position:fixed; left:50%; transform:translateX(-50%);
+  top:calc(var(--hud-h) + 6px); z-index:101;
+  display:flex; align-items:center; gap:10px;
+  padding:6px 14px; font-size:12px; font-weight:700;
+  color:#241a02; background:var(--lk-amber); border-radius:999px;
+}
+.preview-flag button{
+  font:inherit; font-size:12px; padding:4px 10px; min-height:32px;
+  border:1px solid rgba(0,0,0,.3); border-radius:999px; background:transparent; cursor:pointer;
+}
+
+/* ═══════════ SCENY I RYTM ═══════════ */
+main{ padding-top:var(--hud-h); }
+.scene{
+  position:relative; padding:12vh 5vw;
+  display:flex; flex-direction:column; justify-content:center;
+  min-height:70vh;
+}
+.scene--tall{ min-height:92vh; }
+.scene--hero{ min-height:100vh; text-align:center; align-items:center; }
+.scene--split{ min-height:88vh; }
+
+/* tony rozdziałów */
+[data-tone="dark"]{ background:var(--lk-dark); color:var(--lk-paper); }
+[data-tone="navy"]{ background:var(--lk-navy); color:var(--lk-paper); }
+[data-tone="deep"]{ background:linear-gradient(180deg,var(--lk-navy),#071410); color:var(--lk-paper); }
+[data-tone="warm"]{ background:var(--lk-amber-bg); color:var(--lk-text); }
+[data-tone="light"]{ background:var(--lk-paper); color:var(--lk-text); }
+[data-tone="sage"]{ background:var(--lk-sage-bg); color:var(--lk-text); }
+
+/* bursztynowy trop między rozdziałami */
+.trail{ position:relative; height:12vh; background:inherit; }
+.trail::before{
+  content:""; position:absolute; left:50%; top:0; bottom:0; width:2px;
+  background:linear-gradient(180deg,transparent,var(--lk-amber),transparent);
+  transform:translateX(-50%);
+}
+.trail__label{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  padding:4px 14px; font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+  font-family:var(--font-title); color:var(--lk-amber);
+  background:inherit;
+}
+
+/* typografia scen */
+.kicker{
+  font-family:var(--font-title); font-size:12px; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--lk-amber); margin-bottom:12px;
+}
+.lead{
+  font-family:var(--font-title); font-weight:800; line-height:1.02;
+  font-size:clamp(30px,5.2vw,68px); max-width:18ch; margin-bottom:18px;
+}
+.scene--hero .lead{ max-width:22ch; }
+h2.lead,h3.lead{ font-weight:800; }
+.body-text{ font-size:clamp(16px,1.5vw,19px); line-height:1.6; max-width:56ch; }
+.body-text + .body-text{ margin-top:12px; }
+.note{ font-size:14px; line-height:1.5; opacity:.72; max-width:60ch; margin-top:14px; }
+.scene__grid{ display:grid; gap:clamp(20px,4vw,48px); grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px){ .scene__grid--2{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:48px; padding:12px 26px; margin-top:20px;
+  font:inherit; font-weight:700; font-size:16px;
+  color:#241a02; background:var(--lk-amber); border:2px solid var(--lk-amber);
+  border-radius:999px; cursor:pointer; text-decoration:none;
+}
+.btn:hover{ filter:brightness(1.06); }
+/* nagłówki ogniskowane programowo (np. po „Film obejrzany") nie pokazują
+   obwódki przy myszy — przy klawiaturze :focus-visible nadal ją rysuje */
+[tabindex="-1"]:focus:not(:focus-visible){ outline:none; }
+.btn--ghost{ background:transparent; color:inherit; border-color:currentColor; }
+.btn:disabled{ opacity:.5; cursor:default; }
+
+.reveal{ opacity:0; transform:translateY(22px); transition:opacity .6s ease,transform .6s ease; }
+.reveal.is-visible{ opacity:1; transform:none; }
+
+/* ═══════════ KOMPONENT „DO UZUPEŁNIENIA” ═══════════ */
+.ph{
+  position:relative; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:8px; text-align:center;
+  aspect-ratio:1/1; width:100%; padding:20px;
+  background:repeating-linear-gradient(45deg,rgba(182,213,170,.05) 0 12px,transparent 12px 24px);
+  border:2px dashed rgba(182,213,170,.5); border-radius:16px;
+  color:inherit;
+}
+[data-tone="warm"] .ph,[data-tone="light"] .ph,[data-tone="sage"] .ph{
+  border-color:rgba(62,96,52,.4);
+  background:repeating-linear-gradient(45deg,rgba(62,96,52,.05) 0 12px,transparent 12px 24px);
+}
+.ph__label{
+  font-family:var(--font-title); font-size:clamp(13px,1.6vw,17px);
+  letter-spacing:.16em; text-transform:uppercase; opacity:.85;
+}
+.ph__meta{ font-size:12px; line-height:1.4; opacity:.6; max-width:36ch; }
+.ph--video{ aspect-ratio:16/9; }
+.ph--game{ aspect-ratio:4/3; }
+.ph--wide{ aspect-ratio:21/9; }
+.ph--portrait{ aspect-ratio:3/4; max-width:320px; margin-inline:auto; }
+.ph__sim{
+  margin-top:10px; min-height:44px; padding:8px 16px;
+  font:inherit; font-size:13px; font-weight:700; color:#241a02;
+  background:var(--lk-amber); border:none; border-radius:999px; cursor:pointer;
+}
+.ph__sim:disabled{ background:var(--lk-sage); cursor:default; }
+/* symulator poza placeholderem (np. pod grą K15); :not([hidden]) —
+   inaczej display:block nadpisałby atrybut hidden w trybie normalnym */
+.note .ph__sim:not([hidden]){ display:block; margin-top:10px; }
+
+/* ═══════════ OSADZENIE GENIALLY (K04, K06) ═══════════
+   Kwadratowe okno gry (proporcja z kodu osadzenia Genially),
+   leniwe ładowanie i stan wczytywania jak w ramkach prototypów. */
+.genially{ position:relative; width:100%; }
+.genially__box{
+  position:relative; aspect-ratio:1/1;
+  /* kwadrat nie może przerosnąć ekranu: przy niskim oknie maleje też szerokość */
+  width:min(100%, 84vh, 860px);
+  margin-inline:auto;
+  border-radius:var(--lk-radius); overflow:hidden; background:rgba(0,0,0,.18);
+}
+/* Etap A5: wariant szeroki (16:9) obsługiwał wyłącznie kuchnię K06, którą
+   zastąpiła gra „Latarka w kuchni" w zwykłej ramce prototypu — reguła
+   zniknęła razem z ostatnim użyciem. */
+.genially__box iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+.genially__status{ margin-top:10px; font-size:13px; opacity:.75; min-height:1.3em; }
+.genially.is-loading .genially__box::after{
+  content:"Wczytywanie gry…"; position:absolute; inset:0;
+  display:grid; place-items:center; background:rgba(11,21,18,.7); color:var(--lk-paper);
+}
+
+/* ═══════════ RAMKA MODUŁU (iframe prototypu) ═══════════ */
+.frame{ position:relative; width:100%; border-radius:var(--lk-radius); overflow:hidden; background:rgba(0,0,0,.15); }
+.frame__box{ position:relative; width:100%; }
+.frame iframe{
+  display:block; width:100%; height:760px; border:0;
+  background:var(--lk-paper);
+}
+.frame__status{ margin-top:10px; font-size:13px; opacity:.75; min-height:1.3em; }
+.frame__open{ font-size:13px; color:inherit; }
+.frame.is-loading .frame__box::after{
+  content:"Wczytywanie modułu…"; position:absolute; inset:0;
+  display:grid; place-items:center; background:rgba(11,21,18,.7); color:var(--lk-paper);
+}
+.frame.is-error .frame__box{ min-height:200px; display:grid; place-items:center; }
+
+/* ═══════════ SEKWENCJE KLATKOWE (K05, K10, K11) ═══════════ */
+.seq{ position:relative; height:320vh; padding:0; }
+.seq__stage{
+  position:sticky; top:var(--hud-h); height:calc(100vh - var(--hud-h));
+  display:grid; place-items:center; padding:4vh 5vw;
+}
+.seq__frame{
+  width:100%; max-width:1200px; height:auto;              /* nie rozciągamy bez ograniczeń */
+  max-height:64vh; object-fit:contain; margin-inline:auto;
+}
+.seq__steps{ position:absolute; left:5vw; right:5vw; bottom:6vh; max-width:640px; }
+.seq__step{
+  opacity:0; transform:translateY(10px); transition:opacity .4s ease,transform .4s ease;
+  position:absolute; inset:auto auto 0 0; font-size:clamp(15px,1.7vw,20px); line-height:1.5;
+}
+.seq__step.is-on{ opacity:1; transform:none; position:relative; }
+/* Etap 2E.2: drugi poziom typografii w TYM SAMYM kroku — doprecyzowanie
+   pisane mniejszym stopniem. Czytnik ekranu dostaje jedno zdanie, bo
+   myślnik siedzi w treści akapitu (klasa `sr-only`), a nie w obrazie. */
+.seq__step-sub{ display:block; margin-top:2px; font-size:.68em; opacity:.82; font-weight:400; }
+.seq__caption{ margin-top:10px; font-size:13px; opacity:.7; }
+.seq.is-static{ height:auto; }
+.seq.is-static .seq__stage{ position:static; height:auto; display:block; }
+.seq.is-static .seq__steps{ position:static; margin-top:20px; max-width:none; }
+.seq.is-static .seq__step{ position:static; opacity:1; transform:none; margin-bottom:14px; }
+.seq__fallback{ display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); margin-top:18px; }
+
+/* Etap 3C.1 — PLACEHOLDER KADRU SEKWENCJI.
+   `<img>` bez gotowego obrazu pokazuje ikonę zepsutego obrazka i tekst
+   alternatywny (usterka zgłoszona z realnego testu). Do czasu zdarzenia
+   `load` pierwszej klatki — czyli do klasy `is-ready` na sekcji — kadr jest
+   spokojnym prostokątem w kolorze sceny, a tekst alternatywny zostaje
+   wyłącznie dla czytników ekranu (zerowy stopień pisma go nie usuwa
+   z drzewa dostępności). */
+.seq:not(.is-ready) .seq__frame,
+#k12-scene:not(.is-ready) .k12__frame{
+  background:rgba(120,132,112,.16);
+  border-radius:var(--lk-radius);
+  color:transparent; font-size:0;
+}
+
+/* K11 — jednostka skali, siatka miniatur, licznik i komunikat finalny */
+
+/* Korekta 3C.1.1 — MINIATURA STADIONU.
+   Jeden plik WebP na całą siatkę: dwa stany ułożone pionowo (góra — stadion
+   pusty, dół — wypełniony olejem), przełączane `background-position`.
+   Proporcje kadru 144×67 ≈ 2,15:1 trzyma `aspect-ratio`, więc rozmiar
+   ustawia się samą szerokością. */
+.k11__stad, .k11__unit-ikona{
+  display:block; aspect-ratio:144/67;
+  background-image:url("../assets/images/lekcja45/k11-stadion-mini.webp");
+  background-repeat:no-repeat; background-size:100% 200%;
+  background-position:0 0;                       /* stadion pusty */
+  opacity:.45; filter:grayscale(.5);
+}
+.k11__stad.is-on, .k11__unit-ikona.is-on{
+  background-position:0 100%;                    /* wypełniony olejem */
+  opacity:1; filter:none;
+}
+.k11__meter{ text-align:center; margin-top:14px; }
+.k11__unit{ display:flex; align-items:center; justify-content:center; gap:8px;
+  margin:0 0 10px; font-size:clamp(12px,1.4vw,15px); }
+.k11__unit-ikona{ width:38px; flex:none; }
+.k11__multiplier{ font-family:var(--font-title); font-size:clamp(40px,8vw,96px); color:var(--lk-amber); line-height:1; }
+
+/* Siatka: cztery dziesiątki i jedynka, rozdzielone znakiem „+”.
+   Sylwetki są powielane z jednego `<symbol>` — stąd zero żądań sieciowych. */
+.k11__grid{ display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center;
+  gap:6px 8px; max-width:880px; margin:12px auto 0; }
+.k11__grupa{ display:flex; flex-direction:column; align-items:center; gap:4px; }
+.k11__pole{ display:grid; grid-template-columns:repeat(5,auto); gap:3px; justify-content:center; }
+.k11__grupa:last-of-type .k11__pole{ grid-template-columns:auto; }
+.k11__grupa-podpis{ font-size:11px; font-weight:700; letter-spacing:.04em; opacity:.75;
+  border-top:1px solid currentColor; padding-top:2px; min-width:2.4em; }
+.k11__plus{ align-self:center; font-size:13px; font-weight:700; opacity:.6; }
+.k11__stad{ width:32px; }
+
+/* Komunikat finalny — dopiero po skompletowaniu 41 sylwetek */
+.k11__final{ margin:12px 0 0; opacity:0; transform:translateY(8px);
+  transition:opacity .45s ease, transform .45s ease; }
+.k11__final.is-on{ opacity:1; transform:none; }
+.k11__final-ton{ display:block; font-family:var(--font-title); line-height:1.02; }
+.k11__final-liczba{ font-size:clamp(28px,5.4vw,64px); font-weight:800; letter-spacing:-.02em; }
+.k11__final-jedn{ font-size:clamp(14px,1.8vw,22px); font-weight:700; letter-spacing:.04em; }
+.k11__final-rownanie{ display:block; margin-top:4px; font-family:var(--font-title);
+  font-size:clamp(20px,3.6vw,40px); font-weight:800; color:var(--lk-amber); }
+/* licznik ustępuje miejsca dużym liczbom (hierarchia, nie dwie „41” obok siebie) */
+.k11__meter.is-final .k11__multiplier,
+.k11__meter.is-final .k11__podpis{ display:none; }
+
+/* Telefon: cztery pełne DZIESIĄTKI jedna pod drugą i osobna jedynka —
+   układ czytelny już przy 320 px, bez poziomego przewijania. */
+@media (max-width: 900px){
+  .k11__grid{ flex-direction:column; align-items:center; gap:4px; max-width:100%; }
+  .k11__grupa{ flex-direction:row; align-items:center; gap:6px; }
+  .k11__pole{ grid-template-columns:repeat(10,auto); gap:2px; }
+  .k11__grupa:last-of-type .k11__pole{ grid-template-columns:auto; }
+  .k11__grupa-podpis{ border-top:0; border-left:1px solid currentColor;
+    padding:0 0 0 5px; min-width:1.6em; text-align:left; }
+  .k11__plus{ display:none; }              /* przy układzie kolumnowym „+” tylko szumi */
+  /* Korekta 3C.3.1: szerokość miniatury liczona z REALNIE dostępnego miejsca —
+     dziesiąta sztuka i etykieta „|10” wychodziły poza jasną kolumnę na 390 px.
+     Dziesięć miniatur + dziewięć przerw + etykieta + margines bezpieczeństwa. */
+  .k11__stad{ width:min(25px, calc((100vw - 96px - 18px) / 10)); }
+  /* legenda pod siatką (układ z makiety mobilnej) */
+  .k11__unit{ order:2; margin:10px 0 0; }
+  .k11__meter{ display:flex; flex-direction:column; }
+  .k11__grid{ order:1; }
+  .k11__multiplier, .k11__podpis, .k11__final{ order:3; }
+}
+@media (max-width: 360px){
+  .k11__pole{ gap:1px; }
+}
+
+/* ═══════════ K12 — LAS PRZED/PO ═══════════ */
+.k12{ position:relative; height:260vh; padding:0; }
+.k12__stage{ position:sticky; top:var(--hud-h); height:calc(100vh - var(--hud-h)); display:grid; place-items:center; padding:4vh 5vw; }
+.k12__images{ position:relative; width:100%; max-width:1100px; aspect-ratio:16/9; border-radius:var(--lk-radius); overflow:hidden; }
+.k12__images img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.k12__after{ opacity:0; }
+
+/* ── ETAP 3C.2: SKANER W TRZECH WARSTWACH ──
+   Świat (kadr + lupa + pinezki) skaluje się jako jedna całość; interfejs
+   (licznik, karta) stoi nieruchomo poza dioramą; lista tekstowa jest
+   osobno w DOM. Reguły bazowe siedzą tutaj, bo blok jeździ też do legacy. */
+.k12__scena{ position:relative; width:100%; }
+/* Ramka świata: przycina powiększoną dioramę. Skalowane jest jej WNĘTRZE
+   (`.k12__images` razem z lupą i pinezkami), bo `overflow` działa na dzieci,
+   a nie na sam transformowany element. */
+.k12__swiat{ position:relative; width:100%; }
+.k12__images{
+  transition:transform .55s cubic-bezier(.2,.7,.3,1);
+  will-change:transform;
+}
+
+/* Lupa — bursztynowy celownik na obiekcie badanym TERAZ. Środek pozostaje
+   przezroczysty: skaner ma pokazywać obiekt, nie go zasłaniać. */
+.k12__lupa{
+  position:absolute; left:50%; top:50%;
+  width:clamp(64px,9vw,104px); aspect-ratio:1;
+  margin:0; transform:translate(-50%,-50%) scale(.7);
+  border-radius:50%;
+  border:3px solid var(--lk-amber, #f2b127);
+  box-shadow:0 0 0 2px rgba(30,40,28,.28), 0 0 22px rgba(242,177,39,.55),
+             inset 0 0 18px rgba(242,177,39,.22);
+  opacity:0; pointer-events:none;
+  transition:left .55s cubic-bezier(.2,.7,.3,1), top .55s cubic-bezier(.2,.7,.3,1),
+             opacity .3s ease, transform .4s ease;
+}
+.k12__lupa.is-on{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+/* krzyżyk celownika — dwie cienkie kreski, bez zasłaniania środka */
+.k12__lupa::before, .k12__lupa::after{
+  content:""; position:absolute; background:rgba(242,177,39,.85);
+}
+.k12__lupa::before{ left:50%; top:-10px; width:2px; height:14px; transform:translateX(-50%); }
+.k12__lupa::after{ left:50%; bottom:-10px; width:2px; height:14px; transform:translateX(-50%); }
+
+/* Pinezka z numerem — zostaje po sprawdzeniu obiektu. Dyskretna: mały
+   krążek z cyfrą, bez pastylki z tekstem (opis mieszka w karcie obok). */
+/* Korekta 3C.3.1: pinezka to PRAWDZIWY przycisk — uczeń nim odkrywa ślad,
+   więc musi być klikalna, dotykalna i osiągalna z klawiatury. Nieodkryta
+   czeka widoczna (inaczej nie dałoby się jej znaleźć), odkryta gaśnie
+   do spokojnego znacznika. */
+.k12__pin{
+  position:absolute; width:30px; height:30px; padding:0;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:#8a3630; color:#fff;
+  border:2px solid rgba(255,255,255,.92);
+  box-shadow:0 3px 10px rgba(30,40,28,.35);
+  font:inherit; font-size:13px; font-weight:800; line-height:1; text-align:center;
+  display:grid; place-items:center;
+  cursor:pointer; pointer-events:auto;
+  transition:opacity .3s ease, transform .3s ease, background .3s ease;
+}
+.k12__pin::before{ content:attr(data-nr); }
+.k12__pin:focus-visible{ outline:3px solid var(--lk-amber,#f2b127); outline-offset:3px; }
+/* nieodkryta pinezka woła o uwagę, gdy uczeń próbuje iść dalej */
+.k12.is-braknie .k12__pin:not(.is-on){ animation:k12puls 1.4s ease-in-out infinite; }
+@keyframes k12puls{
+  0%,100%{ transform:translate(-50%,-50%) scale(1); box-shadow:0 3px 10px rgba(30,40,28,.35); }
+  50%    { transform:translate(-50%,-50%) scale(1.22); box-shadow:0 0 0 8px rgba(242,177,39,.35); }
+}
+.k12__pin.is-on{ background:#5d6b52; }
+/* 3C.3.3: przy przybliżeniu na telefonie sąsiednie pinezki potrafią na siebie
+   zachodzić. Nieodkryta ma wtedy być NA WIERZCHU — inaczej palec trafia
+   w znacznik już sprawdzony i ślad zostaje nieosiągalny dotykiem. */
+.k12__pin{ z-index:3; }
+.k12__pin.is-on{ z-index:2; }
+/* 3C.3.3: odpad sprzątnięty — znacznik gaśnie razem z nim */
+.k12__pin.is-zgaszony, .k12__mapka-pin.is-zgaszony{
+  opacity:0; transform:translate(-50%,-50%) scale(.5); pointer-events:none;
+}
+.k12__pin.is-scan{ background:#8a3630; transform:translate(-50%,-50%) scale(1.06); }
+
+/* zaproszenie i podpowiedź bramki */
+.k12__zaproszenie{
+  margin:0 0 6px; text-align:center;
+  font-weight:700; font-size:clamp(13px,1.6vw,17px);
+}
+.k12__brama{ margin:6px 0 0; text-align:center; min-height:1.4em;
+  font-size:clamp(13px,1.5vw,16px); font-weight:700; }
+
+/* ── warstwa B: nieruchomy interfejs ── */
+.k12__licznik{
+  margin:0 0 8px; text-align:center;
+  font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+  opacity:0; transition:opacity .3s ease;
+}
+.k12.is-skan .k12__licznik{ opacity:1; }
+.k12__licznik b{ font-size:15px; }
+/* Korekta 3C.2.2: karta ma ZAREZERWOWANE miejsce przez całe życie sceny —
+   znika tylko jej treść, nigdy jej miejsce. Dzięki temu układ nie skacze,
+   gdy opis się pojawia, zmienia i zostaje po fazie skanera. */
+.k12__karta{
+  opacity:0; transform:translateY(6px);
+  transition:opacity .35s ease, transform .35s ease;
+}
+.k12__karta.is-on{ opacity:1; transform:none; }
+.k12__karta-nazwa{
+  margin:0 0 4px; font-family:var(--font-title);
+  font-size:clamp(16px,1.9vw,21px); font-weight:800;
+}
+.k12__karta-tekst{ margin:0; font-size:clamp(13px,1.5vw,16px); line-height:1.45; }
+
+/* ── ETAP 3C.3: FINAŁ — PRZEJAZD CIĘŻARÓWEK ──
+   Obie jadą dołem kadru OD lasu w prawo. Pozycję niesie zmienna `--tir1`
+   / `--tir2` (0 = poza kadrem z lewej, 1 = poza kadrem z prawej), ustawiana
+   z mapowania faz, więc przejazd jest w pełni odwracalny scrollem i nie
+   potrzebuje własnego zegara. */
+/* Korekta 3C.3.1: pas przejazdu leży w SEKCJI FINAŁU, pod wielkim tytułem —
+   nie na dioramie. Dzięki temu ciężarówki nie mają fizycznej możliwości
+   pojawić się przed odkryciem wszystkich śladów. */
+.k12__tiry{
+  position:relative; width:100%; aspect-ratio:5/1;
+  overflow:hidden; pointer-events:none;
+  opacity:0; transition:opacity .3s ease;
+}
+.k12__tiry.is-on{ opacity:1; }
+/* Pozycję niesie `left` w procentach KONTENERA (procenty w `translateX`
+   liczyłyby się od szerokości samej ciężarówki, nie kadru). Start −42%
+   chowa pojazd za lewą krawędzią, koniec +100% — za prawą. */
+/* Ciężarówka zajmuje ok. ćwierć szerokości kadru i jedzie przy jego dolnej
+   krawędzi — ma przejechać przez scenę, a nie ją zasłonić.
+   Selektor musi być mocniejszy niż `.k12__images img` (reguła dla klatek
+   sekwencji: `inset:0; width:100%; object-fit:cover`), bo inaczej pojazd
+   rozciągał się na cały kadr i stał w miejscu. */
+.k12__tiry img.k12__tir{
+  position:absolute; top:auto; right:auto; bottom:0;
+  width:34%; height:auto; object-fit:contain;
+  filter:drop-shadow(0 6px 14px rgba(30,40,28,.3));
+  will-change:left;
+}
+/* Korekta 3C.3.1: pojazdy nie wyjeżdżają poza kadr — wjeżdżają i ZOSTAJĄ
+   obok siebie, tak jak w makiecie finału. Inaczej po przejeździe zostawał
+   pusty pas, a wielki tytuł tracił obraz, który go tłumaczy. */
+.k12__tiry img.k12__tir--1{ left:calc(-38% + var(--tir1, 0) * 93%); }
+.k12__tiry img.k12__tir--2{ left:calc(-38% + var(--tir2, 0) * 48%); }
+
+/* ── sekcja finału: każda linia wchodzi osobno ── */
+.k12__final > *{
+  opacity:0; transform:translateY(10px);
+  transition:opacity .45s ease, transform .45s ease;
+}
+.k12__final > .is-on{ opacity:1; transform:none; }
+.k12__final .k12__tiry{ transform:none; }
+.k12__pyt-pigulka{
+  display:inline-block; margin:10px auto 0; padding:6px 16px;
+  border-radius:999px; background:#1f4d24; color:#fff;
+  font-weight:800; font-size:clamp(13px,1.6vw,17px);
+}
+.k12__fakt-podpis{ margin:10px auto 0; max-width:60ch; text-align:center; }
+
+/* ── warstwa C: lista dla czytnika ekranu ──
+   W trybie animowanym niesie tę samą treść co karty, ale naraz: czytnik
+   dostaje jedną listę zamiast pięciu ogłoszeń przy szybkim przewijaniu. */
+.k12__lista{
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+}
+.k12__lista button{
+  font:inherit; color:inherit; background:none; border:0; padding:0;
+  text-align:left; cursor:pointer;
+}
+/* Korekta 3C.2.1: przy nawigacji klawiaturą lista przestaje być niewidzialna
+   — inaczej fokus wędrowałby po elementach, których nie widać. */
+.k12__lista:focus-within{
+  position:static; width:auto; height:auto; margin:12px auto 0; padding:0;
+  overflow:visible; clip:auto; white-space:normal;
+  max-width:60ch; list-style:none;
+}
+.k12__lista:focus-within li{ margin:4px 0; }
+.k12__lista:focus-within button{
+  display:block; width:100%;
+  padding:8px 12px; border-radius:10px;
+  background:rgba(255,255,255,.8); border:1px solid rgba(62,96,52,.22);
+}
+.k12__lista button:focus-visible{ outline:3px solid var(--lk-amber,#f2b127); outline-offset:2px; }
+.k12__question{
+  margin-top:18px; text-align:center; opacity:0; transition:opacity .4s ease;
+  font-family:var(--font-title); font-size:clamp(20px,3vw,34px);
+}
+.k12__question.is-on{ opacity:1; }
+
+/* ═══════════ K09 — KUCHENNA STACJA KONTROLI ═══════════ */
+.k09{
+  display:grid; gap:18px; max-width:980px; margin-inline:auto; width:100%;
+  background:rgba(255,255,255,.6); border:1px solid rgba(62,96,52,.18);
+  border-radius:var(--lk-radius); padding:clamp(16px,3vw,28px);
+}
+.k09__board{ display:grid; grid-template-columns:1fr; gap:16px; align-items:center; }
+@media (min-width:820px){ .k09__board{ grid-template-columns:180px 1fr 180px; } }
+.k09__zone{
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:14px; border:2px dashed rgba(62,96,52,.4); border-radius:16px;
+  text-align:center; font-size:13px; font-weight:700;
+}
+.k09__zone.is-armed{ border-style:solid; border-color:var(--lk-amber); background:rgba(242,177,39,.14); }
+.k09__zone-img{ width:72px; height:72px; object-fit:contain; }
+.k09__stagearea{
+  min-height:220px; display:grid; place-items:center; gap:10px;
+  border-radius:16px; background:rgba(255,255,255,.7); padding:16px;
+  touch-action:pan-y;
+}
+.k09__object{ width:clamp(120px,22vw,180px); height:clamp(120px,22vw,180px); display:grid; place-items:center; transition:transform .2s ease; }
+.k09__object.is-missing::after{
+  content:"DO UZUPEŁNIENIA"; font-size:11px; letter-spacing:.12em;
+  display:grid; place-items:center; width:100%; height:100%;
+  border:2px dashed rgba(62,96,52,.45); border-radius:14px; color:rgba(26,31,26,.6);
+}
+.k09__object.is-pouring{ transform:rotate(-24deg) translateY(-8px); }
+.k09__object.is-rejected{ transform:translateX(0); animation:k09shake .42s; }
+@keyframes k09shake{ 25%{ transform:translateX(-10px);} 75%{ transform:translateX(10px);} }
+.k09__img{ max-width:100%; max-height:100%; object-fit:contain; }
+.k09__name{ font-weight:700; text-align:center; font-size:clamp(15px,1.8vw,18px); }
+.k09__counter{ font-size:13px; opacity:.7; }
+.k09__buttons{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.k09__buttons .btn{ margin-top:0; }
+.k09__fill{ height:10px; background:rgba(62,96,52,.15); border-radius:999px; overflow:hidden; }
+.k09__fill-bar{ height:100%; width:0; background:var(--lk-amber); transition:width .3s ease; }
+.k09__feedback{ min-height:3em; font-size:14px; line-height:1.5; text-align:center; }
+.k09__feedback.is-ok{ color:#2f7d43; font-weight:600; }
+.k09__feedback.is-err{ color:#b4453c; font-weight:600; }
+.k09__done{ text-align:center; font-weight:700; }
+
+/* ═══════════ K13 — ROZWIJANIE SKRÓTU ═══════════ */
+.k13{ display:grid; gap:16px; justify-items:center; text-align:center; }
+.k13__letters{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+.k13__letter{
+  min-width:64px; min-height:64px; padding:10px 14px;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  font:inherit; cursor:pointer;
+  background:rgba(62,96,52,.08); border:2px solid rgba(62,96,52,.35); border-radius:14px;
+}
+.k13__letter:hover:not(:disabled){ border-color:var(--lk-green); }
+.k13__letter.is-open{ background:rgba(242,177,39,.16); border-color:var(--lk-amber); cursor:default; }
+.k13__big{ font-family:var(--font-title); font-size:clamp(24px,3.4vw,34px); line-height:1; }
+.k13__word{ font-size:12px; font-weight:600; min-height:1.2em; }
+.k13__hint{ font-size:13px; opacity:.7; min-height:1.3em; }
+.k13__reveal{ max-width:60ch; }
+.k13__full{ font-family:var(--font-title); font-size:clamp(20px,2.6vw,30px); margin-bottom:10px; }
+
+/* ═══════════ K17 — TERMINAL ═══════════ */
+.terminal{
+  max-width:760px; margin-inline:auto; width:100%; padding:clamp(20px,4vw,34px);
+  background:rgba(16,35,28,.7); border:1px solid rgba(182,213,170,.28);
+  border-radius:var(--lk-radius); text-align:center;
+}
+.terminal.is-unlocked{ border-color:var(--lk-amber); box-shadow:0 0 0 3px rgba(242,177,39,.18); }
+.terminal__missing{ font-size:14px; line-height:1.5; opacity:.8; margin-top:10px; }
+.terminal__msg{ font-size:clamp(17px,2vw,22px); line-height:1.5; font-weight:600; }
+
+/* ═══════════ K18 — DYPLOM ═══════════ */
+.diploma-form{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; justify-content:center; margin-top:18px; }
+.diploma-form label{ display:block; font-size:13px; font-weight:600; margin-bottom:6px; }
+.diploma-form input{
+  min-height:48px; padding:10px 16px; font:inherit; font-size:16px;
+  border:2px solid rgba(182,213,170,.4); border-radius:12px;
+  background:rgba(255,255,255,.06); color:inherit; min-width:220px;
+}
+.diploma-form .btn{ margin-top:0; }
+.diploma-card{
+  max-width:640px; margin:22px auto 0; padding:clamp(22px,4vw,40px);
+  background:var(--lk-paper); color:var(--lk-text); text-align:center;
+  border:4px solid var(--lk-green); border-radius:12px;
+}
+.diploma-card__title{ font-family:var(--font-title); font-size:clamp(22px,3.4vw,34px); color:var(--lk-green); }
+.diploma-card__name{ font-family:var(--font-title); font-size:clamp(26px,4.6vw,46px); margin:16px 0; }
+.diploma-card__logos{ display:flex; gap:20px; align-items:center; justify-content:center; flex-wrap:wrap; margin-top:20px; }
+.diploma-card__logos img{ height:44px; width:auto; }
+.diploma-card__fund{ font-size:12px; line-height:1.5; margin-top:12px; opacity:.8; }
+
+/* ═══════════ STOPKA ═══════════ */
+.lk-footer{ padding:8vh 5vw; background:var(--lk-dark); text-align:center; }
+.lk-footer__logos{ display:flex; gap:28px; align-items:center; justify-content:center; flex-wrap:wrap; margin-bottom:16px; }
+.lk-footer__logos img{ height:56px; width:auto; }
+.lk-footer__fund{ font-size:13px; line-height:1.6; max-width:62ch; margin-inline:auto; opacity:.8; }
+
+/* ═══════════ RESPONSYWNOŚĆ ═══════════ */
+@media (max-width:1180px){
+  .progress{ width:min(240px,80vw); }
+}
+@media (max-width:900px){
+  :root{ --hud-h:52px; }
+  .hud__exit span{ display:none; }
+  .hud__exit::after{ content:"Wyjdź"; }
+
+  /* stałe panele zwijają się do kompaktowych kontrolek — nie zasłaniają treści */
+  .progress{
+    right:10px; top:auto; bottom:10px; width:auto; padding:0; background:none;
+    border:none; box-shadow:none;
+  }
+  .progress__toggle{
+    display:flex; align-items:center; gap:8px; min-height:44px; padding:8px 14px;
+    font:inherit; font-size:13px; font-weight:700; color:#241a02;
+    background:var(--lk-amber); border:none; border-radius:999px; cursor:pointer;
+  }
+  .progress__body{
+    display:none; margin-bottom:8px; padding:14px 16px;
+    background:rgba(16,35,28,.97); border:1px solid rgba(182,213,170,.25); border-radius:16px;
+    width:min(300px,88vw);
+  }
+  .progress.is-open .progress__body{ display:block; }
+
+  .audio-panel{ left:10px; bottom:10px; }
+  .audio-panel__toggle .ap__scene{ display:none; }   /* na telefonie sama ikona i etykieta */
+
+  .scene{ padding:8vh 6vw; min-height:auto; }
+  .seq{ height:240vh; }
+  .k12{ height:200vh; }
+}
+@media (max-width:560px){
+  .lead{ font-size:clamp(26px,8vw,38px); max-width:none; }
+  .seq__frame{ max-height:46vh; }
+}
+
+/* ═══════════ REDUCED MOTION ═══════════ */
+@media (prefers-reduced-motion:reduce){
+  html{ scroll-behavior:auto; }
+  .reveal{ opacity:1; transform:none; transition:none; }
+  .seq{ height:auto; }
+  .seq__stage{ position:static; height:auto; display:block; }
+  .seq__steps{ position:static; margin-top:20px; max-width:none; }
+  .seq__step{ position:static; opacity:1; transform:none; margin-bottom:14px; }
+  .k12{ height:auto; }
+  .k12__stage{ position:static; height:auto; display:block; }
+  .k12__after{ opacity:1; }
+  .k12__pin,.k12__question,.k12__fakt{ opacity:1; transform:none; transition:none; }
+  .k12__swiat,.k12__lupa,.k12__karta{ transition:none; }
+  .k12__fakt--echo{ opacity:.88; }
+  .progress.is-flash{ animation:none; }
+  .k09__object{ transition:none; }
+}
+
+/* ═══════════ DRUK DYPLOMU ═══════════ */
+@media print{
+  body *{ visibility:hidden; }
+  .diploma-card,.diploma-card *{ visibility:visible; }
+  /* Etap 6B: karta jest warstwowa i ma proporcję dyplomu, więc do druku
+     ustawiamy szerokość arkusza i pozwalamy wysokości wyjść z proporcji.
+     Film nigdy nie trafia na papier — na wydruku ma być gotowy dyplom. */
+  .diploma-card{
+    position:fixed; inset:8mm auto auto 50%; transform:translateX(-50%);
+    width:180mm; aspect-ratio:1054 / 1492; height:auto;
+    border:0; overflow:visible;
+  }
+  .dyplom__film{ display:none !important; }
+  .dyplom__imie, .dyplom__stopka{ opacity:1 !important; transition:none !important; }
+  .diploma-card .btn{ display:none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   WARSTWA ZGODNOŚCI DLA PRZENIESIONEGO MODUŁU K14
+   Markup K14 pochodzi 1:1 z zaakceptowanej lekcji i używa klas .act,
+   .act--three oraz .btn-lk. Odtwarzamy je tutaj, żeby nie ruszać
+   przeniesionego kodu ani oryginalnej lekcji.
+   ═══════════════════════════════════════════════════════════════════ */
+.act{ position:relative; }
+.act--three{ background:var(--lk-sage-bg); color:var(--lk-text); }
+.btn-lk{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height:44px; padding:10px 22px; font:inherit; font-weight:700;
+  color:#241a02; background:var(--lk-amber); border:2px solid var(--lk-amber);
+  border-radius:999px; cursor:pointer; text-decoration:none;
+}
+.btn-lk--ghost{ background:transparent; color:var(--lk-green); border-color:var(--lk-green); }
+
+/* =====================================================================
+   K14 — SPACER PO PSZOK-u (.pszok-journey)
+   Dwa tryby z jednego markupu:
+   • BAZOWY (bez JS / mobile / reduced-motion) — 14 stacji jako pionowy stos,
+     pełna treść czytelna, zero animacji. To jest stan domyślny w CSS.
+   • SCENA (body.js-pj) — stacje nakładają się w przypiętym kadrze i są
+     animowane scrollem. Przypięcie robi CSS `position: sticky`, nie pin GSAP:
+     brak pin-spacerów i zero ryzyka rozjazdu kolejności odświeżania
+     istniejących pinów lekcji (korytarz A, proces, planeta).
+   ===================================================================== */
+
+.pszok-journey {
+  --pj-tint: #8DCE68;          /* kolor etapu — interpolowany przez JS */
+  --pj-tint-soft: #cfe9bd;
+  --pj-vanish-y: 34%;          /* punkt zaniku drogi (zgodny z SVG y=336/1000) */
+  background: #f7f9f7;
+  color: #1b241d;
+  padding: 9vh 20px 11vh;
+  overflow: clip;
+}
+
+/* ── nagłówek modułu (widoczny przed spacerem) ── */
+.pj__head { max-width: 1100px; margin: 0 auto 6vh; }
+.pj__title {
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: clamp(30px, 5.5vw, 74px);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+  color: var(--lk-green);
+}
+.pj__lead {
+  font-family: var(--font-body);
+  font-size: clamp(16px, 1.9vw, 20px);
+  line-height: 1.65;
+  max-width: 640px;
+  margin-top: 22px;
+}
+/* .pj__skip — reguły usunięte w korekcie 4A.3 razem z samym przyciskiem.
+   Stara lekcja (lekcja-4-5.css) ma własną kopię i zostaje bez zmian. */
+
+/* ── stała nota o regulaminie ── */
+.pj__note {
+  font-family: var(--font-sub);
+  font-size: 13px;
+  line-height: 1.5;
+  color: #47554b;
+  max-width: 640px;
+  margin: 5vh auto 0;
+  text-align: center;
+}
+
+/* ── warstwy sceny: nieaktywne w trybie bazowym ── */
+.pj__background, .pj__road { display: none; }
+.pj__ui { display: contents; }   /* w stosie UI nie tworzy własnego kontekstu */
+.pj__texts:empty { display: none; }
+
+/* ── TRYB BAZOWY: pionowy stos stacji ── */
+.pj__stations {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(48px, 8vh, 96px);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.pj-station {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "no  no" "vis txt";
+  gap: clamp(20px, 4vw, 56px);
+  align-items: center;
+}
+.pj-station__no     { grid-area: no; }
+.pj-station__visual { grid-area: vis; position: relative; }
+.pj-station__text   { grid-area: txt; }
+.pj-station__visual img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 18px 32px rgba(0, 0, 0, 0.22));
+}
+/* w stosie górka odpadów leży pod kontenerem jako drugi kadr */
+.pj-station__waste { margin-top: 14px; }
+.pj-station__no {
+  font-family: var(--font-sub);
+  font-size: 13px; font-weight: 800;
+  letter-spacing: 4px;
+  opacity: 0.55;
+  margin-bottom: 12px;
+}
+.pj-station__no b { font-size: 20px; letter-spacing: 2px; opacity: 0.95; }
+.pj-station__title {
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: clamp(24px, 3.4vw, 52px);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+}
+.pj-station__desc {
+  font-family: var(--font-body);
+  font-size: clamp(15px, 1.7vw, 19px);
+  line-height: 1.62;
+  max-width: 34em;
+}
+
+/* =====================================================================
+   TRYB SCENY (body.js-pj) — desktop/tablet, ruch dozwolony
+   ===================================================================== */
+.js-pj .pszok-journey {
+  padding: 0;
+  /* wysokość = ile scrolla ma cały spacer; --pj-span nadaje JS */
+  height: calc((14 * var(--pj-span, 1.22) + 1) * 100svh);
+  position: relative;
+}
+/* bez translateX — transform na rodzicu tworzyłby containing block i przypięty
+   (fixed) przycisk „Pomiń animację" przestałby działać */
+.js-pj .pj__head {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  width: min(1100px, 100% - 40px);
+  margin: 0 auto;
+  z-index: 4;
+  padding: 9vh 0 0;
+  pointer-events: none;
+}
+.js-pj .pj__head > * { pointer-events: auto; }
+
+/* skrót wyjścia „Pomiń animację" — usunięty w korekcie 4A.3 (patrz wyżej) */
+
+.js-pj .pj__stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  /* hidden, nie clip — bliskie kontenery i dekoracje mają być naturalnie
+     ucinane krawędzią kadru przy mijaniu kamery */
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* ══ WARSTWA A: TŁO (z-index 0) ══
+   Najpłytsza paralaksa; bardzo subtelne przesunięcie i skala. */
+.js-pj .pj__background {
+  display: block;
+  position: absolute; inset: 0;
+  z-index: 0;
+}
+.js-pj .pj__bg-inner {
+  position: absolute; inset: -4%;
+  transform:
+    translate3d(calc(var(--pj-px, 0) * 3px), calc(var(--pj-py, 0) * 3px), 0)
+    scale(var(--pj-bg-scale, 1));
+  background:
+    radial-gradient(ellipse 66% 56% at 50% 38%,
+      #ffffff 0%, rgba(255, 255, 255, 0.92) 26%, rgba(255, 255, 255, 0) 70%),
+    radial-gradient(ellipse 44% 34% at 50% 118%, var(--pj-tint) 0%, transparent 72%),
+    linear-gradient(168deg,
+      var(--pj-tint-soft) 0%, #fbfcfa 48%, var(--pj-tint-soft) 100%);
+}
+.js-pj .pj__bg-inner::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(53deg, rgba(0,0,0,0.014) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+
+/* ══ WARSTWA B: ŚWIAT (z-index 1) ══
+   Skala kamery + pełna paralaksa. Wszystko, co „stoi w przestrzeni". */
+.js-pj .pj__world {
+  position: absolute; inset: 0;
+  z-index: 1;
+}
+.js-pj .pj__world-inner {
+  position: absolute; inset: 0;
+  transform:
+    translate3d(calc(var(--pj-px, 0) * 7px), calc(var(--pj-py, 0) * 7px), 0)
+    rotate(calc(var(--pj-px, 0) * 0.3deg))
+    scale(var(--pj-cam, 1));
+  transform-origin: 50% 62%;
+  will-change: transform;
+}
+
+/* droga — wstęga budowana co klatkę z linii środkowej trasy */
+.js-pj .pj__road {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+}
+.pj__road-path { fill: url(#pjRoadFade); }
+
+/* ══ WARSTWA C: UI (z-index 5) ══
+   Stabilna: bez skali kamery, bez paralaksy. */
+.js-pj .pj__ui {
+  display: block;
+  position: absolute; inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.js-pj .pj__ui > *,
+.js-pj .pj__texts > * { pointer-events: auto; }
+.js-pj .pj__texts { position: absolute; inset: 0; }
+
+/* stacje nakładają się w kadrze (wewnątrz świata) */
+.js-pj .pj__stations {
+  display: block;
+  position: absolute; inset: 0;
+  z-index: 3;
+  max-width: none;
+  margin: 0;
+}
+.js-pj .pj-station {
+  display: block;
+  position: absolute; inset: 0;
+  gap: 0;
+  visibility: hidden;
+  contain: layout paint;
+}
+.js-pj .pj-station.is-live { visibility: visible; }
+
+/* Assety modułu czekają w data-src i dostają src dopiero przy dojeździe —
+   bez tego parser HTML ściągałby ~4 MB już przy starcie lekcji. Do czasu
+   podstawienia src obraz nie może zajmować miejsca ani mrugać ramką.
+   Wariant bez JS obsługuje <noscript> wewnątrz każdej stacji. */
+.pj-station__visual > img:not([src]) { display: none; }
+
+/* pozycję w całości wyznacza transform z getRoutePoint — kotwica w (0,0) */
+.js-pj .pj-station__visual {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--pj-cw, 34vw);
+  will-change: transform, opacity, filter;
+}
+.js-pj .pj-station__container {
+  width: 100%;
+  filter: drop-shadow(0 26px 44px rgba(0, 0, 0, 0.26));
+  transform-origin: center center;
+}
+/* górka odpadów wyłania się ze środka kontenera i staje na pierwszym planie.
+   Cień ustawia manifest per stacja (--pj-waste-shadow) — jasne frakcje
+   (styropian) giną pod białą poświatą, więc dostają neutralny ciemny cień. */
+.js-pj .pj-station__waste {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: var(--pj-ww, 78%);
+  margin: 0;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  opacity: 0;
+  filter: var(--pj-waste-shadow,
+    drop-shadow(0 0 22px rgba(255, 255, 255, 0.85))
+    drop-shadow(0 18px 30px rgba(0, 0, 0, 0.22)));
+}
+
+/* tekst stacji żyje w warstwie UI — nie dziedziczy kamery ani paralaksy */
+.js-pj .pj__texts .pj-station__text {
+  position: absolute;
+  top: 58%;                       /* punkt startowy; kontroler doprecyzowuje */
+  left: var(--pj-text-x, 26%);
+  width: min(40vw, 680px);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  will-change: opacity;
+}
+.js-pj .pj-station__title {
+  font-size: clamp(38px, 4.2vw, 76px);
+  line-height: 1.02;
+  max-width: 12ch;
+  margin-bottom: 20px;
+}
+.js-pj .pj-station__desc {
+  font-size: clamp(20px, 1.6vw, 26px);
+  line-height: 1.45;
+  max-width: 42ch;
+  font-weight: 500;
+  color: #1b241d;
+  opacity: 1;
+}
+
+/* licznik stacji — w warstwie UI, przypięty do rogu kadru */
+.js-pj .pj__texts .pj-station__no {
+  position: absolute;
+  right: 30px;
+  bottom: 26px;
+  margin: 0;
+  font-size: 14px;
+  opacity: 0;
+}
+.js-pj .pj__texts .pj-station__no b { font-size: 26px; }
+.js-pj .pj__texts .pj-station__no.is-current { opacity: 0.5; }
+
+.js-pj .pj__note {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  margin: 0;
+  z-index: 4;
+  width: min(640px, 74vw);
+  max-width: none;
+}
+
+/* na węższym desktopie nota trafiłaby pod przycisk „Pomiń animację” —
+   przenosimy ją nad niego */
+@media (min-width: 901px) and (max-width: 1240px) {
+  .js-pj .pj__note { bottom: 84px; width: min(560px, 84vw); }
+  /* mniejszy desktop / tablet: typografia o stopień niżej */
+  .js-pj .pj__texts .pj-station__text { width: 41vw; }
+  .js-pj .pj-station__title { font-size: clamp(32px, 4vw, 60px); }
+  .js-pj .pj-station__desc  { font-size: clamp(18px, 1.7vw, 22px); }
+}
+
+/* =====================================================================
+   MOBILE / WĄSKI TABLET — spokojny wariant pionowy (bez sceny)
+   ===================================================================== */
+@media (max-width: 900px) {
+  .pszok-journey { padding: 60px 14px 70px; }
+  .pj-station {
+    grid-template-columns: 1fr;
+    grid-template-areas: "no" "vis" "txt";
+    gap: 18px;
+  }
+  .pj-station__visual { max-width: 460px; margin: 0 auto; }
+  .pj-station__desc { font-size: 16px; }
+  .pj__lead { font-size: 16px; }
+  .pj__stations { gap: 54px; }
+}
+
+/* =====================================================================
+   REDUCED MOTION — tryb sceny nigdy się nie włącza (JS nie doda .js-pj),
+   ale gdyby klasa została z wcześniejszego stanu, wymuszamy stos.
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .js-pj .pszok-journey { height: auto; padding: 9vh 20px 11vh; }
+  .js-pj .pj__head { position: static; padding: 0; }
+  .js-pj .pj__stage { position: static; height: auto; overflow: visible; }
+  .js-pj .pj__background, .js-pj .pj__road { display: none; }
+  .js-pj .pj__world, .js-pj .pj__world-inner {
+    position: static; inset: auto; transform: none;
+  }
+  .js-pj .pj__ui { display: contents; }
+  .js-pj .pj__texts { position: static; }
+  .js-pj .pj__stations {
+    position: static;
+    display: flex;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .js-pj .pj-station {
+    position: static;
+    display: grid;
+    visibility: visible;
+  }
+  .js-pj .pj-station__visual,
+  .js-pj .pj-station__text,
+  .js-pj .pj__texts .pj-station__text { position: relative; top: auto; left: auto; width: auto; transform: none; opacity: 1; }
+  .js-pj .pj-station__waste { position: static; transform: none; opacity: 1; width: 100%; margin-top: 14px; filter: none; }
+  .js-pj .pj-station__no,
+  .js-pj .pj__texts .pj-station__no { position: static; opacity: 0.55; }
+  .js-pj .pj__note { position: static; transform: none; margin: 5vh auto 0; }
+}
+
+/* ═══ K09 — elementy scenografii sceny kontroli (Etapy 2D / 2D.1) ═══
+   Markup jest WSPÓLNY dla obu wariantów, ale scenografia (podesty, butelka
+   z nakładką oleju, znak X, tło, etykiety celów i strzałki) należy wyłącznie
+   do trybu tablicy. Tu jest jej stan bazowy — ukrycie; arkusz tablicy
+   (…-board.css, ładowany tylko poza ?legacy=1) odsłania ją regułami
+   `body.bd-on`. Dzięki temu wariant legacy zachowuje dotychczasowy układ
+   bez żadnej zmiany — reguła MUSI zostać w tym arkuszu, bo w legacy
+   …-board.css nie jest w ogóle pobierany. */
+.k09sc,
+.k09sc__tlo,
+.k09sc__strzalka{ display: none; }
+/* rozwinięcie o tłuszczach stałych jest treścią wspólną — widoczne w obu
+   wariantach, sterowane atrybutem hidden z modułu gry */
+.k09__wiecej[hidden]{ display: none !important; }
+/* K5.1: po finale nazwa produktu jest pusta — sama pigułka nie ma wtedy nic
+   do pokazania. Reguła obowiązuje w OBU trybach, więc mieszka tutaj. */
+.k09__name:empty{ display: none; }
+
+/* K11 (Etap 3A) — wariant statyczny: dwa kadry stadionu zamiast scrubu.
+   Reguła wspólna: dotyczy tak trybu tablicy, jak i ?legacy=1, bo
+   prefers-reduced-motion obowiązuje w obu. W wariancie statycznym
+   pojedyncza klatka sekwencji jest zbędna — zastępują ją te dwa obrazy. */
+.k11__stat{ margin:0; }
+.k11__stat img{ width:100%; height:auto; border-radius:10px; display:block; }
+.k11__stat figcaption{ margin-top:6px; font-size:13px; opacity:.75; text-align:center; }
+#k11-seq.is-static .seq__frame{ display:none; }
+
+/* ═══════════ K12 (Etap 3B) — sekwencja lasu, skaner, fakty ═══════════
+   Reguły WSPÓLNE dla obu trybów: przemianę niesie teraz sekwencja klatek,
+   a obrazy przed/po zostają wariantem statycznym (reduced motion / brak
+   klatek). Skaner to warstwa HTML/CSS — bez grafik rastrowych. */
+.k12__frame{ opacity:1; }
+.k12__static{ position:absolute; inset:0; }
+.k12__static .k12__after{ opacity:1; }        /* w wariancie statycznym „po" jest widoczne */
+.k12.is-static .k12__frame{ display:none; }
+.k12.is-static .k12__images{ aspect-ratio:16/9; }
+
+/* fakty liczbowe pod kadrem (dane w komentarzu HTML przy sekcji) */
+.k12__fakt{
+  margin:14px auto 0; max-width:60ch; text-align:center;
+  font-size:clamp(15px,1.8vw,19px); line-height:1.5;
+  opacity:0; transform:translateY(8px);
+  transition:opacity .45s ease, transform .45s ease;
+}
+.k12__fakt.is-on{ opacity:1; transform:none; }
+.k12__fakt--echo{ margin-top:8px; font-size:clamp(14px,1.6vw,17px); opacity:0; }
+.k12__fakt--echo.is-on{ opacity:.88; }
+
+/* Wariant statyczny K12 (reduced motion / brak klatek): skaner nie ma czego
+   prowadzić, więc lupa znika, a treść pięciu kart pokazuje się jako zwykła,
+   widoczna lista pod kadrem. Reguła wspólna dla obu trybów. */
+.k12.is-static .k12__lupa{ display:none; }
+.k12.is-static .k12__swiat{ transform:none !important; }
+.k12.is-static .k12__karta,
+.k12.is-static .k12__licznik,
+.k12.is-static .k12__mapka{ display:none; }
+.k12.is-static .k12__lista{
+  position:static; width:auto; height:auto; margin:16px auto 0; padding:0;
+  overflow:visible; clip:auto; white-space:normal;
+  max-width:60ch; list-style:none; text-align:left;
+}
+.k12.is-static .k12__lista li{
+  padding:6px 0 6px 26px; position:relative;
+  font-size:clamp(14px,1.6vw,17px); line-height:1.45;
+}
+.k12.is-static .k12__lista li::before{
+  content:counter(k12li); counter-increment:k12li;
+  position:absolute; left:0; top:6px;
+  width:18px; height:18px; border-radius:50%;
+  background:#8a3630; color:#fff;
+  font-size:11px; font-weight:800; line-height:18px; text-align:center;
+}
+.k12.is-static .k12__lista{ counter-reset:k12li; }
+
+/* ═══ K15 — KADR GRY „OBSŁUŻ PSZOK” (etap 4C) ═══
+   Gra rysuje na płótnie 1600 × 1000 i skaluje się przez Scale.FIT, więc
+   kadr trzyma tę proporcję — inaczej Phaser zostawia czarne pasy.
+   Reguła siedzi w arkuszu WSPÓLNYM, bo ?legacy=1 nie ładuje arkusza
+   tablicy: tam ramka zostawała na sztywnych 760 px (proporcja 1,71). */
+.frame__box--pszok{
+  position:relative; width:100%; aspect-ratio:1600 / 1000;
+  overflow:hidden; border-radius:14px; background:#f4efe4;
+}
+.frame__box--pszok iframe{
+  position:absolute; inset:0; width:100%; height:100%; border:0; display:block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DYPLOM Z MATERIAŁÓW UŻYTKOWNIKA (Etap 6B)
+
+   Karta = grafika tła (1054×1492) plus warstwy ustawione w PROCENTACH
+   tej grafiki. Te same ułamki obsługują ekran i sklejanie pliku, więc
+   pobrany dyplom nie może wyglądać inaczej niż ten na ekranie.
+   Współrzędne zmierzone z pliku, nie oszacowane:
+     • puste pole na imię: 48,5%–58,4% wysokości (środek 53,4%),
+     • wolny pas stopki: 83,1%–95,8%, z kreską dzielącą w osi.
+   Karta jest treścią WSPÓLNĄ — nowa szata obowiązuje też w ?legacy=1;
+   animacja gra tylko w tablicy.
+   ═══════════════════════════════════════════════════════════════════ */
+.diploma-card{
+  position:relative; container-type:inline-size;
+  width:min(100%, 640px);
+  aspect-ratio:1054 / 1492;
+  max-width:none; margin:22px auto 0; padding:0;
+  background:none; border:0; border-radius:0;
+  overflow:hidden;
+}
+.dyplom__tlo{
+  position:absolute; inset:0;
+  width:100%; height:100%; object-fit:contain; display:block;
+}
+.dyplom__film{
+  position:absolute; inset:0; z-index:2;
+  width:100%; height:100%; object-fit:contain;
+  background:#f8f1d7;
+}
+.dyplom__film[hidden]{ display:none; }
+
+/* IMIĘ — wyśrodkowane w pustym polu między „otrzymuje" a gwiazdką */
+.dyplom__imie{
+  position:absolute; left:50%; top:53.4%; transform:translate(-50%, -50%);
+  z-index:3; width:62%; text-align:center;
+  font-family:var(--font-title, 'Cabinet Grotesk', system-ui, sans-serif);
+  font-weight:700; color:#0d4c3a; line-height:1.05;
+  font-size:7.36cqi;                 /* skala względem szerokości karty */
+  opacity:0; transition:opacity .5s ease .1s;
+  overflow-wrap:break-word;
+}
+/* STOPKA — dwie kolumny po obu stronach istniejącej kreski.
+   Każdy element pozycjonowany OSOBNO w procentach karty, dokładnie tymi
+   samymi ułamkami, których używa sklejanie pliku. Dzięki temu ekran
+   i pobrany PNG nie mogą się rozjechać — nie ma dwóch układów, jest jeden
+   zestaw liczb w dwóch technikach. */
+.dyplom__stopka{
+  position:absolute; inset:0; z-index:3;
+  opacity:0; transition:opacity .6s ease .35s;
+  pointer-events:none;
+}
+.dyplom__kol{ position:static; }
+.dyplom__logo{ position:absolute; display:block; object-fit:contain; }
+/* lewa kolumna: znak wyśrodkowany, nazwa pod nim */
+/* Znak SELEKT jest kołem, a WFOŚiGW prostokątem: przy tej samej wysokości
+   koło czyta się jako mniejsze, więc dostaje jej niemal dwa razy tyle —
+   optycznie wychodzą równe (porównanie na zrzucie). */
+.dyplom__logo--selekt{ left:28.8%; top:83.8%; height:7.05%; width:auto; transform:translateX(-50%); }
+.dyplom__nazwa{
+  position:absolute; left:28.8%; top:91.5%; width:40%;
+  transform:translateX(-50%); text-align:center;
+}
+/* prawa kolumna: logo i tekst wyrównane DO LEWEJ krawędzi logotypu */
+.dyplom__logo--wfos{ left:56.9%; top:83.18%; height:6.72%; width:auto; }
+.dyplom__formula{
+  position:absolute; left:58.9%; top:89.9%; width:36%; text-align:left;
+}
+.dyplom__nazwa,
+.dyplom__formula{
+  margin:0; color:#1d1d1c;
+  font-family:Arial, 'Helvetica Neue', system-ui, sans-serif;
+}
+.dyplom__nazwa{ font-size:1.43cqi; font-weight:400; line-height:1.45; }
+.dyplom__formula{ font-size:1.51cqi; font-weight:400; line-height:1.45; }
+
+/* fazy: film → gotowy dyplom */
+.diploma-card.is-film .dyplom__imie,
+.diploma-card.is-film .dyplom__stopka{ opacity:0; }
+.diploma-card.is-gotowy .dyplom__imie,
+.diploma-card.is-gotowy .dyplom__stopka{ opacity:1; transition:none; }
+.diploma-card.is-odslona .dyplom__imie,
+.diploma-card.is-odslona .dyplom__stopka{ opacity:1; }
+
+@media (prefers-reduced-motion: reduce){
+  .dyplom__imie, .dyplom__stopka{ transition:none; }
+}
+
+/* ═══ WYDRUK DYPLOMU — PO regułach ekranowych (Etap 6B) ═══
+   USTERKA ZŁAPANA W POMIARZE: blok @media print stoi w tym pliku wcześniej
+   niż nowe reguły karty, a przy równej szczegółowości wygrywa reguła
+   PÓŹNIEJSZA — więc szerokość arkusza (180 mm) była nadpisywana przez
+   ekranowe `min(100%, 640px)`. Powtarzamy geometrię wydruku tutaj, na
+   końcu arkusza, gdzie nic już jej nie przykryje. */
+@media print{
+  .diploma-card{
+    position:fixed; inset:8mm auto auto 50%; transform:translateX(-50%);
+    width:180mm; max-width:180mm; aspect-ratio:1054 / 1492; height:auto;
+    border:0; overflow:visible;
+  }
+  .dyplom__film{ display:none !important; }
+  .dyplom__imie, .dyplom__stopka{ opacity:1 !important; transition:none !important; }
+}
