@@ -252,6 +252,19 @@ body.bd-chapter{ overflow:hidden; }
 .bd-pol:focus-visible{ outline:none; }
 .bd-pol:focus-visible .bd-pol__card{ outline:4px solid #7db8ff; outline-offset:4px; }
 .bd-pol.is-open .bd-pol__card{ animation:none; box-shadow:0 18px 40px rgba(0,0,0,.55); }
+/* Korekta T-ANIM.1 — polaroid z grającą animacją jest przyciskiem „wejdź od
+   razu": kursor mówi o klikalności, a dyskretny podpis pod kartą pojawia się
+   po sekundzie (fade). Bez ramek i bez pulsowania — ma być cichy. Podpis leży
+   POD kartą w pozycji absolutnej, więc nie rusza wymiaru polaroidu ani zoomu. */
+.bd-pol.is-anim{ cursor:pointer; }
+.bd-pol__hint{
+  position:absolute; left:50%; top:100%; transform:translateX(-50%);
+  margin-top:6cqw; padding:.35em .9em; white-space:nowrap;
+  font-family:'Cabinet Grotesk', system-ui, sans-serif; font-size:5.2cqw; font-weight:600;
+  letter-spacing:.02em; color:#f8fcf6; background:rgba(8,14,11,.62); border-radius:999px;
+  opacity:0; pointer-events:none; transition:opacity .3s ease;
+}
+.bd-pol.is-hint .bd-pol__hint{ opacity:1; }
 
 /* pasek tablicy (nad sceną i nad stroną rozdziału — jak we wzorcu) */
 .bd-boardbar{
@@ -269,12 +282,9 @@ body.bd-chapter .bd-boardbar{ display:none !important; }
 .bd-boardbar__title{ font-family:'Cabinet Grotesk', system-ui, sans-serif;
   font-size:clamp(11px,1.3vw,14px); letter-spacing:.16em; text-transform:uppercase;
   color:#f8fcf6; background:rgba(8,14,11,.62); padding:6px 12px; border-radius:8px; }
-/* „Pomiń animację" siedziało wcześniej na dole-środku pola tablicy i lądowało
-   na polaroidach, kartkach i nici. Teraz jest zwykłym elementem stałego
-   klastra kontrolek u góry — poza transformowaną sceną i poza polem tablicy. */
-.bd-polui{ display:flex; }
-.bd-polui[hidden]{ display:none !important; }
-.bd-polui .bd-btn{ min-height:44px; min-width:44px; }
+/* Korekta T-ANIM.1: przycisk „Pomiń animację" zniknął z klastra — pominięciem
+   jest kliknięcie w sam polaroid (style `.bd-pol.is-anim` i `.bd-pol__hint`
+   przy polaroidach). */
 .bd-boardbar{ padding-top:max(10px, env(safe-area-inset-top)); }
 @media (max-width: 640px){
   /* na wąskim ekranie kontrolki układają się w kolumnę, żeby nie schodzić
@@ -641,6 +651,7 @@ body.bd-chapter .bd-boardbar{ display:none !important; }
   .bd-pol, .bd-note, .bd-pinwrap{ transition:none; }
   .bd-pol.is-in{ animation:none; }
   .bd-pol[data-state="active"] .bd-pol__card{ animation:none; }
+  .bd-pol__hint{ transition:none; }        /* T-ANIM.1: podpis bez fade */
   .bd-freeze{ transition:none; }
   .bd-thread path{ transition:none; }
   .bd-chapterlay{ transition:none; }

@@ -27,7 +27,7 @@
   if (legacy) { unveil(); return; }
 
   const base = "lekcja-4-5-integracja/";
-  const v = "?v=163";
+  const v = "?v=164";
 
   /* Ten sam znacznik wersji udostępniamy silnikowi. Klatki sekwencji zlewu mają
      stałe nazwy, więc po korekcie kanału alfa przeglądarka podałaby stare pliki

@@ -201,13 +201,12 @@
 
       <!-- Stały klaster kontrolek: leży POZA transformowaną sceną i poza polem
            tablicy, więc nigdy nie zasłania polaroidów, kartek, pinezek ani nici.
-           „Pomiń animację" dołącza tu tylko na czas trwania animacji. -->
+           Korekta T-ANIM.1: „Pomiń animację" nie jest już osobnym przyciskiem —
+           pominięciem jest kliknięcie w sam polaroid (wzrok ucznia jest tam,
+           nie w rogu ekranu). -->
       <div class="bd-boardbar" id="bd-boardbar">
         <p class="bd-boardbar__title">Tablica śledztwa</p>
         <div class="bd-boardbar__actions">
-          <div class="bd-polui" id="bd-polui" hidden>
-            <button type="button" class="bd-btn bd-btn--sm" id="bd-anim-skip">Pomiń animację</button>
-          </div>
           <button type="button" class="bd-btn bd-btn--ghost bd-btn--sm" id="bd-replay">Odtwórz intro ponownie</button>
         </div>
       </div>`;
@@ -226,8 +225,6 @@
       threadPath: document.getElementById("bd-thread-path"),
       notes: document.getElementById("bd-notes"),
       pols: document.getElementById("bd-pols"),
-      polui: document.getElementById("bd-polui"),
-      animSkip: document.getElementById("bd-anim-skip"),
       boardbar: document.getElementById("bd-boardbar"),
     });
     applyBoardImage();
@@ -334,7 +331,8 @@
           </span>
           <span class="bd-pol__cap">${i + 1}. ${c.title}
             <span class="bd-pol__status">${STATUS[c.state]}</span></span>
-        </span>`;
+        </span>
+        <span class="bd-pol__hint" aria-hidden="true">Kliknij, aby wejść od razu</span>`;
       btn.addEventListener("click", () => openChapter(c.id));
       /* Zabezpieczenie (Etap 1E): chwilowy błąd sieci nie może zostawić pustej
          ramki — jedno ponowienie z pominięciem cache, potem jawne tło ramki
@@ -682,6 +680,14 @@
     await playInPolaroid(c);
   }
 
+  /** POMINIĘCIE ANIMACJI POLAROIDU (korekta T-ANIM.1).
+      Jeden uchwyt na moduł: podczas grającej animacji wskazuje na `finish(true)`
+      bieżącego polaroidu, poza nią jest pusty. Wołają go: klik w polaroid
+      (a przez natywne zachowanie `<button>` także Enter i Spacja) oraz Escape.
+      Dawny przycisk „Pomiń animację" stał w rogu ekranu, a wzrok ucznia był na
+      polaroidzie — źródłem pominięcia jest więc sam polaroid. */
+  let pominAnimacje = null;
+
   /** Animacja WEWNĄTRZ pola zdjęcia polaroidu — bez modalu i czarnego tła;
       ramka, pineska i korek pozostają w kadrze. */
   function playInPolaroid(c) {
@@ -691,10 +697,22 @@
       const vid = btn.querySelector(".bd-pol__video");
       btn.classList.add("is-open");
 
+      /* Klik w polaroid z grającą animacją = wejście od razu. Listener siedzi
+         w fazie CAPTURE, żeby wyprzedzić `openChapter` z tego samego przycisku
+         (który w trakcie animacji i tak wychodzi na strażniku `openedChapter`)
+         i nie zależeć od kolejności rejestracji. */
+      const onPomin = (e) => { e.stopPropagation(); finish(true); };
+      let hintTimer = 0;
+      const ariaOryginal = btn.getAttribute("aria-label");
+
       const finish = (skipped) => {
         if (finish.done) return;
         finish.done = true;
-        el.polui.hidden = true;
+        pominAnimacje = null;
+        clearTimeout(hintTimer);
+        btn.removeEventListener("click", onPomin, true);
+        btn.classList.remove("is-anim", "is-hint");
+        if (ariaOryginal !== null) btn.setAttribute("aria-label", ariaOryginal);
         stopVideo(vid);
         vid.hidden = true;
         img.hidden = false;
@@ -705,9 +723,14 @@
 
       if (!c.anim || reduceMotion) { finish(true); return; }
 
-      el.polui.hidden = false;
-      el.animSkip.onclick = () => finish(true);
-      el.animSkip.focus({ preventScroll: true });
+      pominAnimacje = () => finish(true);
+      btn.addEventListener("click", onPomin, true);
+      btn.classList.add("is-anim");
+      btn.setAttribute("aria-label", "Pomiń animację i wejdź do tropu");
+      btn.focus({ preventScroll: true });
+      /* dyskretny podpis pod polaroidem — dopiero po sekundzie, żeby nie
+         konkurował z pierwszymi klatkami animacji */
+      hintTimer = setTimeout(() => btn.classList.add("is-hint"), 1000);
 
       stopAllMedia();
       img.hidden = true;
@@ -5396,7 +5419,7 @@
       if (e.key !== "Escape") return;
       const openDlg = document.querySelector(".bd-dialog[open]");
       if (openDlg) { if (openDlg.__bdClose) openDlg.__bdClose(); return; }
-      if (!el.polui.hidden) { el.animSkip.click(); return; }
+      if (pominAnimacje) { pominAnimacje(); return; }
       if (chapterView()) backToBoard();
     });
 
