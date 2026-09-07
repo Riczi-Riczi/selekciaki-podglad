@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Eko-detektyw: Tajemnica zakorkowanego miasta — struktura integracyjna K01–K18 | SELEKT</title>
 <meta name="description" content="Równoległa strona integracyjna e-lekcji dla klas 4–5. Pełna kolejność klocków K01–K18 do przeglądu kompozycji przed podmianą produkcyjną.">
-<link rel="stylesheet" href="lekcja-4-5-integracja.css?v=79">
+<link rel="stylesheet" href="lekcja-4-5-integracja.css?v=81">
 
 <!-- Tablica śledztwa jest wariantem DOMYŚLNYM. Skrypt startowy stoi na końcu
      <body>, więc bez tej blokady stara lekcja zdążyłaby mignąć przed jej
@@ -187,23 +187,25 @@
   <p class="body-text">Wyznacz właściwą drogę przez kanalizację. Gdy dotrzesz do miejsca
     blokady, zaliczysz pierwszy punkt śledztwa.</p>
 
-  <!-- Gra Genially dostarczona przez użytkownika (05.08.2026).
-       Genially nie wysyła zdarzenia ukończenia do strony — zgodnie z dokumentem 09
-       ekran końcowy gry pokazuje literę P, a uczeń wpisuje ją w polu postępu;
-       pole otwiera się po załadowaniu gry. -->
-  <div class="genially" data-genially="k04" data-letter="P" data-stops-audio
-       style="max-width:900px;margin:22px 0">
-    <div class="genially__box">
-      <iframe title="Gra Genially: Agent śledczy w kanalizacji"
-              data-src="https://view.genially.com/6a60646fa4b38d2b26bd3b8a"
-              frameborder="0" allowfullscreen scrolling="yes"></iframe>
+  <!-- Etap A6: gra „Rurociąg" zastąpiła materiał Genially — ostatni w lekcji.
+       Genially był cross-origin i nigdy nie mówił stronie, że uczeń skończył:
+       klocek zaliczał ręczny przycisk, a litera P otwierała się już przy
+       ZAŁADOWANIU ramki. Prototyp emituje `k04:completed` (kontrakt w jego
+       README), więc litera należy się dopiero po dojściu do zatoru. -->
+  <div class="frame" data-frame="k04" data-stops-audio style="max-width:900px;margin:22px 0">
+    <div class="frame__box">
+      <iframe title="Gra: Agent śledczy w kanalizacji — rurociąg"
+              data-src="prototypy/k04-rurociag/" loading="lazy"
+              allow="fullscreen" scrolling="no"></iframe>
     </div>
-    <p class="genially__status" role="status" aria-live="polite"></p>
   </div>
-  <p class="note">Po ukończeniu gry zobaczysz zdobytą literę — wpisz ją w&nbsp;pierwszym polu
-    postępu śledztwa. Link awaryjny:
-    <a href="https://view.genially.com/6a60646fa4b38d2b26bd3b8a" target="_blank"
-       rel="noopener">otwórz grę w nowej karcie ↗</a></p>
+  <p class="frame__status" role="status" aria-live="polite"></p>
+  <p class="note">Po dotarciu do zatoru zobaczysz zdobytą literę — wpisz ją w&nbsp;pierwszym polu
+    postępu śledztwa. Jeśli gra się nie wczyta, otwórz ją w&nbsp;osobnej karcie:
+    <a class="frame__open" href="prototypy/k04-rurociag/" target="_blank"
+       rel="noopener">Otwórz grę w nowej karcie ↗</a>. Uwaga: w&nbsp;osobnej karcie gra nie przekaże
+    wyniku lekcji, więc po powrocie literę P trzeba będzie wpisać samodzielnie
+    w&nbsp;polu postępu śledztwa.</p>
 </section>
 
 <!-- ═══════════ K05 — DOWÓD NR 1: ZLEW I RURY ═══════════ -->
@@ -1479,12 +1481,12 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
-<script src="lekcja-4-5-integracja/lesson-state.js?v=10"></script>
-<script src="lekcja-4-5-integracja/audio-manager.js?v=14"></script>
-<script src="lekcja-4-5-integracja/modules.js?v=44"></script>
-<script src="lekcja-4-5-integracja.js?v=51"></script>
+<script src="lekcja-4-5-integracja/lesson-state.js?v=11"></script>
+<script src="lekcja-4-5-integracja/audio-manager.js?v=15"></script>
+<script src="lekcja-4-5-integracja/modules.js?v=47"></script>
+<script src="lekcja-4-5-integracja.js?v=52"></script>
 <!-- Nowe otwarcie lekcji (intro → tablica → 9 polaroidów) w trybie podglądu.
      Bez ?boardPreview=1 ten skrypt kończy się natychmiast i niczego nie ładuje. -->
-<script src="lekcja-4-5-integracja/board-boot.js?v=126"></script>
+<script src="lekcja-4-5-integracja/board-boot.js?v=133"></script>
 </body>
 </html>

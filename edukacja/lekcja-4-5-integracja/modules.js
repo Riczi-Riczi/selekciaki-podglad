@@ -19,6 +19,22 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   /* ═══════════════════════════════════════════════════════════
+     0. LITERA: DWIE DROGI, JEDNO WYWOŁANIE (Etap S1.A)
+
+     Tryb tablicy nie ma już pól do wpisywania — literę przyznaje zdarzenie
+     gry i pokazuje ją kwadracik w belce górnej. Wariant `?legacy=1` zostaje
+     przy dotychczasowej mechanice: gra otwiera pole, uczeń przepisuje literę.
+     Ten plik obsługuje OBA warianty (osłony `bd-on` w dalszej części), więc
+     wybór drogi zamykamy w jednym miejscu.
+     ═══════════════════════════════════════════════════════════ */
+  const wTablicy = () => document.body.classList.contains("bd-on");
+  function przyznajLitere(letter) {
+    if (!letter) return;
+    if (wTablicy() && S.awardLetter) S.awardLetter(letter);
+    else S.unlockLetterEntry(letter);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
      1. REJESTR PLACEHOLDERÓW
      Klucz = data-ph w HTML. Rejestr zasila etykiety, listę w raporcie
      i (w preview) kontrolki symulacji punktów kontrolnych.
@@ -28,9 +44,9 @@
     "k02-film":     { block:"K02", material:"film otwierający YouTube",        format:"URL / ID filmu",  folder:"konfiguracja klocka K02" },
     "k02-transkrypcja": { block:"K02", material:"transkrypcja filmu otwierającego", format:"tekst", folder:"konfiguracja klocka K02" },
     "k03-teczka":   { block:"K03", material:"teczka akt / terminal 3D",        format:"WebP z alfą ~1200 px", folder:"site/assets/images/lekcja45/03-odprawa/" },
-    /* K04 i K06: gry Genially osadzone 05.08.2026 (patrz initGenially);
-       K04 = 6a60646fa4b38d2b26bd3b8a (1:1), K06 = 6974e6d97536a1341bf562c0 (16:9,
-       użytkownik będzie ją jeszcze edytował pod tym samym adresem) */
+    /* K04 i K06: własne prototypy zamiast materiałów Genially —
+       „Latarka w kuchni" (A5) i „Rurociąg" (A6); assety leżą przy grach
+       w `site/edukacja/prototypy/`, nie w tym rejestrze. */
     "k10-pojazd":   { block:"K10", material:"pojazd odbierający olej (opcjonalny symbol)", format:"WebP z alfą", folder:"site/assets/images/lekcja45/10-dalsza-droga-oleju/" },
     "k12-las":      { block:"K12", material:"zoptymalizowane klatki lasu (64–72 WebP)",  format:"WebP 1600 px", folder:"site/assets/images/lekcja45/12-las-przed-po/" },
     "k15-gra":      { block:"K15", material:"gra „Obsłuż PSZOK”",              format:"kod gry + assety", folder:"site/edukacja/gry/pszok/", checkpoint:"O" },
@@ -69,81 +85,33 @@
       btn.hidden = false;
       btn.addEventListener("click", () => {
         S.completeInteraction(block);
-        if (letter) S.unlockLetterEntry(letter);
+        /* Etap S1.A: w tablicy litera należy się od razu (nie ma pól do
+           wpisania), w `?legacy=1` symulator dalej tylko otwiera pole —
+           inaczej podgląd omijałby mechanikę, którą ma sprawdzać. */
+        if (letter) przyznajLitere(letter);
         btn.disabled = true;
         btn.textContent = letter
-          ? `Zasymulowano ukończenie — wpisz literę ${letter} w postępie`
+          ? (wTablicy() ? `Zasymulowano ukończenie — litera ${letter} zdobyta`
+                        : `Zasymulowano ukończenie — wpisz literę ${letter} w postępie`)
           : "Zasymulowano ukończenie";
         NS.ui && NS.ui.announce(letter
-          ? `Zasymulowano ukończenie klocka ${block.toUpperCase()}. Pole litery ${letter} jest gotowe do wpisania.`
+          ? `Zasymulowano ukończenie klocka ${block.toUpperCase()}. ` + (wTablicy()
+              ? `Litera ${letter} zdobyta.` : `Pole litery ${letter} jest gotowe do wpisania.`)
           : `Zasymulowano ukończenie klocka ${block.toUpperCase()}.`);
       });
     });
   }
 
   /* ═══════════════════════════════════════════════════════════
-     2b. GRY GENIALLY (K04, K06) — iframe zewnętrzny (cross-origin)
-     Genially nie wysyła zdarzenia ukończenia do strony. Zgodnie
-     z dokumentem 09: ekran końcowy gry pokazuje uczniowi literę,
-     a uczeń wpisuje ją w aktywne pole postępu. Dlatego pole litery
-     otwiera się z chwilą ZAŁADOWANIA gry (nie samym scrollem) —
-     weryfikacją pozostaje znajomość litery z ekranu końcowego,
-     a finał i tak chroni podwójna blokada pełnej ścieżki.
+     2b. (usunięte w Etapie A6) GRY GENIALLY
+     Materiały Genially były cross-origin i nigdy nie mówiły stronie, że
+     uczeń skończył — dlatego pole litery otwierało się już przy ZAŁADOWANIU
+     ramki, a klocek zaliczał ręczny przycisk. Obie gry mają teraz własne
+     prototypy z kontraktem zdarzeń: K06 „Latarka w kuchni" (A5) i K04
+     „Rurociąg" (A6). Funkcja straciła ostatniego klienta i zniknęła razem
+     z markupem [data-genially] oraz stylami .genially*.
      ═══════════════════════════════════════════════════════════ */
-  function initGenially() {
-    document.querySelectorAll("[data-genially]").forEach(wrap => {
-      const id     = wrap.dataset.genially;          // k04 | k06
-      const letter = wrap.dataset.letter || "";
-      const frame  = wrap.querySelector("iframe");
-      const status = wrap.querySelector(".genially__status");
-      if (!frame) return;
 
-      const setStatus = (t) => { if (status) status.textContent = t; };
-
-      frame.addEventListener("load", () => {
-        if (!frame.src) return;                       // ignoruj pusty start
-        wrap.classList.remove("is-loading");
-        wrap.classList.add("is-ready");
-        setStatus(letter
-          ? "Gra gotowa. Po jej ukończeniu wpisz zdobytą literę w polu postępu śledztwa."
-          : "Gra gotowa.");
-        if (letter) S.unlockLetterEntry(letter);
-      });
-      frame.addEventListener("error", () => {
-        wrap.classList.remove("is-loading");
-        setStatus("Nie udało się wczytać gry. Użyj linku awaryjnego pod oknem.");
-      });
-
-      /* Leniwe ładowanie zewnętrznego materiału.
-         BEZ `once` (N2.1): przy wyjściu z tropu silnik tablicy zdejmuje
-         `src`, żeby gra nie grała dalej w ukrytym `<main>` — obserwator
-         musi więc przetrwać i doczytać ją ponownie przy powrocie.
-         Wielokrotne wejścia są bezpieczne: `onEnter` odpala tylko przy
-         przejściu z „poza kadrem" do „w kadrze", a strażnik `!frame.src`
-         i tak blokuje drugie ładowanie tej samej ramki. */
-      NS.util.watch(wrap, {
-        margin: 600,
-        onEnter: () => {
-          if (frame.dataset.src && !frame.src) {
-            wrap.classList.add("is-loading");
-            setStatus("Wczytywanie gry…");
-            frame.src = frame.dataset.src;
-          }
-        },
-      });
-      /* Aktywna gra ucisza narrację strony — ale TYLKO dopóki jest w kadrze.
-         Etap A2: bez `onLeave` blokada zapadała przy pierwszym pokazaniu się
-         ramki i nikt jej nie zdejmował (zdejmuje ją wyłącznie panel albo
-         zmiana trybu), więc w tropach z grą narracja kolejnych scen milczała
-         do końca lekcji. Pomiar: wejście w Trop 5 ustawiało blokadę po
-         451 ms, zanim uczeń cokolwiek zrobił. */
-      NS.util.watch(wrap, {
-        ratio: 0.45, dwell: 600,
-        onEnter: () => NS.audio.suspend("Narracja wstrzymana — pracuje gra.", wrap),
-        onLeave: () => NS.audio.resumeAllowed(),
-      });
-    });
-  }
 
   /* ═══════════════════════════════════════════════════════════
      3. MOST DO PROTOTYPÓW (K07, K08, K16) — same-origin iframe
@@ -156,6 +124,11 @@
      • stan ładowania, błąd i link do otwarcia modułu osobno.
      ═══════════════════════════════════════════════════════════ */
   const FRAMES = {
+    /* K04 (Etap A6): gra „Rurociąg" w miejsce ostatniego materiału Genially.
+       Emituje wyłącznie na `window` z `bubbles: true`, więc nasłuch na obu
+       celach daje JEDNO wywołanie. Litera P przychodzi teraz po dojściu do
+       zatoru, a nie — jak w wariancie Genially — przy załadowaniu ramki. */
+    k04: { event:"k04:completed", letter:"P",  title:"Agent w kanalizacji", root:"#game" },
     /* K06 (Etap A5): gra „Latarka w kuchni" w miejsce materiału Genially.
        Emituje wyłącznie na `window` z `bubbles: true`, więc nasłuch na
        contentWindow i contentDocument daje JEDNO wywołanie (kontrakt
@@ -293,12 +266,18 @@
 
       if (d.type === "pszok:completed") {
         const noweZaliczenie = S.completeInteraction("k15");
-        S.unlockLetterEntry("O");                 /* przy KAŻDEJ wygranej */
+        przyznajLitere("O");                      /* przy KAŻDEJ wygranej */
         if (poGrze) poGrze.hidden = false;
-        setStatus("Gra ukończona. Wpisz literę O w polu postępu śledztwa.");
+        setStatus(wTablicy()
+          ? "Gra ukończona. Litera O trafiła do paska postępu na górze."
+          : "Gra ukończona. Wpisz literę O w polu postępu śledztwa.");
         if (!noweZaliczenie) return;              /* ogłoszenie i przewinięcie raz */
-        NS.ui && NS.ui.announce("Obsłuż PSZOK: ukończone. Pole litery O czeka na wpisanie.");
-        NS.ui && NS.ui.flashProgress();
+        /* W tablicy zdobycie litery ogłasza belka — tu zostaje sam fakt
+           ukończenia gry, żeby czytnik nie mówił tego samego dwa razy. */
+        NS.ui && NS.ui.announce(wTablicy()
+          ? "Obsłuż PSZOK: ukończone."
+          : "Obsłuż PSZOK: ukończone. Pole litery O czeka na wpisanie.");
+        if (!wTablicy()) NS.ui && NS.ui.flashProgress();
         wrap.dispatchEvent(new CustomEvent("k15:pierwsza-wygrana", { bubbles: true }));
         return;
       }
@@ -545,6 +524,42 @@
         };
         window.addEventListener("keydown", onKlawisz);
         window.addEventListener("keyup", onKlawisz);
+      }
+
+      /* ═══ MOST STEROWANIA DLA GRY „RUROCIĄG" (Etap A6) ═══
+         Ten sam problem co przy K06 i K08: klawiatura bez kliknięcia w planszę
+         nie dociera do ramki. Tu dochodzi PIĄTY klawisz — Backspace cofa ruch —
+         więc most przekazuje cztery strzałki i Backspace. Gra sama filtruje
+         auto-repeat, my pilnujemy tylko, żeby przekazywać wyłącznie przy
+         widocznej ramce: w lekcji stoją trzy takie mosty (K04 w Tropie 3,
+         K06 i K08 w Tropie 4) i żaden nie może sterować cudzą grą. */
+      if (id === "k04") {
+        let widoczna = false;
+        const KLAWISZE = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Backspace"];
+        const wyslij = (dane) => {
+          if (!loadedOnce) return;
+          try { frame.contentWindow.postMessage(dane, "*"); } catch (e) { /* ramka znikła */ }
+        };
+        const aktywna = () => widoczna && loadedOnce && !!frame.contentWindow;
+
+        NS.util.watch(wrap, {
+          ratio: 0.25,
+          onEnter: () => { widoczna = true; },
+          onLeave: () => {
+            widoczna = false;
+            KLAWISZE.forEach((key) => wyslij({ type: "k04:key", key, down: false }));
+          },
+        });
+
+        const onKlawiszK04 = (e) => {
+          if (KLAWISZE.indexOf(e.key) < 0) return;
+          if (!aktywna()) return;
+          if (e.repeat && e.type === "keydown") { e.preventDefault(); return; }
+          e.preventDefault();
+          wyslij({ type: "k04:key", key: e.key, down: e.type === "keydown" });
+        };
+        window.addEventListener("keydown", onKlawiszK04);
+        window.addEventListener("keyup", onKlawiszK04);
       }
 
       /* ═══ MOST STEROWANIA DLA GRY „LATARKA W KUCHNI" (Etap A5) ═══
@@ -1785,17 +1800,201 @@
     }
   }
 
+  /* ═══════════════════════════════════════════════════════════
+     8. FILM FINAŁOWY W TROPIE 9 (Etap F1)
+
+     Odtwarzacz INLINE w kadrze 16:9, nie modal — film jest tu treścią
+     sceny, a nie osobnym oknem. Wspólny dla obu wariantów lekcji: w tablicy
+     węzeł `#k17-film-wrap` wjeżdża do sceny „Materiał odtajniony", w
+     `?legacy=1` zostaje na miejscu w przepływie. Dlatego kod siedzi tutaj,
+     a nie w silniku tablicy.
+
+     PRYWATNOŚĆ I WYDAJNOŚĆ — ten sam wzorzec, co film K02:
+       • do YouTube nie leci ANI JEDNO żądanie, dopóki scena jest ukryta:
+         miniatura ma `data-src`, a `src` dostaje dopiero przy odsłonie,
+       • iframe powstaje wyłącznie po świadomym kliknięciu Play,
+       • domena `youtube-nocookie.com`, `rel=0` (bez cudzych podpowiedzi),
+         `hl=pl`,
+       • skrypt IFrame API ładujemy dopiero razem z iframe'em.
+
+     BRAMKA PRZYCISKU. „Przejdź do werdyktu" ma się pojawić po KOŃCU filmu,
+     więc potrzebujemy stanu odtwarzacza (`enablejsapi=1` + IFrame API).
+     API bywa jednak zablokowane — sieć szkolna, wtyczka, brak zgody — a
+     wtedy uczeń nie może utknąć: po 3 s bez gotowego API otwieramy bramkę
+     sami i mówimy o tym wprost. Lepiej wpuścić dalej kogoś, kto filmu nie
+     dooglądał, niż zatrzasnąć lekcję.
+
+     Kontrakt na zewnątrz: `k17:film-koniec` na węźle `#k17-film-wrap`,
+     `bubbles`, DOKŁADNIE RAZ, `detail: { powod: "koniec" | "zapas" }`.
+     Silnik tablicy nasłuchuje go i odsłania werdykt; `?legacy=1` po prostu
+     go ignoruje, bo nie ma tam czego bramkować.
+     ═══════════════════════════════════════════════════════════ */
+  const FILM_FINALOWY = {
+    id: "t8naF7T4dYw",
+    tytul: "Rozwiązanie sprawy",
+    /* Miniatura z domeny obrazków YouTube. `hqdefault` istnieje dla każdego
+       filmu (maxres bywa pusty), więc nie ryzykujemy pustego kadru. */
+    poster: "https://i.ytimg.com/vi/t8naF7T4dYw/hqdefault.jpg",
+  };
+  const API_YT = "https://www.youtube.com/iframe_api";
+  const ZAPAS_MS = 3000;
+
+  function initFilmFinalowy() {
+    const wrap = document.getElementById("k17-film-wrap");
+    if (!wrap || wrap.dataset.filmGotowy) return;
+    wrap.dataset.filmGotowy = "1";
+
+    /* plansza „DO UZUPEŁNIENIA" ustępuje miejsca odtwarzaczowi */
+    const plansza = wrap.querySelector(".ph");
+    if (plansza) plansza.remove();
+
+    const box = document.createElement("div");
+    box.className = "film";
+    box.innerHTML =
+      '<div class="film__kadr">'
+      + '<img class="film__poster" alt="" decoding="async" '
+      + 'data-src="' + FILM_FINALOWY.poster + '">'
+      + '<button type="button" class="film__play" '
+      + 'aria-label="Odtwórz film: ' + FILM_FINALOWY.tytul + '">'
+      + '<span class="film__ikona" aria-hidden="true">'
+      + '<svg viewBox="0 0 24 24" focusable="false"><path d="M8 5.2v13.6L19 12z"/></svg>'
+      + '</span>'
+      + '<span class="film__tytul">' + FILM_FINALOWY.tytul + '</span>'
+      + '</button>'
+      + '</div>'
+      + '<p class="film__nota" hidden></p>'
+      + '<p class="sr-only" role="status" aria-live="polite" data-film-live></p>';
+    wrap.appendChild(box);
+
+    const kadr = box.querySelector(".film__kadr");
+    const poster = box.querySelector(".film__poster");
+    const play = box.querySelector(".film__play");
+    const nota = box.querySelector(".film__nota");
+    const live = box.querySelector("[data-film-live]");
+
+    /* ── miniatura dopiero przy odsłonie sceny ── */
+    const wczytajPoster = () => {
+      if (poster.src || !poster.dataset.src) return;
+      poster.src = poster.dataset.src;
+    };
+    if (!wrap.hidden) wczytajPoster();
+    if ("MutationObserver" in window) {
+      const mo = new MutationObserver(() => { if (!wrap.hidden) wczytajPoster(); });
+      mo.observe(wrap, { attributes: true, attributeFilter: ["hidden"] });
+    }
+
+    let player = null, koniecWyslany = false, zegarZapasu = null;
+
+    const powiedz = (t) => { if (live) live.textContent = t; };
+    const koniecFilmu = (powod) => {
+      if (koniecWyslany) return;
+      koniecWyslany = true;
+      clearTimeout(zegarZapasu);
+      if (powod === "zapas") {
+        nota.hidden = false;
+        nota.textContent = "Nie udało się odczytać, kiedy film się kończy. "
+          + "Przejście dalej jest otwarte — obejrzyj nagranie do końca i kliknij przycisk.";
+      } else {
+        powiedz("Film się skończył. Możesz przejść do werdyktu.");
+      }
+      wrap.dispatchEvent(new CustomEvent("k17:film-koniec",
+        { bubbles: true, detail: { powod: powod } }));
+    };
+
+    /* ── IFrame API ładowane NA ŻĄDANIE, raz na stronę ── */
+    const gotoweApi = () => !!(window.YT && window.YT.Player);
+    function zaladujApi() {
+      return new Promise((res, rej) => {
+        if (gotoweApi()) { res(); return; }
+        const poprzedni = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = function () {
+          if (typeof poprzedni === "function") { try { poprzedni(); } catch (e) { /* ignore */ } }
+          res();
+        };
+        if (document.querySelector('script[data-yt-api]')) return;   /* już leci */
+        const s = document.createElement("script");
+        s.src = API_YT;
+        s.async = true;
+        s.dataset.ytApi = "1";
+        s.onerror = () => rej(new Error("iframe_api"));
+        document.head.appendChild(s);
+      });
+    }
+
+    const odtworz = () => {
+      if (kadr.querySelector("iframe")) return;
+      /* Narracja milknie TWARDO — tak samo jak przy grach po S1.A.1.
+         Nic jej nie wznawia samo: film jest treścią tej sceny. */
+      if (NS.audio && NS.audio.suspend) {
+        NS.audio.suspend("Narracja wstrzymana — trwa odtwarzanie filmu.", null, true);
+      }
+      const f = document.createElement("iframe");
+      f.className = "film__ramka";
+      f.title = "Film: " + FILM_FINALOWY.tytul;
+      f.setAttribute("allow",
+        "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture");
+      f.setAttribute("allowfullscreen", "");
+      f.src = "https://www.youtube-nocookie.com/embed/" + FILM_FINALOWY.id
+        + "?autoplay=1&rel=0&hl=pl&enablejsapi=1";
+      kadr.appendChild(f);
+      play.remove();
+      poster.remove();
+      powiedz("Film się odtwarza.");
+
+      /* bramka: stan ENDED z API, a gdy API nie wstanie w 3 s — zapas */
+      zegarZapasu = setTimeout(() => koniecFilmu("zapas"), ZAPAS_MS);
+      zaladujApi().then(() => {
+        /* Zegar mierzy ZAŁADOWANIE API, nie gotowość odtwarzacza. Pomiar F1:
+           skrypt i `onYouTubeIframeAPIReady` schodzą w 0,3–0,6 s, ale
+           `onReady` samego playera bywa po 1,1–1,7 s, a przy wolniejszym
+           starcie przekracza 3 s. Pierwsza wersja anulowała zapas dopiero
+           na `onReady` — i notka „nie udało się odczytać" pojawiała się
+           przy CAŁKOWICIE sprawnym API. Skoro API odpowiedziało, mamy
+           z czego odczytać koniec: zdejmujemy zegar i czekamy bez limitu. */
+        clearTimeout(zegarZapasu);
+        if (koniecWyslany) return;
+        player = new window.YT.Player(f, {
+          events: {
+            onStateChange: (e) => {
+              if (e.data === window.YT.PlayerState.ENDED) koniecFilmu("koniec");
+            },
+            onError: () => koniecFilmu("zapas"),
+          },
+        });
+      }).catch(() => koniecFilmu("zapas"));
+    };
+    play.addEventListener("click", odtworz);
+
+    /* ── RESET przy wyjściu z rozdziału ──
+       Zdejmujemy iframe (film milknie i przestaje pobierać dane) i wracamy
+       do postera z przyciskiem: powrót do tropu NIGDY nie startuje filmu
+       sam. Bramka zostaje otwarta, jeśli uczeń dooglądał — o werdykcie
+       decyduje trwały stan sprawy, nie ten węzeł. */
+    wrap.__filmReset = () => {
+      const f = kadr.querySelector("iframe");
+      if (!f) return;
+      clearTimeout(zegarZapasu);
+      try { if (player && player.destroy) player.destroy(); } catch (e) { /* ignore */ }
+      player = null;
+      f.remove();
+      kadr.appendChild(poster);
+      kadr.appendChild(play);
+      wczytajPoster();
+      powiedz("");
+    };
+  }
+
   NS.modules = {
     PLACEHOLDERS,
     init() {
       initPlaceholders();
       initPreviewSimulators();
-      initGenially();
       initFrames();
       initK09();
       initK13();
       initGraPszok();
       initSequences();
+      initFilmFinalowy();
     },
   };
 })();

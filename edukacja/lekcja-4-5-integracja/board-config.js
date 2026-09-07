@@ -54,7 +54,11 @@
        następujący PO grze — nie przyznaje litery i nie jest osobnym klockiem. */
     { id: "p03", blocks: ["k04", "k05"], letter: "P",
       title: "Tropy prowadzą pod ziemię", lead: "Gra i dowód nr 1: zlew",
-      game: { block: "k04", cta: "Gdy skończysz grę, pokaż odkryty dowód" },
+      /* Etap A6: gra „Rurociąg" zastąpiła materiał Genially i sama zgłasza
+         ukończenie (`k04:completed`), więc `cta` — ręczne potwierdzenie
+         ucznia — zniknęło razem z nim. Scenę dowodu i diagram odsłania teraz
+         zdarzenie gry (a przy powrocie: zaliczony stan klocka). */
+      game: { block: "k04" },
       /* Sekwencja zlewu (klocek K05) należy do TEGO rozdziału — od Etapu 1B-B
          P04 to wyłącznie K06, więc zlew nie gra dwa razy pod rząd. Sekwencja
          jest wizualną częścią sceny „Odkryty dowód", nie osobnym rozdziałem,

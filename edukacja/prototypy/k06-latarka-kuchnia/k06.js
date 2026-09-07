@@ -136,6 +136,7 @@ const state = {
   doorOpen: false,
   finished: false,
   completionSent: false,    // k06:completed emitowane tylko raz
+  continueSent: false,      // k06:continue emitowane tylko raz (S1.A.1)
 
   spot: { x: 0, y: 0 },     // środek plamy w px kadru
   keys: { left: false, right: false, up: false, down: false },
@@ -717,9 +718,19 @@ function bindControls() {
   el.cardClose.addEventListener("click", () => { hideCard(); grabFocus(); });
   el.door.addEventListener("click", () => openDoor("przycisk"));
 
+  /* „LITERA S GOTOWA" mówi lekcji, że uczeń chce iść dalej — dokładnie ten
+     sam kontrakt, co `k04:continue` w Rurociągu (Etap S1.A.1). Zdarzenie
+     leci na `window` z `bubbles`, DOKŁADNIE RAZ; lekcja przewija wtedy do
+     kolejnej sceny. Sama litera idzie osobno, z `k06:completed` — brak
+     tego zdarzenia niczego nie psuje. */
   el.btnFinal.addEventListener("click", () => {
-    announce("Litera S gotowa. Wpisz ją w polu postępu śledztwa.");
+    announce("Litera S gotowa. Wracasz do e-lekcji.");
     el.btnFinal.disabled = true;
+    if (state.continueSent) return;
+    state.continueSent = true;
+    try {
+      window.dispatchEvent(new CustomEvent("k06:continue", { bubbles: true }));
+    } catch (e) { /* zdarzenie jest opcjonalne dla samego prototypu */ }
   });
 
   /* DRUGI TOR: pięć śladów jako przyciski (Tab / Enter) */

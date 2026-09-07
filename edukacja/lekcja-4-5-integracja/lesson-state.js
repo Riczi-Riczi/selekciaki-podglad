@@ -6,7 +6,8 @@
    Rozdzielone gałęzie stanu (wymóg promptu):
      visitedBlocks          — odwiedzone obowiązkowe klocki narracyjne
      completedInteractions  — realnie ukończone interakcje (K07, K09, K13, K14…)
-     checkpointLetters      — P/S/Z/O/K (dopiero po wpisaniu litery przez ucznia)
+     checkpointLetters      — P/S/Z/O/K (tablica: `awardLetter` po wygranej;
+                              ?legacy=1: `submitLetter` po wpisaniu przez ucznia)
      audioMode              — read | both  (Etap A3: „Słucham" usunięty)
      finalUnlocked          — wynik podwójnego warunku, nigdy „na skróty”
 
@@ -154,6 +155,35 @@
     return true;
   }
 
+  /** Litera przyznana ZDARZENIEM GRY (Etap S1.A — tryb tablicy).
+      Robi dokładnie to, co udane `submitLetter`, tylko bez kroku wpisywania:
+      uczeń nic nie przepisuje, bo w nowej belce nie ma pól. Idempotentna —
+      powtórne wygrane niczego nie zmieniają.
+
+      ŚWIADOMA KONSEKWENCJA. Dotąd `recheckFinal` żądał liter ORAZ ukończonych
+      interakcji, a litery dało się zdobyć wyłącznie przepisując je z ekranu
+      gry. Teraz literę przyznaje to samo zdarzenie, które zalicza klocek,
+      więc człon „pięć ✓" jest implikowany przez człon interakcji i warunek
+      finału faktycznie staje się POJEDYNCZY. Finał nie robi się łatwiejszy:
+      zostają k07, k09, k13, k14 i komplet odwiedzonych klocków, których żadna
+      litera nie pokrywa. Znika natomiast bariera „uczeń zna hasło PSZOK,
+      ale gry nie przeszedł" — bo tej pilnowało właśnie wpisywanie.
+
+      Wariant `?legacy=1` tej drogi nie używa: tam nadal działa `submitLetter`. */
+  function awardLetter(letter) {
+    const def = LETTERS.find(l => l.letter === letter);
+    if (!def) return false;
+    if (state.checkpointLetters[letter]) return false;      // już zdobyta
+    state.checkpointLetters[letter] = true;
+    state.lettersReady = state.lettersReady.filter(l => l !== letter);
+    if (!state.completedInteractions.includes(def.block)) {
+      state.completedInteractions.push(def.block);
+    }
+    if (!state.visitedBlocks.includes(def.block)) state.visitedBlocks.push(def.block);
+    persist(); recheckFinal(); emit();
+    return true;                                            // true = zdobyta TERAZ
+  }
+
   /** Uczeń wpisuje literę. Zwraca 'ok' | 'wrong' | 'locked' | 'done'. */
   function submitLetter(letter, typed) {
     const def = LETTERS.find(l => l.letter === letter);
@@ -178,9 +208,13 @@
     persist(); emit();
   }
 
-  /** PODWÓJNY warunek finału: 5× ✓ ORAZ przejście obowiązkowej ścieżki.
-      Sama znajomość hasła PSZOK nigdy nie wystarczy — liter nie da się
-      „wpisać z głowy”, bo pole otwiera dopiero zdarzenie ukończenia gry. */
+  /** Warunek finału: 5× ✓ ORAZ przejście obowiązkowej ścieżki.
+      W wariancie `?legacy=1` te dwa człony są niezależne — litery wpisuje
+      uczeń, więc sama znajomość hasła PSZOK nie wystarczy. W trybie tablicy
+      (Etap S1.A) litery przyznaje `awardLetter` na zdarzenie gry, więc człon
+      liter jest implikowany przez człon interakcji; realną bramą zostają
+      k07, k09, k13, k14 i komplet odwiedzonych klocków. Kod jest wspólny —
+      różni się tylko droga, którą litera wpada do `checkpointLetters`. */
   function recheckFinal() {
     const allLetters = LETTERS.every(l => state.checkpointLetters[l.letter]);
     const allVisited = REQUIRED_BLOCKS.every(b => state.visitedBlocks.includes(b));
@@ -365,7 +399,7 @@
   NS.state = {
     PREVIEW, LETTERS, REQUIRED_BLOCKS, REQUIRED_INTERACTIONS,
     get: snapshot,
-    visit, completeInteraction, unlockLetterEntry, submitLetter,
+    visit, completeInteraction, unlockLetterEntry, submitLetter, awardLetter,
     setAudioMode, recheckFinal, missingForFinal, reset, closeCase,
     isCompleted: (b) => state.completedInteractions.includes(b),
     isVisited:   (b) => state.visitedBlocks.includes(b),

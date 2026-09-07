@@ -31,6 +31,11 @@
   let pendingScene = null;
   let suspended = false;         // film/gra aktywne
   let blokadaTwarda = false;     /* Etap A3: film w modalu — cisza do jego zamknięcia */
+  /* Etap S1.A.1: scena, przy której zapadła twarda blokada. Blokada należy
+     do TEJ sceny — po przejściu do następnej narracja ma prawo ruszyć sama,
+     bo „nic nie wznawia jej samo" dotyczy nagrania, które uczeń uciszył,
+     a nie całego tropu. */
+  let scenaBlokady = null;
   const unavailable = new Set(); // ścieżki, które nie wczytały się — nie próbujemy w kółko
   /* Etap A1 — LENIWE ŹRÓDŁA. Dotąd wejście w scenę przypinało `src`
      i wołało `load()` niezależnie od trybu, więc przeglądarka szła po plik
@@ -254,7 +259,7 @@
     if (zrodlo && currentScene && audio && !audio.paused &&
         (currentScene === zrodlo || currentScene.contains(zrodlo))) return;
     suspended = true;
-    if (twarda) blokadaTwarda = true;
+    if (twarda) { blokadaTwarda = true; scenaBlokady = currentScene; }
     clearTimeout(dwellTimer);
     pendingScene = null;
     if (audio && !audio.paused) { audio.pause(); }
@@ -302,6 +307,12 @@
       ratio: VISIBLE_RATIO, dwell: DWELL_MS,
       onEnter: () => {
         const isNew = scene !== currentScene;
+        /* Twarda blokada z gestu w grze (S1.A.1) obowiązuje tylko dla sceny,
+           w której zapadła. Wejście w INNĄ scenę ją zdejmuje — inaczej jedno
+           kliknięcie w Rurociąg uciszyłoby resztę tropu. */
+        if (isNew && blokadaTwarda && scene !== scenaBlokady) {
+          blokadaTwarda = false; scenaBlokady = null; suspended = false;
+        }
         loadScene(scene);
         /* auto-start tylko w trybie słuchania i tylko dla NOWEJ sceny
            (powrót do sceny nie restartuje nagrania samoczynnie) */

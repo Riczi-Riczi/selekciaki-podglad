@@ -241,8 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
          zapadała raz na zawsze i kolejne sceny już nie mówiły.
        Przy okazji komunikat mówi prawdę: ten znacznik wisi także na
        kontenerach gier, a nie tylko przy filmie. */
-    const gra = node.hasAttribute("data-genially") ||
-                node.hasAttribute("data-frame") ||
+    const gra = node.hasAttribute("data-frame") ||
                 node.hasAttribute("data-frame-pszok");
     const komunikat = gra
       ? "Narracja wstrzymana — pracuje gra."

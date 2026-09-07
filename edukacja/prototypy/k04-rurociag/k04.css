@@ -1,0 +1,584 @@
+/* ═══════════════════════════════════════════════════════════════
+   „Akcja kanalizacja” — gra labiryntowa e-lekcji SELEKT (klasy 4–5)
+   Klocek K04, Trop 3. Zastępuje moduł Genially „Rurociąg”.
+
+   Paleta projektu: #02468d  #1b9dd8  #3669ac  #afdaea
+   Strzałki:        #1f7fc4 naprzód / #8fcdf3 wróć / #4b6b86 rura zajęta
+   Rury na grafice: #4a6b4a — stąd zieleń w tłach paneli.
+
+   ZASADA WARSTW w kadrze (od spodu):
+     img.maze       — oryginał labiryntu 1800×1800 (ZERO doładowań w grze)
+     svg.water      — kopia labiryntu z NIEBIESKIMI rurami, odsłaniana maską
+                      wzdłuż przebytej trasy (viewBox 0 0 100 100 = procenty)
+     svg.debug      — graf + trasa wzorcowa, tylko ?debug=1
+     .arrows        — strzałki kierunków (HTML: fokus, 48 px, aria)
+
+   Kadr jest kwadratowy, więc procent w viewBox = procent obrazu na każdym
+   ekranie — żadnego przeliczania w JS przy zmianie rozmiaru okna.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --c-navy:   #02468d;
+  --c-blue:   #1b9dd8;
+  --c-steel:  #3669ac;
+  --c-ice:    #afdaea;
+  --c-text:   #0d2340;
+  --c-white:  #ffffff;
+  --c-amber:  #e8a020;
+  --c-amber-d:#a86a06;
+  --c-pipe:   #4a6b4a;
+
+  --water-dark: #1f7fc4;
+  --water:      #35a7ee;
+  --water-lite: #a9dcff;
+
+  --hud-h: 58px;
+  --radius: 18px;
+  --shadow: 0 10px 30px rgba(2, 70, 141, 0.28);
+
+  /* Bok kadru w px — ustawia k04.js po zmierzeniu sceny.
+     Od niego zależy rozmiar strzałek na małych ekranach. */
+  --scene: 640px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  color: var(--c-text);
+  background: #2a1d12;          /* kolor ziemi z grafiki — kadr wtapia się w tło */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+.game { position: fixed; inset: 0; overflow: hidden; }
+
+/* ══════════════ HUD ══════════════ */
+
+.hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  min-height: var(--hud-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
+  z-index: 20;
+  pointer-events: none;
+}
+
+.hud > * { pointer-events: auto; }
+
+.hud-stat {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #f2e4cf;
+  background: rgba(20, 14, 8, 0.62);
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+
+.hud-stat strong { color: var(--c-white); font-size: 0.94rem; }
+.hud-sep { opacity: 0.5; margin: 0 4px; }
+
+.btn-sound {
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  min-height: 40px;
+  padding: 8px 16px;
+  color: #f2e4cf;
+  background: rgba(20, 14, 8, 0.62);
+  border: 2px solid rgba(242, 228, 207, 0.35);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.btn-sound[aria-pressed="true"] { border-color: var(--c-blue); color: #d9f0ff; }
+.btn-sound:hover { border-color: var(--c-ice); }
+.btn-sound:focus-visible { outline: 3px solid var(--c-blue); outline-offset: 3px; }
+
+/* ══════════════ KADR ══════════════ */
+
+/* Kadr i podpowiedź stoją w jednej kolumnie i razem są wyśrodkowane —
+   dzięki temu podpowiedź jest zawsze tuż pod rurami, a nie przyklejona
+   do dolnej krawędzi ekranu (co na wysokim telefonie wyglądało na błąd). */
+.stage {
+  position: absolute;
+  inset: var(--hud-h) 0 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 6px 10px;
+}
+
+/* Kadr 1:1: bierze mniejszy z wymiarów, więc nigdy nie wychodzi poza ekran
+   ani nie wymusza przewijania w poziomie. */
+.scene {
+  position: relative;
+  width: min(100%, calc(100vh - var(--hud-h) - 92px));
+  max-width: 900px;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+}
+
+.maze {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.water, .debug-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.debug-layer[hidden] { display: none; }
+
+/* Obrysy w masce wstęgi. Białe = odsłonięte, czarne tło maski = ukryte.
+   Szerokość 2,25 % kadru: sama rura ma 2,07 %, pierścienie łączeń do 2,3 %,
+   a poza rurę wychodzi to o ~1,2 px (przy 1400 px) — dzięki temu błękit nie
+   przecieka na rurę sąsiednią. Kopia „niebieska” ma dodatkowo alfę obciętą
+   do maski rur, więc na piasku i tak nic nie widać. */
+.ribbon {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ══════════════ STRZAŁKI ══════════════ */
+
+.arrows { position: absolute; inset: 0; }
+
+/* Wspólna baza: przycisk jest kołem o boku min. 48 px, wyśrodkowanym
+   na swojej pozycji procentowej. Na dużym kadrze rośnie razem z nim. */
+.act {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: max(48px, calc(var(--scene) * 0.08));
+  height: max(48px, calc(var(--scene) * 0.08));
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  background: transparent;
+}
+
+.act svg { width: 74%; height: 74%; display: block; }
+.act:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* WSZYSTKIE strzałki są niebieskie — różnią się odcieniem, nie kolorem.
+
+   naprzód  — pełny błękit wody, biały grot
+   wróć     — jaśniejszy błękit, ciemny grot (rura, którą woda przypłynęła)
+   zajęta   — przygaszona i przekreślona (rura już wypełniona; blokada pętli) */
+.act--fwd .act-bg { fill: var(--water-dark); stroke: #ffffff; stroke-width: 3; }
+.act--fwd .act-fg { fill: #ffffff; }
+.act--fwd:hover .act-bg { fill: var(--water); }
+
+.act--back .act-bg { fill: #8fcdf3; stroke: #ffffff; stroke-width: 3; }
+.act--back .act-fg { fill: #10527f; }
+.act--back:hover .act-bg { fill: #a9dcff; }
+
+.act--off { opacity: 0.62; cursor: not-allowed; }
+.act--off .act-bg { fill: #4b6b86; stroke: rgba(255, 255, 255, 0.75); stroke-width: 3; }
+.act--off .act-fg { fill: rgba(255, 255, 255, 0.7); }
+.act--off .act-bar { stroke: #ffffff; stroke-width: 8; stroke-linecap: round; }
+
+/* Delikatne pulsowanie: pulsują tylko rury, w które można wpłynąć dalej. */
+@keyframes k04-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%      { transform: translate(-50%, -50%) scale(1.09); }
+}
+.act--fwd { animation: k04-pulse 1.9s ease-in-out infinite; }
+.act--fwd:hover, .act--fwd:focus-visible { animation-play-state: paused; }
+
+.arrows.is-busy .act { pointer-events: none; opacity: 0.35; }
+
+/* ══════════════ BŁYSK ALARMU ══════════════ */
+
+.alarm-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 92%, rgba(255, 140, 0, 0.85), rgba(255, 60, 0, 0) 55%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.alarm-flash.is-on { animation: k04-alarm 1.5s ease-out 2; }
+
+@keyframes k04-alarm {
+  0%   { opacity: 0; }
+  25%  { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+/* ══════════════ PODPOWIEDŹ POD KADREM ══════════════ */
+
+.hint {
+  flex: 0 0 auto;
+  z-index: 18;
+  max-width: 94vw;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f2e4cf;
+  background: rgba(20, 14, 8, 0.62);
+  border-radius: 999px;
+  padding: 6px 16px;
+  pointer-events: none;
+}
+
+/* ══════════════ KARTA HYDRAULIKA ══════════════ */
+
+.card {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: 46px;
+  z-index: 30;
+  width: min(300px, 78vw);
+  padding: 10px 14px 14px;
+  background: var(--c-white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: center;
+  transform: translateY(0);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.card[hidden] { display: none; }
+.card.is-enter { opacity: 0; transform: translateY(14px); }
+
+.card-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.card-text {
+  margin: 4px 0 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--c-navy);
+}
+
+.card-close {
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 18px;
+  color: var(--c-white);
+  background: var(--c-steel);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.card-close:hover { background: var(--c-navy); }
+.card-close:focus-visible { outline: 3px solid var(--c-amber); outline-offset: 3px; }
+
+/* ══════════════ EKRANY: START I FINAŁ ══════════════ */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: rgba(10, 22, 36, 0.86);
+  overflow-y: auto;
+}
+
+.overlay.is-hidden { display: none; }
+
+.panel {
+  width: min(520px, 100%);
+  max-height: 100%;
+  padding: 18px 22px 22px;
+  background: var(--c-white);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.panel-cover {
+  display: block;
+  width: min(230px, 62%);
+  height: auto;
+  margin: 0 auto 10px;
+  border-radius: 16px;
+}
+
+.panel-cover--plate { width: min(180px, 50%); }
+
+.panel-title {
+  font-size: clamp(1.25rem, 3.6vw, 1.7rem);
+  line-height: 1.15;
+  color: var(--c-navy);
+  margin-bottom: 8px;
+}
+
+.panel-text {
+  font-size: 0.94rem;
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+
+.panel-text--verdict { font-weight: 700; color: var(--c-navy); }
+.panel-text--label { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.75; margin-bottom: 4px; }
+
+.panel-info {
+  display: flex;
+  gap: 10px;
+  text-align: left;
+  align-items: flex-start;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  background: #eef6fb;
+  border-radius: 14px;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.panel-info-icon { flex: 0 0 20px; width: 20px; height: 20px; color: var(--c-steel); margin-top: 1px; }
+
+.reward-letter {
+  width: 74px; height: 74px;
+  margin: 0 auto 10px;
+  display: grid; place-items: center;
+  font-size: 2.4rem; font-weight: 800;
+  color: var(--c-white);
+  background: var(--c-blue);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+
+.panel-score {
+  font-size: 0.8rem;
+  opacity: 0.75;
+  margin-bottom: 12px;
+}
+
+.btn {
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  min-height: 50px;
+  padding: 12px 26px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.btn--primary { color: var(--c-white); background: var(--c-navy); }
+.btn--primary:hover { background: var(--c-steel); }
+.btn:focus-visible { outline: 3px solid var(--c-amber); outline-offset: 3px; }
+
+.panel-hint { margin-top: 10px; font-size: 0.78rem; opacity: 0.7; }
+
+/* ══════════════ DEBUG ══════════════ */
+
+.d-edge  { fill: none; stroke: #ff5a3c; stroke-width: 0.5; opacity: 0.85; }
+.d-path  { fill: none; stroke: #0d7bd6; stroke-width: 1.5; opacity: 0.95; }
+.d-node  { fill: #101820; stroke: #fff; stroke-width: 0.28; }
+.d-dead  { fill: #a3009b; stroke: #fff; stroke-width: 0.28; }
+.d-entry { fill: #ffd200; stroke: #fff; stroke-width: 0.34; }
+.d-goal  { fill: #00c85a; stroke: #fff; stroke-width: 0.34; }
+.d-label { fill: #fff; font-size: 1.15px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: #000; stroke-width: 0.35; }
+
+.debug-readout {
+  position: absolute;
+  left: max(10px, env(safe-area-inset-left));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 25;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.7rem;
+  color: #d9f0ff;
+  background: rgba(0, 0, 0, 0.62);
+  padding: 5px 9px;
+  border-radius: 8px;
+  pointer-events: none;
+  white-space: pre;
+}
+
+.debug-readout[hidden] { display: none; }
+
+/* ══════════════ EKRANY MAŁE ══════════════ */
+
+@media (max-width: 560px) {
+  :root { --hud-h: 52px; }
+  .hud-stat { font-size: 0.68rem; padding: 6px 11px; }
+  .btn-sound { font-size: 0.68rem; min-height: 36px; padding: 6px 12px; }
+  .hint { font-size: 0.72rem; padding: 5px 12px; }
+  .panel { padding: 14px 16px 18px; }
+  .card { right: 50%; transform: translateX(50%); width: min(280px, 86vw); }
+  .card.is-enter { transform: translateX(50%) translateY(14px); }
+}
+
+/* Telefon w pionie. Kadr jest kwadratowy, więc — inaczej niż przy kadrach
+   16:9 — pion jest dla niego LEPSZY niż poziom (w poziomie ogranicza go
+   niska wysokość ekranu). Dlatego nie ma tu podpowiedzi „obróć telefon”.
+   Kadr siada tuż pod HUD, a podpowiedź i karta hydraulika lądują pod nim —
+   pozycję liczymy ze zmiennej --scene, którą k04.js ustawia po pomiarze. */
+@media (orientation: portrait) and (max-width: 560px) {
+  .scene { width: min(100%, calc(100vh - var(--hud-h) - 150px)); }
+  /* karta ląduje w wolnym pasie pod kadrem, na środku ekranu */
+  .card { bottom: max(10px, env(safe-area-inset-bottom)); }
+}
+
+/* ══════════════ OSADZENIE W TABLICY LEKCJI ══════════════ */
+
+.k04-embed body { background: transparent; }
+.k04-embed .scene { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32); }
+
+/* ══════════════ OGRANICZONY RUCH ══════════════
+   Woda skacze zamiast płynąć (JS pomija animację dash-offset),
+   strzałki przestają pulsować, karta nie wjeżdża. */
+@media (prefers-reduced-motion: reduce) {
+  .act--fwd { animation: none; }
+  .alarm-flash.is-on { animation: none; opacity: 0.55; }
+  .card { transition: none; }
+  .card.is-enter { opacity: 1; transform: none; }
+}
+
+/* ══════════════ TABLICA KOŃCOWA ══════════════
+   Grafika z wpalonymi napisami. Żywe są tylko trzy liczby (SVG w układzie
+   współrzędnych grafiki) i przycisk (przezroczysty, dokładnie na wpalonej
+   zielonej płytce). Pola po wypalonych liczbach są wyczyszczone w samym
+   pliku WebP — sklonowanym paskiem pigułki, bez łat w DOM: płaska łata
+   zostawiała widoczny ślad, bo tło pigułki ma delikatną fakturę. */
+
+.board { position: relative; flex: 0 0 auto; }
+
+/* Szerokość ustawia k04.js — patrz updateBoards(). Wartości domyślne są
+   tylko na wypadek, gdyby skrypt nie zdążył policzyć. */
+.board--start { width: var(--board-start, 640px); aspect-ratio: 2016 / 2120; }
+.board--final { width: var(--board-final, 640px); aspect-ratio: 2114 / 2016; }
+
+.board img { display: block; width: 100%; height: 100%; }
+
+.vals { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+/* Kalibrację stopnia pisma i szerokości robi k04.js — celem jest wysokość
+   36 i szerokość 24,5 na cyfrę w układzie grafiki, czyli dokładnie tyle,
+   ile miały cyfry wypalone. Systemowy grotesk jest szerszy od użytego
+   w grafice, dlatego szerokość wymuszamy przez textLength. */
+.vals text {
+  font-family: system-ui, "Segoe UI", Arial, sans-serif;
+  font-weight: 700;
+  fill: #fffef9;
+  stroke: #4a3325;
+  stroke-width: 4;
+  paint-order: stroke fill;
+  stroke-linejoin: round;
+}
+
+/* Przycisk na wpalonej płytce: przezroczysty, więc grafika zostaje widoczna,
+   ale to prawdziwy <button> — ma fokus, Enter i etykietę. Na telefonie
+   min-height podnosi go do 44 px, rosnąc symetrycznie względem płytki.
+
+   POŁOŻENIE JEST OSOBNE DLA KAŻDEJ TABLICY (S1.A.1). Jedna wspólna reguła
+   ustawiała pole klikalne w obu, a przycisk leży na nich w innych miejscach:
+   pomiar pikseli grafik dał środek na 80,8% wysokości w tablicy początkowej
+   i na 90,5% w końcowej. Wspólne wartości były skalibrowane pod końcową,
+   więc na początkowej pole klikalne siedziało ok. 10% wysokości NIŻEJ niż
+   zielona pigułka. Wartości niżej opisują pole dotykowe, więc są nieco
+   większe od samej pigułki — obejmują obwódkę i cień. */
+.board-go {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-height: 44px;
+  border: 0; padding: 0;
+  font: inherit;
+  color: transparent;
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* tablica początkowa „Zaczynamy akcję Kanalizacja" (1200 × 1262) —
+   zielona pigułka „SCHODZIMY POD ZIEMIĘ" */
+.board--start .board-go {
+  left: 52.3%; top: 80.7%;
+  width: 42%; height: 8.1%;
+}
+/* tablica końcowa (1200 × 1144) — pigułka „ZAPISZ LITERĘ I KONTYNUUJ";
+   te wartości były w arkuszu od początku i pomiar je potwierdził */
+.board--final .board-go {
+  left: 50.71%; top: 90.55%;
+  width: 39.45%; height: 10.47%;
+}
+
+.board-go:hover  { background: rgba(255, 255, 255, 0.12); }
+.board-go:active { background: rgba(0, 0, 0, 0.14); }
+.board-go:focus-visible { outline: 3px solid #ffd899; outline-offset: 3px; }
+.board-go[aria-disabled="true"] { cursor: default; background: rgba(0, 0, 0, 0.22); }
+
+/* Puenta lekcji — na tablicy nie ma na nią miejsca, a klocek nie może się
+   skończyć samą gratulacją. */
+.board-note {
+  width: var(--board-final, 640px);
+  margin-top: 10px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  text-align: center;
+  color: #f2e4cf;
+}
+
+/* PRZEŁĄCZNIK POSTACI. Decyduje nie rozmiar okna, tylko szerokość, do jakiej
+   tablica REALNIE się skaluje w dostępnym kadrze — w lekcji gra siedzi
+   w ramce o własnej wysokości i media query na oknie kłamałaby.
+   Wartość liczy updateBoards() w k04.js przy każdej zmianie rozmiaru.
+
+   Domyślnie (zanim skrypt policzy) widać kartę HTML — bezpieczniejszy wybór
+   niż nieczytelna grafika. */
+.board, .board-note, .sr-board { display: none; }
+
+.overlay[data-form="graf"] .board,
+.overlay[data-form="graf"] .board-note,
+.overlay[data-form="graf"] .sr-board { display: block; }
+
+.overlay[data-form="graf"] .panel--small { display: none; }
+
+/* Przycisk finału po kliknięciu: zostaje na miejscu, ale już nie reaguje —
+   `k04:continue` leci dokładnie raz, a tablica ma zostać na ekranie. */
+.btn[aria-disabled="true"] { opacity: 0.55; cursor: default; }
+.board-go.is-done:hover, .btn[aria-disabled="true"]:hover { background: rgba(0, 0, 0, 0.22); }
+.btn[aria-disabled="true"]:hover { background: var(--c-navy); }
+
+/* Na ekranie finału podpowiedź spod kadru jest już niepotrzebna — tablica
+   mówi wszystko, a dwa komunikaty naraz to szum. */
+.game[data-state="final"] .hint,
+.game[data-state="intro"] .hint { display: none; }

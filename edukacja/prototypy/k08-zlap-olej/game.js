@@ -163,6 +163,7 @@ const game = {
   keyHold: { left: 0, right: 0 },   // ms trzymania klawisza (rozpędzanie)
 
   completionSent: false,    // k08:completed emitowane tylko raz
+  continueSent: false,      // k08:continue emitowane tylko raz (S1.A.1)
   lastTime: 0,
 };
 
@@ -1009,12 +1010,21 @@ function bindControls() {
 
   el.btnResume.addEventListener("click", resumeGame);
 
-  /* prototyp: przycisk tylko potwierdza — zapis litery nastąpi w lekcji */
+  /* „LITERA Z GOTOWA" mówi lekcji, że uczeń chce iść dalej — ten sam
+     kontrakt, co `k04:continue` w Rurociągu i `k06:continue` w kuchni
+     (Etap S1.A.1). Zdarzenie na `window`, z `bubbles`, DOKŁADNIE RAZ;
+     lekcja przewija wtedy do kolejnej sceny. Litera idzie osobno,
+     z `k08:completed` — brak tego zdarzenia niczego nie psuje. */
   el.btnNext.addEventListener("click", () => {
     if (game.state !== STATES.WON) return;
-    announce("Litera Z gotowa. Zapis w Aktach sprawy nastąpi w pełnej lekcji.");
+    announce("Litera Z gotowa. Wracasz do e-lekcji.");
     el.btnNext.disabled = true;
     el.btnNext.textContent = "LITERA Z GOTOWA ✓";
+    if (game.continueSent) return;
+    game.continueSent = true;
+    try {
+      window.dispatchEvent(new CustomEvent("k08:continue", { bubbles: true }));
+    } catch (e) { /* zdarzenie jest opcjonalne dla samego prototypu */ }
   });
 
   el.soundBtn.addEventListener("click", () => setSound(!soundEnabled));

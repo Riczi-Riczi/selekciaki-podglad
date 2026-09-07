@@ -818,7 +818,96 @@
       titleFixes.push({ el: n, html: n.innerHTML });
       n.innerHTML = n.innerHTML.split(NBSP).join(" ").split("&nbsp;").join(" ");
     });
+    poprawWpisywanie(node);
+    ukryjKickery(node);
     return node;
+  }
+
+  /* ── KONIEC POLECEŃ „WPISZ LITERĘ" W TREŚCI (Etap S1.A) ──────────
+     Klocki są WSPÓLNE ze starą lekcją, a w `?legacy=1` uczeń nadal literę
+     przepisuje — więc zdania o wpisywaniu nie znikają z pliku HTML, tylko
+     przechodzą przez `moveBlockInto` razem z klockiem. Jedno wejście, więc
+     łapiemy też klocki doczytywane później (K15 przy odsłonie sceny, K16
+     w Tropie 9), których pojedyncze wywołanie przy budowie by nie objęło.
+
+     Podmieniamy WĘZŁY TEKSTOWE, nie `innerHTML`, żeby linki awaryjne w tych
+     akapitach zostały nietknięte; oryginał zapisujemy do `titleFixes`, więc
+     przy zamknięciu rozdziału treść wraca do postaci z dokumentu.
+
+     Wzorce piszemy zwykłym tekstem, a każdą spację zamieniamy na `\s+`:
+     w dokumencie te zdania są łamane na kilka wierszy i najeżone twardymi
+     spacjami (`&nbsp;`), więc dosłowne dopasowanie po jednej spacji
+     przepuszczało je (pomiar t1: zdanie o literze O zostało w Tropie 7). */
+  const luzno = (tekst) => new RegExp(
+    tekst.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"), "i");
+  const FRAZY_WPISYWANIA = [
+    ["Po ukończeniu wpisz literę w trzecim polu postępu śledztwa.",
+     "Moduł otwarty w osobnej karcie nie przekaże wyniku do lekcji."],
+    ["Uwaga: w osobnej karcie gra nie przekaże wyniku lekcji, więc po powrocie "
+     + "literę O trzeba będzie wpisać samodzielnie w polu postępu śledztwa.",
+     "Uwaga: w osobnej karcie gra nie przekaże wyniku lekcji — po powrocie "
+     + "trzeba ją przejść jeszcze raz tutaj."],
+    ["po ukończeniu wróć tutaj i wpisz literę K w piątym polu postępu śledztwa.",
+     "po ukończeniu wróć tutaj i przejdź moduł w tym oknie."],
+    ["Wpisz literę K w polu postępu.",
+     "Litera K trafiła do paska postępu na górze."],
+    /* K06 (Trop 4) i K04 (Trop 3) — zdania z bloków, których skrót noty
+       awaryjnej do samego linku nie obejmuje */
+    ["Po odnalezieniu wszystkich pięciu śladów zobaczysz zdobytą literę — wpisz ją "
+     + "w drugim polu postępu śledztwa.",
+     "Po odnalezieniu wszystkich pięciu śladów litera S trafi do paska postępu na górze."],
+    ["Po dotarciu do zatoru zobaczysz zdobytą literę — wpisz ją w pierwszym polu "
+     + "postępu śledztwa.",
+     "Po dotarciu do zatoru litera P trafi do paska postępu na górze."],
+  ].map(([a, b]) => [luzno(a), b]);
+  /* ── KICKERY ZBĘDNE W TABLICY (Etap S1.A.1) ─────────────────────
+     Nadtytuł ma nieść informację, nie etykietować oczywistość: uczeń widzi
+     grę i wie, że to zadanie, więc „Punkt kontrolny" nad każdą z nich jest
+     szumem. Znikają też nazwy działów („Sprawa odpadów", „Sprawa surowców",
+     „Skala") i „Terminal". Zostają te, które NIOSĄ treść: „Dane ze śledztwa"
+     i „Początek sprawy".
+
+     Ukrywamy przez `hidden`, czyli także dla czytnika — nagłówki scen
+     (`h1`, `h2`) zostają nietknięte, więc struktura dokumentu się nie
+     zmienia. Odwracalnie: `?legacy=1` zachowuje pełne nadtytuły. */
+  const KICKERY_ZBEDNE = [
+    /^punkt kontrolny$/i,
+    /^skala$/i,
+    /^sprawa odpadów$/i,
+    /^sprawa surowców$/i,
+    /^terminal$/i,
+  ];
+  function ukryjKickery(root) {
+    if (!root || !root.querySelectorAll) return;
+    root.querySelectorAll(".kicker, .bd-scene__kicker").forEach((n) => {
+      if (n.hidden) return;
+      /* „Klocek 6 • punkt kontrolny" — bierzemy ogon za kropką, tak samo
+         jak skraca ten tekst reszta silnika */
+      const pelny = (n.textContent || "").replace(/\s+/g, " ").trim();
+      const ogon = pelny.indexOf("•") >= 0 ? pelny.split("•").pop().trim() : pelny;
+      if (!KICKERY_ZBEDNE.some((re) => re.test(ogon))) return;
+      n.hidden = true;
+      chapterCleanup.push(() => { n.hidden = false; });
+    });
+  }
+
+  function poprawWpisywanie(node) {
+    if (!node) return;
+    node.querySelectorAll(".note, .body-text").forEach((el) => {
+      const przed = el.innerHTML;
+      const teksty = [];
+      const chodz = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+      while (chodz.nextNode()) teksty.push(chodz.currentNode);
+      let zmiana = false;
+      teksty.forEach((t) => {
+        FRAZY_WPISYWANIA.forEach(([wzor, na]) => {
+          if (!wzor.test(t.nodeValue)) return;
+          t.nodeValue = t.nodeValue.replace(wzor, na);
+          zmiana = true;
+        });
+      });
+      if (zmiana) titleFixes.push({ el, html: przed });
+    });
   }
 
   function evidenceHtml(c, idx) {
@@ -838,244 +927,322 @@
       </figure>`;
   }
 
-  /* Pasek pomocniczy — w rozdziale z dwiema scenami jest przyklejony
-     (sticky), żeby „Wróć do tablicy" nie zniknęło po przewinięciu. */
   /* ═══════════════════════════════════════════════════════════════
-     PANEL AUDIO W BELCE TROPU (Etap A3)
+     BELKA GÓRNA TROPU (Etap S1.A)
 
-     Jeden mechanizm dźwięku (`NS.audio`), dwie prezentacje: niemodalny
-     popover pod przyciskiem na szerokich ekranach i modalny arkusz przy
-     dolnej krawędzi na telefonach. Panel nie trzyma własnego stanu —
-     subskrybuje menedżera (`onUi`) i zmienia ustawienie wyłącznie przez
-     `setMode`, więc chipy w Tropie 1, ten panel i panel starej lekcji
-     zawsze pokazują to samo.
+     Trzy strefy w jednym rzędzie, przyklejone do góry w KAŻDYM tropie:
+       lewa   — „← Wróć do tablicy" (id `bd-ch-back` zostaje, trzyma się go
+                `syncBarHeight` i testy wydania),
+       środek — postęp śledztwa P-S-Z-O-K,
+       prawa  — przełącznik „Czytam / Czytam i słucham" plus „↻ Od początku".
+
+     Co zniknęło: okruszek „Trop X z 9 · tytuł" (numer tropu stoi teraz
+     w treści, nad tytułem pierwszej sceny), przycisk „Odtwórz animację"
+     (animacja i tak gra przy każdym wejściu z tablicy) oraz cały popover
+     i arkusz dźwięku z A3 — tryb zmienia się JEDNYM kliknięciem, bez panelu.
      ═══════════════════════════════════════════════════════════════ */
-  const A3_PROG_ARKUSZ = 900;      /* ten sam próg, w którym belka staje się dwurzędowa */
-  const trybArkusza = () => window.matchMedia("(max-width: " + A3_PROG_ARKUSZ + "px)").matches;
 
-  function audioBtnHtml() {
-    return `<button type="button" class="bd-btn bd-btn--dark bd-btn--sm bd-audiobtn"
-            id="bd-audio-btn" aria-expanded="false" aria-controls="bd-audio-panel"
-            aria-label="Dźwięk lekcji: tekst bez narracji. Otwórz ustawienia dźwięku">
-        <span class="bd-audiobtn__ico" aria-hidden="true">Aa</span>
-        <span class="bd-audiobtn__txt">Audio<span class="bd-audiobtn__tryb">: czytam</span></span>
+  /* ── PRZYCISKI WYBORU TRYBU W TROPIE 1 (Korekta A3.2) ────────────
+     Odtworzone 1:1 z projektu użytkownika (cztery pliki SVG 2400×640,
+     stan zwykły i wybrany). Wszystko skaluje się od WYSOKOŚCI przycisku,
+     bo w projekcie każdy element jest ułamkiem 640 px: obwódka 16/640
+     (wybrany 24/640), promień 96/640, kółko ikony r = 202/640, prawy panel
+     500/2400 szerokości. Napis jest PRAWDZIWYM tekstem w Satoshi Bold —
+     tym samym kroju, którego użyto w projekcie i który lekcja już ma
+     w `assets/fonts` — więc skaluje się, daje się zaznaczyć i czyta go
+     czytnik ekranu. */
+  const IKONA_TRYBU = {
+    /* otwarta książka — wycięta z „tryb-czytam-v3-*.svg" */
+    read: '<svg viewBox="126 173 404 294" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'
+      + '<path d="M179 226c74-24 132 0 151 34v196c-37-37-92-56-151-32V226Zm302 0c-74-24-132 0-151 34v196c37-37 92-56 151-32V226Z" fill="none" stroke="#244B2D" stroke-width="27" stroke-linejoin="round"/>'
+      + '<path d="M330 259v197" stroke="#244B2D" stroke-width="19" stroke-linecap="round"/></svg>',
+    /* książka z głośnikiem — z „tryb-czytam-i-slucham-v3-*.svg" */
+    both: '<svg viewBox="140 235 380 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'
+      + '<path d="M151 246c50-16 92 1 109 27v138c-28-26-67-40-109-24V246Zm218 0c-50-16-92 1-109 27v138c28-26 67-40 109-24V246Z" fill="none" stroke="#244B2D" stroke-width="23" stroke-linejoin="round"/>'
+      + '<path d="M260 273v138" stroke="#244B2D" stroke-width="16" stroke-linecap="round"/>'
+      + '<path d="M395 332h35l48 39V253l-48 39h-35v40Z" fill="#3E6034"/>'
+      + '<path d="M501 282c20 22 20 54 0 76" fill="none" stroke="#3E6034" stroke-width="16" stroke-linecap="round"/></svg>',
+  };
+  /* prawy panel: strzałka w stanie zwykłym, ptaszek w wybranym */
+  const PANEL_TRYBU =
+    '<svg class="bd-trybbtn__arrow" viewBox="2019 222 218 196" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'
+    + '<path d="M2035 320h185m-82-82 82 82-82 82" fill="none" stroke="#244B2D" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    + '<svg class="bd-trybbtn__check" viewBox="2018 150 246 254" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'
+    + '<path d="M2037 319l66 66 143-150" fill="none" stroke="#FFFDF7" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function przyciskiTrybuHtml(nazwaGrupy) {
+    const btn = (wartosc, tytul) => `
+      <label class="bd-trybbtn bd-trybbtn--${wartosc}">
+        <input type="radio" name="${nazwaGrupy}" value="${wartosc}" class="bd-trybbtn__radio">
+        <span class="bd-trybbtn__in">
+          <span class="bd-trybbtn__ring">${IKONA_TRYBU[wartosc]}</span>
+          <span class="bd-trybbtn__txt">${tytul}</span>
+          <span class="bd-trybbtn__panel">${PANEL_TRYBU}</span>
+        </span>
+      </label>`;
+    return btn("read", "Czytam") + btn("both", "Czytam i słucham");
+  }
+
+  /* ── POSTĘP ŚLEDZTWA W BELCE ─────────────────────────────────────
+     Pięć kwadracików P-S-Z-O-K. Uczeń NIC nie wpisuje: literę przyznaje
+     zdarzenie gry (`NS.state.awardLetter`), a kwadracik przechodzi kolejno
+     przez trzy stany — kreska z kropką, pulsująca litera, ptaszek. Stan
+     czytamy wyłącznie z `lesson-state`, więc powracający uczeń zastaje
+     komplet ptaszków od razu, bez animacji.
+
+     Nazwę dla czytnika niesie ukryty tekst w każdym kwadraciku, a nie
+     `aria-label` na `<li>`: tekst czytają wszystkie silniki tak samo
+     i przeżywa tłumaczenie strony. */
+  const LITERY_BELKI = ["P", "S", "Z", "O", "K"];
+
+  function belkaProgHtml() {
+    const slot = (L) => `<li class="bd-prog__slot" data-letter="${L}" tabindex="-1">
+        <span class="bd-prog__lit" aria-hidden="true">${L}</span>
+        <svg class="bd-prog__check" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4.5 12.5l5 5.2L19.5 6.6" fill="none" stroke="currentColor" stroke-width="3.2"
+            stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="bd-sr" data-prog-sr>Punkt kontrolny ${L}: niezdobyty</span>
+      </li>`;
+    return `<ol class="bd-prog" id="bd-prog" aria-label="Postęp śledztwa: 0 z 5 punktów">`
+      + LITERY_BELKI.map(slot).join("") + `</ol>`;
+  }
+
+  /* ── PRAWA STREFA BELKI: TRYB I POWTÓRKA ─────────────────────────
+     Dwie prezentacje tego samego wyboru, bo szerokość na to nie pozwala
+     inaczej: na szerokich ekranach segmentowa pigułka z dwiema opcjami
+     (widać, że wybory są dwa i który jest aktywny), na telefonie JEDEN
+     przycisk 44 px przełączający tam i z powrotem — dwie ikony obok
+     pięciu kwadracików nie mieszczą się w kadrze 320 px. Zawsze widoczna
+     jest dokładnie jedna z nich (`display:none` wyjmuje drugą również
+     z kolejności Tab i z drzewa dostępności), a obie karmi ten sam
+     `render`, więc nie ma dwóch prawd o trybie. */
+  function belkaTrybHtml() {
+    const opcja = (w, tytul) => `
+      <label class="bd-tryb__opt bd-tryb__opt--${w}">
+        <input type="radio" name="bd-tryb-belka" value="${w}" class="bd-tryb__radio">
+        <span class="bd-tryb__in">
+          <span class="bd-tryb__ico" aria-hidden="true">${IKONA_TRYBU[w]}</span>
+          <span class="bd-tryb__txt">${tytul}</span>
+        </span>
+      </label>`;
+    return `<div class="bd-tryb" role="radiogroup" aria-label="Jak chcesz poznawać tropy">`
+      + opcja("read", "Czytam") + opcja("both", "Czytam i słucham") + `</div>
+      <button type="button" class="bd-trybtog" id="bd-tryb-tog" aria-pressed="false"
+              aria-label="Czytam. Włącz narrację">
+        <span class="bd-trybtog__ico" aria-hidden="true">${IKONA_TRYBU.read}</span>
       </button>`;
   }
 
-  /** Dwie karty wyboru — wspólny wzorzec dla panelu i (w wersji chipów)
-      dla Tropu 1. Cała karta jest klikalna, bo `<label>` obejmuje radio. */
-  function kartyTrybuHtml(nazwaGrupy, kompakt) {
-    const karta = (wartosc, ikona, tytul, opis) => `
-      <label class="bd-audiocard${kompakt ? " bd-audiocard--chip" : ""}">
-        <input type="radio" name="${nazwaGrupy}" value="${wartosc}" class="bd-audiocard__radio">
-        <span class="bd-audiocard__in">
-          <span class="bd-audiocard__ico" aria-hidden="true">${ikona}</span>
-          <span class="bd-audiocard__txt">
-            <span class="bd-audiocard__name">${tytul}</span>
-            ${kompakt ? "" : `<span class="bd-audiocard__desc">${opis}</span>`}
-          </span>
-          <span class="bd-audiocard__check" aria-hidden="true">✓</span>
-        </span>
-      </label>`;
-    return karta("read", "Aa", "Czytam", "Tekst bez narracji") +
-           karta("both", "🔊", "Czytam i słucham", "Tekst i narracja razem");
+  /** Powtórka narracji sceny. Panel z A3 dawał „Odtwórz / Pauza / Od
+      początku"; po jego usunięciu zatrzymanie dźwięku niesie samo
+      przełączenie na „Czytam", ale POWTÓRZENIE sceny nie miałoby czym.
+      Dlatego jeden przycisk, widoczny wyłącznie wtedy, gdy jest czego
+      słuchać: tryb „Czytam i słucham" ORAZ scena z nagraniem. */
+  function belkaReplayHtml() {
+    return `<button type="button" class="bd-topbtn bd-topbtn--replay" id="bd-audio-restart" hidden
+              aria-label="Odtwórz narrację tej sceny od początku">
+        <svg class="bd-topbtn__ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M20 12a8 8 0 1 1-2.4-5.7M20.5 4.2V9.4h-5.2" fill="none" stroke="currentColor"
+            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="bd-topbtn__txt">Od początku</span>
+      </button>`;
   }
 
-  function audioPanelHtml() {
-    return `<div class="bd-audiopanel" id="bd-audio-panel" hidden>
-        <div class="bd-audiopanel__box" id="bd-audio-box" aria-labelledby="bd-audio-title">
-          <button type="button" class="bd-audiopanel__close" id="bd-audio-close"
-                  aria-label="Zamknij ustawienia dźwięku">✕</button>
-          <p class="bd-audiopanel__kicker">DŹWIĘK LEKCJI</p>
-          <h2 class="bd-audiopanel__title" id="bd-audio-title">Jak chcesz poznawać tropy?</h2>
-          <div class="bd-audiopanel__cards" role="radiogroup" aria-labelledby="bd-audio-title">
-            ${kartyTrybuHtml("bd-audio-mode", false)}
-          </div>
-          <div class="bd-audiopanel__now">
-            <p class="bd-audiopanel__nowlab">TERAZ</p>
-            <p class="bd-audiopanel__scene" id="bd-audio-scene">—</p>
-            <p class="bd-audiopanel__status" id="bd-audio-status" role="status" aria-live="polite"></p>
-          </div>
-          <div class="bd-audiopanel__row" id="bd-audio-controls" hidden>
-            <button type="button" class="bd-audiopanel__btn bd-audiopanel__btn--main" id="bd-audio-play">Odtwórz</button>
-            <button type="button" class="bd-audiopanel__btn" id="bd-audio-restart">Od początku</button>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  /** Panel + przycisk w belce rozdziału. Wołane dla KAŻDEGO tropu. */
-  function wireAudioUI(view) {
-    const btn = view.querySelector("#bd-audio-btn");
-    if (!btn || !NS.audio) return;
-    view.insertAdjacentHTML("beforeend", audioPanelHtml());
-    const panel = view.querySelector("#bd-audio-panel");
-    const box = view.querySelector("#bd-audio-box");
-    const zamknij = view.querySelector("#bd-audio-close");
-    const scena = view.querySelector("#bd-audio-scene");
-    const status = view.querySelector("#bd-audio-status");
-    const sterowanie = view.querySelector("#bd-audio-controls");
-    const play = view.querySelector("#bd-audio-play");
-    const restart = view.querySelector("#bd-audio-restart");
-    const radia = Array.from(panel.querySelectorAll('input[name="bd-audio-mode"]'));
-    let otwarty = false;
-
-    /* ── prezentacja: popover czy arkusz ── */
-    const ustawTryb = () => {
-      const arkusz = trybArkusza();
-      panel.classList.toggle("is-arkusz", arkusz);
-      panel.classList.toggle("is-popover", !arkusz);
-      if (arkusz) {
-        box.setAttribute("role", "dialog");
-        box.setAttribute("aria-modal", "true");
-      } else {
-        box.setAttribute("role", "group");
-        box.removeAttribute("aria-modal");
-      }
+  /** Kwadraciki postępu: subskrypcja stanu lekcji, animacja zdobycia
+      i punkt zaczepienia fokusu (`view.__bdFokusLitery`) dla scen, które
+      po wygranej przenosiły go dotąd na pole wpisania. */
+  function wireBelkaProg(view) {
+    const lista = view.querySelector("#bd-prog");
+    const S = NS.state;
+    if (!lista || !S || !S.get) return;
+    const sloty = Array.from(lista.querySelectorAll(".bd-prog__slot"));
+    const zdobyte = () => {
+      const cl = S.get().checkpointLetters || {};
+      return LITERY_BELKI.filter((L) => cl[L]);
     };
-    ustawTryb();
-    const mq = window.matchMedia("(max-width: " + A3_PROG_ARKUSZ + "px)");
-    const naZmianeProgu = () => { ustawTryb(); if (otwarty) pozycjonuj(); };
-    if (mq.addEventListener) mq.addEventListener("change", naZmianeProgu);
-    chapterCleanup.push(() => { if (mq.removeEventListener) mq.removeEventListener("change", naZmianeProgu); });
+    /* Litery zdobyte PRZED wejściem w trop rysujemy od razu ptaszkiem —
+       animacja należy się wyłącznie zdobyciu na oczach ucznia. */
+    let poprzednie = zdobyte();
+    const timery = [];
 
-    /* popover kotwiczy się pod przyciskiem, wyrównany do jego prawej krawędzi */
-    const pozycjonuj = () => {
-      if (trybArkusza()) { box.style.left = ""; box.style.top = ""; return; }
-      const r = btn.getBoundingClientRect();
-      const vr = view.getBoundingClientRect();
-      const szer = box.offsetWidth || 320;
-      let left = r.right - vr.left - szer;
-      left = Math.max(12, Math.min(left, vr.width - szer - 12));
-      box.style.left = Math.round(left) + "px";
-      box.style.top = Math.round(r.bottom - vr.top + 10) + "px";
-    };
-
-    /* ── otwieranie i zamykanie ── */
-    /* Grupa radiowa to dla klawiatury JEDEN przystanek (Tab wchodzi i wychodzi,
-       strzałki przełączają w środku) — więc do listy bierzemy z niej wyłącznie
-       zaznaczone pole. Bez tego pułapka wypuszczała fokus na stronę, bo za
-       „ostatni" uznawała pole, którego Tab i tak nie odwiedza. */
-    const fokusowalne = () => Array.from(box.querySelectorAll(
-      'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'))
-      .filter((n) => n.offsetParent !== null || n.type === "radio")
-      .filter((n) => n.type !== "radio" || n.checked);
-
-    const pulapka = (e) => {
-      if (e.key !== "Tab" || !trybArkusza() || !otwarty) return;
-      const lista = fokusowalne();
-      if (!lista.length) return;
-      const pierwszy = lista[0], ostatni = lista[lista.length - 1];
-      const akt = document.activeElement;
-      /* Fokus poza arkuszem — wracamy do środka. Bez tego Tab uciekał na
-         stronę pod arkuszem (pomiar regresji A3: 6 z 7 tabów poza panelem),
-         bo po otwarciu fokus siadał na tytule, który sam kontrolką nie jest. */
-      if (!box.contains(akt)) { e.preventDefault(); (e.shiftKey ? ostatni : pierwszy).focus(); return; }
-      if (e.shiftKey && akt === pierwszy) { e.preventDefault(); ostatni.focus(); }
-      else if (!e.shiftKey && akt === ostatni) { e.preventDefault(); pierwszy.focus(); }
-    };
-
-    const otworz = () => {
-      if (otwarty) return;
-      otwarty = true;
-      panel.hidden = false;
-      ustawTryb();
-      pozycjonuj();
-      btn.setAttribute("aria-expanded", "true");
-      /* Trop 5 jeździ slajdami na kółko i klawiaturę — na czas otwartego
-         panelu nawigacja slajdów milknie, żeby scena nie uciekała spod
-         palca (ryzyko 3 z preflightu A3). */
-      view.dataset.bdAudioOpen = "1";
-      requestAnimationFrame(() => {
-        const cel = trybArkusza()
-          ? (zamknij || fokusowalne()[0])
-          : (radia.find((r) => r.checked) || radia[0] || zamknij);
-        if (cel) { if (cel.tabIndex < 0 && !cel.matches("input")) cel.tabIndex = -1; cel.focus({ preventScroll: true }); }
+    const rysuj = (swieze) => {
+      const teraz = zdobyte();
+      sloty.forEach((s) => {
+        const L = s.dataset.letter;
+        const ma = teraz.indexOf(L) >= 0;
+        const nowa = !!(swieze && swieze.indexOf(L) >= 0) && !reduceMotion;
+        const sr = s.querySelector("[data-prog-sr]");
+        if (sr) sr.textContent = "Punkt kontrolny " + L + (ma ? ": zdobyty" : ": niezdobyty");
+        if (nowa) {
+          /* litera → trzy pulsy → ptaszek */
+          s.classList.remove("is-done");
+          s.classList.add("is-zdobywa");
+          const t = setTimeout(() => {
+            s.classList.remove("is-zdobywa");
+            s.classList.add("is-done");
+          }, 1320);
+          timery.push(t);
+        } else if (!s.classList.contains("is-zdobywa")) {
+          s.classList.toggle("is-done", ma);
+        }
       });
+      lista.setAttribute("aria-label", "Postęp śledztwa: " + teraz.length + " z 5 punktów");
     };
 
-    const zamknijPanel = (wrocFokus) => {
-      if (!otwarty) return;
-      otwarty = false;
-      panel.hidden = true;
-      btn.setAttribute("aria-expanded", "false");
-      delete view.dataset.bdAudioOpen;
-      if (wrocFokus) btn.focus({ preventScroll: true });
+    const odsw = () => {
+      const teraz = zdobyte();
+      const swieze = teraz.filter((L) => poprzednie.indexOf(L) < 0);
+      poprzednie = teraz;
+      rysuj(swieze);
+      if (!swieze.length) return;
+      const L = swieze[swieze.length - 1];
+      /* WŁASNY region `aria-live`, nie wspólny `#bd-live`. Pomiar pokazał,
+         dlaczego: po wygranej K04 lekcja ogłasza jeszcze „Zator odnaleziony"
+         i „Odkryty dowód", więc komunikat o literze był nadpisywany w tym
+         samym regionie w ułamku sekundy i czytnik mógł go w ogóle nie
+         przeczytać. Dwa niezależne regiony = dwa niezależne komunikaty. */
+      const live = view.querySelector("#bd-prog-live");
+      if (live) live.textContent =
+        "Zdobywasz literę " + L + ". Masz " + teraz.length + " z 5 punktów kontrolnych.";
     };
 
-    btn.addEventListener("click", () => { if (otwarty) zamknijPanel(true); else otworz(); });
-    zamknij.addEventListener("click", () => zamknijPanel(true));
-
-    /* Klik poza panelem zamyka go, ale NIE odbiera kliknięcia — kontrolka
-       pod kursorem działa od razu, bez drugiego kliknięcia (errata E6). */
-    const naDokumencie = (e) => {
-      if (!otwarty) return;
-      if (box.contains(e.target) || btn.contains(e.target)) return;
-      if (trybArkusza()) { e.preventDefault(); e.stopPropagation(); }
-      zamknijPanel(false);
+    rysuj(null);
+    const odepnij = S.onChange(odsw);
+    /* Fokus po wygranej: dotąd siadał na polu wpisania litery, którego już
+       nie ma. Kwadracik ma `tabindex="-1"`, więc przyjmuje fokus programowo,
+       ale nie wchodzi do kolejności Tab. */
+    view.__bdFokusLitery = (L) => {
+      const s = sloty.find((n) => n.dataset.letter === L);
+      if (s) { try { s.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
     };
-    document.addEventListener("pointerdown", naDokumencie, true);
-    chapterCleanup.push(() => document.removeEventListener("pointerdown", naDokumencie, true));
-
-    const naEscape = (e) => {
-      if (e.key === "Escape" && otwarty) { e.stopPropagation(); zamknijPanel(true); return; }
-      pulapka(e);
-    };
-    document.addEventListener("keydown", naEscape, true);
-    chapterCleanup.push(() => document.removeEventListener("keydown", naEscape, true));
-
-    const naScroll = () => { if (otwarty && !trybArkusza()) pozycjonuj(); };
-    view.addEventListener("scroll", naScroll, { passive: true });
-    window.addEventListener("resize", naScroll);
     chapterCleanup.push(() => {
-      view.removeEventListener("scroll", naScroll);
-      window.removeEventListener("resize", naScroll);
+      odepnij();
+      while (timery.length) clearTimeout(timery.pop());
+      delete view.__bdFokusLitery;
     });
+  }
 
-    /* ── kontrolki ── */
+  /** Przełącznik trybu i powtórka. Jedno źródło prawdy — menedżer dźwięku;
+      belka tylko go pokazuje i woła `setMode`. */
+  function wireBelkaTryb(view) {
+    const A = NS.audio;
+    if (!A) return;
+    const radia = Array.from(view.querySelectorAll('input[name="bd-tryb-belka"]'));
+    const tog = view.querySelector("#bd-tryb-tog");
+    const restart = view.querySelector("#bd-audio-restart");
+    if (!radia.length && !tog && !restart) return;
+
     radia.forEach((r) => r.addEventListener("change", () => {
-      if (r.checked) NS.audio.setMode(r.value);
+      if (r.checked) A.setMode(r.value);
     }));
-    play.addEventListener("click", () => {
-      const stan = NS.audio.stanUi();
-      if (stan.gra) NS.audio.pause();
-      else { NS.audio.resumeAllowed(); NS.audio.play(false); }
+    if (tog) tog.addEventListener("click", () => {
+      A.setMode(A.stanUi().tryb === "both" ? "read" : "both");
     });
-    restart.addEventListener("click", () => { NS.audio.resumeAllowed(); NS.audio.play(true); });
+    /* `resumeAllowed(true)` — z argumentem, bo tylko ten przycisk zdejmuje
+       TWARDĄ blokadę założoną gestem w grze (S1.A.1). To jedyna droga
+       powrotu do narracji uciszonej przez granie. */
+    if (restart) restart.addEventListener("click", () => {
+      A.resumeAllowed(true);
+      A.play(true);
+    });
 
-    /* ── render stanu (jedno źródło: menedżer) ── */
     const render = (d) => {
-      radia.forEach((r) => { r.checked = (r.value === d.tryb); });
-      panel.querySelectorAll(".bd-audiocard").forEach((k) => {
-        const inp = k.querySelector("input");
-        k.classList.toggle("is-on", !!(inp && inp.checked));
-      });
       const zDzwiekiem = d.tryb === "both";
-      btn.classList.toggle("is-dzwiek", zDzwiekiem);
-      const ikona = btn.querySelector(".bd-audiobtn__ico");
-      /* Etykieta ma dwie części, bo na telefonie w rzędzie stoją TRZY akcje
-         i pełny wariant („Audio: czytam i słucham") wypychał je poza ekran.
-         Wąskie ekrany chowają samą końcówkę trybu — zostaje „Audio”, a stan
-         niosą dalej ikona (Aa / 🔊), obwódka `is-dzwiek` i `aria-label`. */
-      const tryb = btn.querySelector(".bd-audiobtn__tryb");
-      if (ikona) ikona.textContent = zDzwiekiem ? "🔊" : "Aa";
-      if (tryb) tryb.textContent = zDzwiekiem ? ": czytam i słucham" : ": czytam";
-      btn.setAttribute("aria-label", (zDzwiekiem
-        ? "Dźwięk lekcji: tekst i narracja razem."
-        : "Dźwięk lekcji: tekst bez narracji.") + " Otwórz ustawienia dźwięku");
-      if (scena) scena.textContent = d.tytul || "—";
-      if (status) status.textContent = d.status || "";
-      if (sterowanie) sterowanie.hidden = !zDzwiekiem;
-      if (play) {
-        play.textContent = d.gra ? "Pauza" : "Odtwórz";
-        play.setAttribute("aria-pressed", d.gra ? "true" : "false");
-        play.disabled = !d.maNagranie;
+      radia.forEach((r) => { r.checked = (r.value === d.tryb); });
+      view.querySelectorAll(".bd-tryb__opt").forEach((o) => {
+        const i = o.querySelector("input");
+        o.classList.toggle("is-on", !!(i && i.checked));
+      });
+      if (tog) {
+        tog.classList.toggle("is-on", zDzwiekiem);
+        tog.setAttribute("aria-pressed", zDzwiekiem ? "true" : "false");
+        tog.setAttribute("aria-label", zDzwiekiem
+          ? "Czytam i słucham. Wyłącz narrację"
+          : "Czytam. Włącz narrację");
+        const ik = tog.querySelector(".bd-trybtog__ico");
+        if (ik) ik.innerHTML = IKONA_TRYBU[zDzwiekiem ? "both" : "read"];
       }
-      if (restart) restart.disabled = !d.maNagranie;
+      /* Powtórka znika także na czas filmu (Etap F1). Scena „Materiał
+         odtajniony" nie ma dziś własnego nagrania, więc przycisk i tak jest
+         ukryty — ale gdy nagrania tropów 6–9 dojdą, bez tego warunku uczeń
+         mógłby puścić narrację POD grającym filmem i słyszeć dwa głosy
+         naraz. Kanał audio jest jeden i film ma do niego pierwszeństwo. */
+      const filmGra = !!view.querySelector("#k17-film-wrap iframe");
+      if (restart) restart.hidden = !(zDzwiekiem && d.maNagranie) || filmGra;
     };
-    const odepnij = NS.audio.onUi(render);
+    const odepnij = A.onUi(render);
     chapterCleanup.push(odepnij);
-    chapterCleanup.push(() => { const p = view.querySelector("#bd-audio-panel"); if (p) p.remove(); });
+  }
+
+  function wireBelka(view) {
+    wireBelkaProg(view);
+    wireBelkaTryb(view);
+  }
+
+  /* ── NARRACJA MILKNIE, GDY UCZEŃ ZACZYNA GRAĆ (Etap S1.A.1) ──────
+     Dotychczasowe wyciszanie szło z obserwatora widoczności ramki (45%
+     przez 600 ms) i w trybie tablicy NIE DZIAŁAŁO: `suspend` odrzuca
+     prośbę, gdy proszący element leży w scenie, której nagranie właśnie
+     gra — a w rozdziale ramka gry i narracja to ta sama scena. Skutek:
+     Rurociąg i tort grały razem z narratorem.
+
+     Zamiast poprawiać obserwator zmieniamy sygnał: cisza zapada na
+     PIERWSZY REALNY GEST ucznia w grze — kliknięcie, dotknięcie albo
+     klawisz. To sygnał jednoznaczny (uczeń gra) i nie myli się z samą
+     obecnością ramki w kadrze.
+
+     Blokada jest TWARDA: żaden obserwator jej nie zdejmie. Wraca tylko
+     przyciskiem „Od początku" w belce albo przy przejściu do następnej
+     sceny (patrz `scenaBlokady` w audio-manager).
+
+     Ramki są same-origin, więc słuchamy w ich `contentDocument` —
+     zdarzenia z iframe nie bąbelkują do dokumentu rodzica. Ramka obca
+     (YouTube) wyleci na `catch` i zostanie przy dotychczasowej obsłudze. */
+  const GESTY = ["pointerdown", "keydown", "touchstart"];
+
+  function wyciszNarracjeGrą(view) {
+    if (!NS.audio || !NS.audio.suspend) return;
+    const wycisz = () => NS.audio.suspend(
+      "Narracja wstrzymana — pracuje gra. Wróć do niej przyciskiem „Od początku”.",
+      null, true);
+
+    const wpiete = new WeakSet();
+    const wepnijDokument = (dok) => {
+      if (!dok || wpiete.has(dok)) return;
+      wpiete.add(dok);
+      GESTY.forEach((t) => dok.addEventListener(t, wycisz, true));
+      chapterCleanup.push(() => {
+        try { GESTY.forEach((t) => dok.removeEventListener(t, wycisz, true)); }
+        catch (e) { /* dokument zwolniony razem z ramką */ }
+      });
+    };
+    const wepnijRamke = (f) => {
+      if (wpiete.has(f)) return;
+      wpiete.add(f);
+      const naLoad = () => { try { wepnijDokument(f.contentDocument); } catch (e) { /* obca */ } };
+      f.addEventListener("load", naLoad);
+      naLoad();                       /* ramka mogła być już wczytana */
+      chapterCleanup.push(() => f.removeEventListener("load", naLoad));
+    };
+    const skanuj = () => view.querySelectorAll("iframe").forEach(wepnijRamke);
+    skanuj();
+
+    /* Sceny doczytywane później (K15 przy odsłonie, K08 po literze S)
+       przynoszą własne ramki — obserwator łapie je bez ponownego wołania. */
+    const mo = new MutationObserver(skanuj);
+    mo.observe(view, { childList: true, subtree: true });
+    chapterCleanup.push(() => mo.disconnect());
+
+    /* Diagram K05: karty i kawałki tortu są w dokumencie lekcji, więc
+       wystarczy zwykły nasłuch na kontenerze rozdziału. Zawężamy do
+       elementów diagramu, żeby zwykłe przewijanie treści nie uciszało. */
+    const naDiagram = (e) => {
+      const t = e.target;
+      if (t && t.closest && t.closest(".mdo-card, .mdo-wyc, .mdo-tort, [data-mdo-card]")) wycisz();
+    };
+    GESTY.forEach((t) => view.addEventListener(t, naDiagram, true));
+    chapterCleanup.push(() =>
+      GESTY.forEach((t) => view.removeEventListener(t, naDiagram, true)));
   }
 
   /** Chipy wyboru trybu w Tropie 1 (Etap A3, wariant B).
@@ -1088,7 +1255,7 @@
     const wrap = h("div", "bd-audiochips");
     wrap.innerHTML = '<p class="bd-audiochips__q" id="bd-chips-q">Jak chcesz poznawać tropy?</p>' +
       '<div class="bd-audiochips__row" role="radiogroup" aria-labelledby="bd-chips-q">' +
-      kartyTrybuHtml("bd-audio-mode-k01", true) + "</div>";
+      przyciskiTrybuHtml("bd-audio-mode-k01") + "</div>";
     if (cta && cta.parentNode) cta.parentNode.insertBefore(wrap, cta);
     else blok.appendChild(wrap);
     const radia = Array.from(wrap.querySelectorAll("input"));
@@ -1097,7 +1264,7 @@
     }));
     const render = (d) => {
       radia.forEach((r) => { r.checked = (r.value === d.tryb); });
-      wrap.querySelectorAll(".bd-audiocard").forEach((k) => {
+      wrap.querySelectorAll(".bd-trybbtn").forEach((k) => {
         const inp = k.querySelector("input");
         k.classList.toggle("is-on", !!(inp && inp.checked));
       });
@@ -1107,15 +1274,29 @@
     chapterCleanup.push(() => wrap.remove());
   }
 
-  function barHtml(c, idx) {
-    return `<div class="bd-page__bar" id="bd-page-bar">
-        <p class="bd-page__crumb"><span class="bd-crumb__n">Trop ${idx + 1} z 9</span><span
-          class="bd-crumb__t"> &bull; ${c.title}</span></p>
-        <div class="bd-page__actions">
-          ${audioBtnHtml()}
-          ${c.anim ? '<button type="button" class="bd-btn bd-btn--dark bd-btn--sm" id="bd-ch-replay">Odtwórz animację</button>' : ""}
-          <button type="button" class="bd-btn bd-btn--dark bd-btn--sm" id="bd-ch-back">&larr; Wróć do tablicy</button>
+  /** Belka tropu. `idx` nie jest już używany — numer tropu przeniósł się
+      do treści, nad tytuł pierwszej sceny (`wstawEtykieteTropu`) — ale
+      zostaje w sygnaturze, bo wołają ją wszystkie dziewięć szablonów.
+
+      Trop 1 nie dostaje przełącznika trybu: wybór jest tam treścią lekcji
+      (przyciski w K01), a dwa równoległe sterowania tym samym ustawieniem
+      na jednym ekranie myliłyby ucznia. Powtórka narracji zostaje, bo
+      dotyczy sceny, nie wyboru. */
+  function barHtml(c, idx) {                        /* eslint-disable-line no-unused-vars */
+    return `<div class="bd-topbar" id="bd-page-bar">
+        <button type="button" class="bd-topbtn bd-topbtn--back" id="bd-ch-back"
+                aria-label="Wróć do tablicy śledztwa">
+          <svg class="bd-topbtn__ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M19 12H5.5m0 0l6.2-6.2M5.5 12l6.2 6.2" fill="none" stroke="currentColor"
+              stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="bd-topbtn__txt">Wróć do tablicy</span>
+        </button>
+        ${belkaProgHtml()}
+        <div class="bd-topbar__right">
+          ${c.id === "p01" ? "" : belkaTrybHtml()}
+          ${belkaReplayHtml()}
         </div>
+        <p class="bd-sr" id="bd-prog-live" role="status" aria-live="polite"></p>
       </div>`;
   }
 
@@ -1203,13 +1384,26 @@
         <section class="bd-chscene bd-chscene--p04koniec" id="bd-scene-p04-final" hidden
                  aria-label="Finał tropu — pełna butelka">
           <div class="bd-chscene__in">
-            <div class="bd-final">
+            <!-- Etap S1.A.1: układ PIONOWY, wyśrodkowany — tytuł, tekst,
+                 butelka, przycisk. Dawny podział „tekst po lewej, przycisk
+                 po prawej" rozrywał scenę na dwie kolumny i gubił bohatera
+                 tej sceny, czyli pełną butelkę. Grafika jest statyczna;
+                 w etapie S1.C wejdzie w to miejsce butelka obracana — stąd
+                 osobny slot o własnej wysokości, żeby podmiana nie
+                 przestawiła układu. -->
+            <div class="bd-final bd-final--pion">
               <div class="bd-final__txt"
                    data-audio-src="../assets/audio/lekcja45/04-slad-do-kuchni/04-butelka-pelna-03.mp3"
                    data-audio-title="Butelka jest pełna">
                 <h2 class="bd-scene__title bd-final__title">Butelka jest pełna</h2>
                 <p class="bd-scene__text">Wszystkie krople zużytego oleju trafiły do
                   butelki. Teraz sprawdź, co należy zrobić ze zużytym olejem.</p>
+              </div>
+              <div class="bd-final__slot" id="bd-p04-butelka">
+                <img class="bd-final__butelka"
+                     src="../assets/images/lekcja45/07-droga-butelki/butelka-olejomat-3d.webp"
+                     alt="Pełna butelka na zużyty olej z naklejką Olejomaty"
+                     loading="lazy" decoding="async">
               </div>
               <p class="bd-final__cta">
                 <button type="button" class="bd-btn" id="bd-p04-dalej">Sprawdź, co dalej</button>
@@ -1231,9 +1425,6 @@
     setSceneActive(scena, true);
     const laduj = view.__bdLazyK08;
     if (laduj) laduj();
-    const panel = view.querySelector("#progress-panel");
-    const slot2 = view.querySelector("#bd-slot-progress2");
-    if (panel && slot2 && panel.parentElement !== slot2) slot2.appendChild(panel);
     syncBarHeight(view);
     /* każde kliknięcie potwierdzenia K06 prowadzi do sceny (idempotentnie) */
     if (!odRazu) requestAnimationFrame(() => scrollToHeading(scena, view));
@@ -1267,7 +1458,7 @@
     if (!frame) return;
 
     const gotowe = () =>
-      "Gra ukończona. Litera S jest gotowa do wpisania w polu postępu śledztwa.";
+      "Gra ukończona. Litera S trafiła do paska postępu na górze.";
 
     /* Ładowanie leniwe z parametrem trybu osadzenia (wzorzec K07/K16):
        gra chowa wtedy własne marginesy. Legacy'owa ścieżka w `initFrames`
@@ -1305,55 +1496,35 @@
       const S = NS.state;
       if (!S) return;
       const noweZaliczenie = S.completeInteraction("k06");
-      if (S.unlockLetterEntry) S.unlockLetterEntry("S");
+      if (S.awardLetter) S.awardLetter("S");
       if (statusEl) statusEl.textContent = gotowe();
       if (noweZaliczenie) {
-        announce("Pięć śladów odnalezionych. Pole litery S czeka na wpisanie. " +
+        announce("Pięć śladów odnalezionych. " +
           "Czas zebrać olej z patelni.");
       }
-      /* Rola dawnego przycisku: odsłona obowiązkowej sceny K08. Scena staje
-         się dostępna NATYCHMIAST, ale strona nie skacze do niej od razu —
-         przewinięcie czeka na koniec klipu piątego śladu (niżej). */
+      /* Scena K08 staje się dostępna NATYCHMIAST, ale strona do niej NIE
+         skacze — o przejściu decyduje uczeń przyciskiem „Litera S gotowa"
+         (zdarzenie `k06:continue`, niżej). Ten sam wzorzec, co w Rurociągu. */
       odslonaK08(view, true);
-      if (noweZaliczenie) przewinDoK08PoKlipie();
     };
 
-    /* PIĄTY ŚLAD MA WYBRZMIEĆ (Etap A5, decyzja użytkownika).
-       Ukończenie gry pada w tej samej chwili co klip ostatniego śladu, więc
-       natychmiastowe przewinięcie do sceny K08 uruchamiało jej narrację, ta
-       przejmowała jedyny kanał audio i ucinała klip w pierwszej sekundzie —
-       razem z finałem gry, którego uczeń nie zdążył zobaczyć.
-       Czekamy więc na koniec klipu, ale nigdy dłużej niż 11 s, a przerwanie
-       klipu przez ucznia — pauza, zmiana trybu — przewija od razu. W trybie
-       „Czytam" nie ma na co czekać: przewijamy bez opóźnienia.
-       Bezpiecznik to WYŁĄCZNIE siatka na zawieszony odtwarzacz, nie planowany
-       czas oczekiwania: normalnie przewijamy w chwili realnego końca nagrania.
-       Stąd 11 s — najdłuższy klip śladu (lejek) trwa 10,11 s, a przy 4 s
-       z pierwszej wersji bezpiecznik ucinał każdy ślad w połowie zdania. */
-    const przewinDoK08PoKlipie = () => {
-      const przewin = () => scrollToHeading(view.querySelector("#bd-scene-k08g"), view);
-      const A = NS.audio;
-      const stan = A && A.stanUi ? A.stanUi() : null;
-      const klipGra = (d) => !!(d && d.gra && /^Ślad:/.test(d.tytul || ""));
-      if (!stan || stan.tryb !== "both" || !klipGra(stan)) {
-        requestAnimationFrame(przewin);
-        return;
-      }
-      let odepnij = null, zrobione = false;
-      const zakoncz = () => {
-        if (zrobione) return;
-        zrobione = true;
-        clearTimeout(bezpiecznik);
-        if (odepnij) odepnij();
-        przewin();
-      };
-      const bezpiecznik = setTimeout(zakoncz, 11000);
-      odepnij = A.onUi((d) => { if (!klipGra(d)) zakoncz(); });
-      chapterCleanup.push(() => {
-        clearTimeout(bezpiecznik);
-        if (odepnij) odepnij();
-      });
+    /* Uczeń nacisnął „LITERA S GOTOWA" — dopiero teraz przewijamy do sceny
+       K08, kadrując ją od góry, żeby zdanie wprowadzające i tytuł stały
+       w całości pod belką. Nasłuch jest DEFENSYWNY: litera i odsłona idą
+       z `k06:completed` niezależnie, więc brak tego zdarzenia niczego nie
+       psuje — uczeń dojedzie do sceny przewijaniem. */
+    const onContinue = () => {
+      odslonaK08(view, true);
+      const scena = view.querySelector("#bd-scene-k08g");
+      if (scena) requestAnimationFrame(() => scrollToHeading(scena, view));
     };
+
+    /* Etap S1.A.1: zniknęło czekanie na koniec klipu piątego śladu przed
+       przewinięciem do sceny K08. Było potrzebne, dopóki strona sama
+       skakała do następnej sceny w chwili wygranej — klip i narracja
+       nowej sceny biły się wtedy o jedyny kanał audio. Teraz o przejściu
+       decyduje uczeń („Litera S gotowa”), więc klip zdąży wybrzmieć
+       z definicji i cały bezpiecznik z zegarem stał się zbędny. */
     /* ── Klipy śladów (Etap A5, patch autora gry) ────────────────────
        Odkrycie śladu odzywa się głosem lektora, ale WYŁĄCZNIE w trybie
        „Czytam i słucham". W „Czytam" nie wołamy `playClip`, więc po plik
@@ -1389,10 +1560,12 @@
         /* gra emituje wyłącznie na oknie (bubbles) — jeden nasłuch, jedno
            zaliczenie; nasłuch na dokumencie dołożyłby drugie wywołanie */
         win.addEventListener("k06:completed", onDone);
+        win.addEventListener("k06:continue", onContinue);
         win.addEventListener("k06:trace", onTrace);
         chapterCleanup.push(() => {
           try {
             win.removeEventListener("k06:completed", onDone);
+            win.removeEventListener("k06:continue", onContinue);
             win.removeEventListener("k06:trace", onTrace);
           } catch (e) { /* okno zwolnione */ }
         });
@@ -1414,7 +1587,7 @@
         wrap.classList.add("is-error");
         if (statusEl) statusEl.textContent =
           "Nie udało się wczytać gry. Otwórz ją w nowej karcie linkiem pod oknem — " +
-          "po powrocie literę S wpisz samodzielnie w polu postępu śledztwa.";
+          "wynik wróci do lekcji dopiero po ukończeniu gry w tym oknie.";
         return;
       }
       wrap.classList.add("is-ready");
@@ -1523,25 +1696,40 @@
       if (!S) return;
       const noweZaliczenie = S.completeInteraction("k08");
       /* idempotentne: nie doda duplikatu i nie otworzy litery już wpisanej */
-      if (S.unlockLetterEntry) S.unlockLetterEntry("Z");
+      if (S.awardLetter) S.awardLetter("Z");
       if (statusEl) statusEl.textContent =
-        "Gra ukończona. Litera Z jest gotowa do wpisania w polu postępu śledztwa.";
+        "Gra ukończona. Litera Z trafiła do paska postępu na górze.";
       if (noweZaliczenie) {
-        announce("Butelka jest pełna. Pole litery Z czeka na wpisanie. " +
+        announce("Butelka jest pełna. " +
           "Możesz przejść do kolejnego tropu.");
       }
-      pokazFinalP04(view, !noweZaliczenie);   /* przewijamy tylko przy pierwszym razie */
+      /* Scena finału staje się dostępna od razu, ale bez skoku — o przejściu
+         decyduje uczeń przyciskiem „Litera Z gotowa" (`k08:continue`). */
+      pokazFinalP04(view, true);
       unlock("p05");                       /* tablica pokazuje kolejny trop
                                               nawet przy wyjściu bez CTA */
     };
+
+    /* „LITERA Z GOTOWA" — dopiero teraz przewijamy do finału tropu,
+       kadrując go od góry. Nasłuch defensywny, tak jak przy K04 i K06. */
+    const onContinue = () => {
+      pokazFinalP04(view, true);
+      const koniec = view.querySelector("#bd-scene-p04-final");
+      if (koniec) requestAnimationFrame(() => scrollToHeading(koniec, view));
+    };
+
     const bind = () => {
       try {
         const win = frame.contentWindow;
         if (!win || win.__bdK08Bound) return;
         win.__bdK08Bound = true;
         win.addEventListener("k08:completed", onDone);
+        win.addEventListener("k08:continue", onContinue);
         chapterCleanup.push(() => {
-          try { win.removeEventListener("k08:completed", onDone); } catch (e) { /* okno zwolnione */ }
+          try {
+            win.removeEventListener("k08:completed", onDone);
+            win.removeEventListener("k08:continue", onContinue);
+          } catch (e) { /* okno zwolnione */ }
         });
       } catch (e) { /* cisza */ }
     };
@@ -1549,7 +1737,7 @@
       bind(); fitFrame();
       if (NS.state && NS.state.isCompleted && NS.state.isCompleted("k08") && statusEl) {
         statusEl.textContent =
-          "Gra ukończona. Litera Z jest gotowa do wpisania w polu postępu śledztwa.";
+          "Gra ukończona. Litera Z trafiła do paska postępu na górze.";
       }
     };
     frame.addEventListener("load", onFrameLoad);
@@ -1581,7 +1769,7 @@
          powrocie do rozdziału (naprawa N1). Wywołanie jest idempotentne —
          przy literze już wpisanej nie zmienia niczego i nie zalicza gry
          ponownie. */
-      if (S.unlockLetterEntry) S.unlockLetterEntry("Z");
+      if (S.awardLetter) S.awardLetter("Z");
       pokazFinalP04(view, true);
       unlock("p05");
     }
@@ -2932,17 +3120,9 @@
           kickerK15.hidden = true;
           chapterCleanup.push(() => { kickerK15.hidden = false; });
         }
-        /* Panel postępu — ten sam węzeł DOM, wpisany do `moved`, więc przy
-           zamknięciu rozdziału wraca na miejsce (wzorzec z Tropów 4 i 8). */
-        const slotPO = view.querySelector("#bd-slot-progress-k15");
-        const progO = document.getElementById("progress-panel");
-        if (slotPO && progO && !moved.some((m) => m.node === progO)) {
-          const kotwica = document.createComment("bd-anchor-progress");
-          progO.parentNode.insertBefore(kotwica, progO);
-          slotPO.appendChild(progO);
-          moved.push({ node: progO, anchor: kotwica });
-        }
-        explainProgress(view);
+        /* Etap S1.A: panel postępu nie wjeżdża już do tropu — postęp
+           pokazuje belka górna. Panel zostaje dzieckiem <body>, ukrytym
+           przy `body.bd-on`, i służy wyłącznie wariantowi `?legacy=1`. */
         /* Wzorzec N2.1: przy wyjściu z tropu ramka gry musi ucichnąć —
            zdejmujemy `src`, więc gra przestaje istnieć razem z dźwiękiem
            i żądaniami. Przy powrocie `data-src` ładuje ją od nowa. */
@@ -2959,16 +3139,74 @@
       if (koniec && koniec.hidden) koniec.hidden = false;
     };
 
-    /* Pierwsze zaliczenie przewija ucznia do panelu domknięcia; powrót
-       z ekranu wyników gry robi to samo, bez zamykania tropu. */
-    const doPanelu = () => {
-      if (!koniec) return;
-      koniec.hidden = false;
-      requestAnimationFrame(() => koniec.scrollIntoView({
-        behavior: reduceMotion ? "auto" : "smooth", block: "start" }));
+    /* ── PO WYGRANEJ W PSZOK-u (Etap S1.A.1 pkt 7) ─────────────────
+       Ten sam błąd, co przy K06 i K08: zaliczenie natychmiast spychało
+       ucznia w dół, więc nie zobaczył ani tablicy wyników gry, ani litery O
+       pulsującej w belce. Rozdzielamy dwa zdarzenia:
+
+         pszok:completed        → litera i odsłona treści, BEZ przewijania,
+         pszok:return-to-lesson → dopiero teraz przewijamy, bo uczeń sam
+                                  nacisnął „Wróć do lekcji".
+
+       Celem przewinięcia jest zdanie „Każda strefa to inna droga odzysku"
+       (`#k15-po`), a nie panel domknięcia niżej — to ono jest odpowiedzią
+       na to, co uczeń przed chwilą zrobił. Samej gry NIE ruszamy. */
+    const odslonPoGrze = () => { if (koniec) koniec.hidden = false; };
+    const przewinPoPowrocie = () => {
+      odslonPoGrze();
+      const cel = view.querySelector("#k15-po") || koniec;
+      if (!cel) return;
+      requestAnimationFrame(() => scrollToHeading(cel, view));
+
+      /* STRAŻNIK FOKUSU I KADRU (pomiar 390 px).
+         Gra oddaje fokus SWOJEJ ramce mniej więcej sekundę po naciśnięciu
+         „Wróć do lekcji" — a razem z fokusem przeglądarka dociąga ramkę do
+         widoku i psuje świeżo ustawiony kadr: zdanie „Każda strefa…"
+         lądowało 6 px POD belką zamiast 12 px pod nią, a czytnik czytał
+         znowu grę zamiast odpowiedzi na to, co uczeń zrobił.
+
+         Gry nie ruszamy (osobny pakiet), więc korygujemy po swojej stronie:
+         przez 2,5 s po powrocie odbieramy fokus, gdy wpadnie do ramki, i
+         dosuwamy kadr, jeśli cel wjechał pod belkę. Strażnik sam się zdejmuje. */
+      const belkaDol = () => {
+        const b1 = view.querySelector("#bd-page-bar");
+        return b1 ? b1.getBoundingClientRect().bottom : 0;
+      };
+      const przywroc = () => {
+        const zapas = belkaDol() + 12 - cel.getBoundingClientRect().top;
+        if (zapas > 1) view.scrollTop -= zapas;
+        try {
+          cel.setAttribute("tabindex", "-1");
+          cel.focus({ preventScroll: true });
+        } catch (e) { /* ignore */ }
+      };
+      const naFokus = (e) => {
+        if (e.target && e.target.tagName === "IFRAME") przywroc();
+      };
+      view.addEventListener("focusin", naFokus);
+      /* Korekta MUSI przyjść po zakończeniu płynnego przewijania, nie po
+         stałym czasie: pomiar ze stałym opóźnieniem 700 ms trafiał w środek
+         animacji, kiedy cel był jeszcze pod ekranem, więc nie miał czego
+         poprawiać. Czekamy, aż pozycja przestanie się zmieniać. */
+      let ostatni = -1, prob = 0;
+      const czekaj = setInterval(() => {
+        const teraz = Math.round(view.scrollTop);
+        if (teraz === ostatni || ++prob > 24) {
+          clearInterval(czekaj);
+          przywroc();
+          return;
+        }
+        ostatni = teraz;
+      }, 120);
+      const stop = setTimeout(() => view.removeEventListener("focusin", naFokus), 3000);
+      chapterCleanup.push(() => {
+        clearInterval(czekaj);
+        clearTimeout(stop);
+        view.removeEventListener("focusin", naFokus);
+      });
     };
-    view.addEventListener("k15:pierwsza-wygrana", doPanelu);
-    view.addEventListener("k15:powrot", doPanelu);
+    view.addEventListener("k15:pierwsza-wygrana", odslonPoGrze);
+    view.addEventListener("k15:powrot", przewinPoPowrocie);
 
     /* Spacer odsłania się po zaliczeniu skrótu, a gra po przejściu Spaceru
        — od razu, gdy uczeń wraca do tropu z zaliczonymi krokami. */
@@ -3103,21 +3341,8 @@
     const slotK16 = view.querySelector("#bd-slot-k16");
     if (slotK16) moveBlockInto("k16", slotK16);
 
-    /* PANEL POSTĘPU — bez tego litera K nie ma gdzie zostać wpisana.
-       Ten sam mechanizm co w scenie gry Tropu 4: to TEN SAM węzeł DOM,
-       wpisany do `moved`, więc przy zamknięciu rozdziału wraca na swoje
-       miejsce w dokumencie (zero duplikatów, zero drugiego systemu). */
-    {
-      const slotP = view.querySelector("#bd-slot-progress-k16");
-      const prog = document.getElementById("progress-panel");
-      if (slotP && prog && !moved.some((m) => m.node === prog)) {
-        const kotwica = document.createComment("bd-anchor-progress");
-        prog.parentNode.insertBefore(kotwica, prog);
-        slotP.appendChild(prog);
-        moved.push({ node: prog, anchor: kotwica });
-      }
-      explainProgress(view);
-    }
+    /* Etap S1.A: panel postępu nie wjeżdża już do tropu — literę K pokazuje
+       kwadracik w belce górnej, a uczeń niczego nie przepisuje. */
     const blokK16 = view.querySelector("#k16");
 
     /* KOREKTA 5B.1 — nagłówek sceny. W trybie tablicy żaden tekst
@@ -3146,15 +3371,15 @@
     const panel = view.querySelector("#bd-scene-p08-koniec");
     const zdanieEl = view.querySelector("#bd-p08-haslo");
 
-    /* Panel wita ucznia inaczej przed wpisaniem litery i po nim. Stan
-       czytamy z lesson-state, więc nie budujemy drugiego rejestru. */
+    /* Panel wita ucznia inaczej przed zdobyciem ostatniej litery i po nim.
+       Stan czytamy z lesson-state, więc nie budujemy drugiego rejestru. */
     const zdanieOHasle = () => {
       if (!zdanieEl) return;
       const S = NS.state;
       const jest = !!(S && S.get && S.get().checkpointLetters.K);
       zdanieEl.textContent = jest
         ? "Hasło z pięciu liter jest kompletne."
-        : "Zostało wpisać ostatnią literę — a hasło z pięciu liter będzie kompletne.";
+        : "Została ostatnia litera — a hasło z pięciu liter będzie kompletne.";
     };
     zdanieOHasle();
 
@@ -3197,13 +3422,12 @@
         const noweZaliczenie = S.completeInteraction("k16");
         /* idempotentne — przy KAŻDEJ wygranej, tak jak litera Z po naprawie
            N1 i litera O w etapie 4C */
-        if (S.unlockLetterEntry) S.unlockLetterEntry("K");
-        ustawStatus("Moduł ukończony. Litera K jest gotowa do wpisania w polu postępu śledztwa.");
+        if (S.awardLetter) S.awardLetter("K");
+        ustawStatus("Moduł ukończony. Litera K trafiła do paska postępu na górze.");
         if (poGrze) poGrze.hidden = false;
         zdanieOHasle();
         if (!noweZaliczenie) return;         /* ogłoszenie i przewinięcie raz */
-        announce("Drugie życie odpadów: ukończone. Pole litery K czeka na wpisanie.");
-        NS.ui && NS.ui.flashProgress && NS.ui.flashProgress();
+        announce("Drugie życie odpadów: ukończone.");
         if (panel) requestAnimationFrame(() => panel.scrollIntoView({
           behavior: reduceMotion ? "auto" : "smooth", block: "start" }));
       };
@@ -3290,7 +3514,7 @@
         setTimeout(dopasujWysokosc, 600);   /* po dociągnięciu grafik modułu */
         const S = NS.state;
         if (S && S.isCompleted && S.isCompleted("k16")) {
-          ustawStatus("Moduł ukończony. Litera K jest gotowa do wpisania w polu postępu śledztwa.");
+          ustawStatus("Moduł ukończony. Litera K trafiła do paska postępu na górze.");
         } else ustawStatus("Moduł gotowy.");
       };
       ramka.addEventListener("load", poZaladowaniu);
@@ -3315,7 +3539,7 @@
       const S = NS.state;
       if (S && S.get) {
         if (S.get().completedInteractions.indexOf("k16") >= 0) {
-          if (S.unlockLetterEntry) S.unlockLetterEntry("K");
+          if (S.awardLetter) S.awardLetter("K");
           if (poGrze) poGrze.hidden = false;
         }
         if (S.onChange) {
@@ -3403,29 +3627,48 @@
       slotFilm.appendChild(filmWrap);
     }
 
-    /* ── ATRAPA NAGRANIA (do wymiany w 6B) ──
-       Architektura pod plik jest gotowa: kadr o proporcji 16:9, plansza
-       zastępcza w tonacji sceny i przycisk, który ustawia ZNACZNIK
-       OBEJRZENIA. W 6B ten sam znacznik ustawi koniec odtwarzania,
-       a plansza ustąpi elementowi wideo z posterem. */
+    /* ── PRZEJŚCIE DO WERDYKTU PO FILMIE (Etap F1) ──
+       Plansza „Nagranie w przygotowaniu" ustąpiła prawdziwemu odtwarzaczowi
+       (`initFilmFinalowy` w modules.js — wspólnemu dla obu wariantów lekcji).
+       Silnik dokłada TYLKO to, czego nie ma w `?legacy=1`: przycisk do
+       werdyktu, otwierany dopiero po końcu filmu.
+
+       Bramkę zdejmuje zdarzenie `k17:film-koniec` — z realnego stanu
+       odtwarzacza albo z zapasu, gdy IFrame API nie wstanie. Uczeń, który
+       sprawę już domknął, dostaje przycisk od razu: nie każemy mu oglądać
+       filmu drugi raz, żeby wrócić do werdyktu. */
     let filmObejrzany = false;
-    if (filmWrap && !filmWrap.dataset.bdAtrapa) {
-      filmWrap.dataset.bdAtrapa = "1";
-      const plansza = h("div", "bd-atrapa");
-      plansza.innerHTML =
-        '<p class="bd-atrapa__tytul">Nagranie w przygotowaniu</p>'
-        + '<p class="bd-atrapa__opis">Film z rozwiązaniem sprawy pojawi się tutaj. '
-        + 'Na razie możesz przejść dalej — reszta śledztwa czeka.</p>';
-      const dalej = h("button", "bd-btn bd-atrapa__cta");
+    if (filmWrap && !filmWrap.dataset.bdBramka) {
+      filmWrap.dataset.bdBramka = "1";
+      const stopka = h("p", "bd-filmcta");
+      const dalej = h("button", "bd-btn bd-filmcta__btn");
       dalej.type = "button";
       dalej.id = "bd-film-dalej";
       dalej.textContent = "Przejdź do werdyktu →";
-      plansza.appendChild(dalej);
-      filmWrap.appendChild(plansza);
+      stopka.appendChild(dalej);
+      stopka.hidden = true;
+      filmWrap.appendChild(stopka);
       chapterCleanup.push(() => {
-        plansza.remove();
-        delete filmWrap.dataset.bdAtrapa;
+        stopka.remove();
+        delete filmWrap.dataset.bdBramka;
       });
+
+      const otworzBramke = (odRazu) => {
+        if (!stopka.hidden) return;
+        stopka.hidden = false;
+        syncBarHeight(view);
+        if (odRazu) return;
+        /* fokus na przycisku dopiero po filmie — uczeń klawiatury ma
+           trafić dokładnie tam, gdzie właśnie coś przybyło */
+        setTimeout(() => { try { dalej.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 120);
+      };
+      const naKoniec = () => otworzBramke(false);
+      filmWrap.addEventListener("k17:film-koniec", naKoniec);
+      chapterCleanup.push(() => filmWrap.removeEventListener("k17:film-koniec", naKoniec));
+
+      /* powracający z domkniętą sprawą — bez oglądania od nowa */
+      if (NS.state && NS.state.get && NS.state.get().caseClosed) otworzBramke(true);
+
       dalej.addEventListener("click", () => {
         filmObejrzany = true;
         domknijSprawe();
@@ -3435,6 +3678,12 @@
           behavior: reduceMotion ? "auto" : "smooth", block: "start" }));
       });
     }
+
+    /* Wyjście z rozdziału zdejmuje iframe: film milknie i przestaje pobierać
+       dane, a powrót do tropu zastaje poster z przyciskiem Play. */
+    if (filmWrap) chapterCleanup.push(() => {
+      if (typeof filmWrap.__filmReset === "function") filmWrap.__filmReset();
+    });
 
     /* Scena nagrania odsłania się dokładnie wtedy, gdy skrypt lekcji zdejmie
        `hidden` z kadru — czyli po kliknięciu przycisku w terminalu.
@@ -4148,43 +4397,17 @@
     moveBlockInto(c.game.block, slot);
     /* sceny odsłaniane dopiero po grze — poza kolejnością Tab do tego czasu */
     LATER_SCENES.forEach((id) => setSceneActive(view.querySelector("#" + id), false));
-    /* panel postępu jest dzieckiem <body> i przy body.bd-on ma visibility:hidden —
-       bez przeniesienia uczeń nie miałby gdzie wpisać zdobytej litery.
-       Trafia POD kompozycję (własny slot), żeby na desktopie stał centralnie
-       pod grą, a nie w wąskiej prawej kolumnie. */
-    const foot = view.querySelector("#bd-slot-progress") || slot;
-    const prog = document.getElementById("progress-panel");
-    if (prog && !moved.some((m) => m.node === prog)) {
-      const anchor = document.createComment("bd-anchor-progress");
-      prog.parentNode.insertBefore(anchor, prog);
-      foot.appendChild(prog);
-      moved.push({ node: prog, anchor });
-    }
+    /* Etap S1.A: panel postępu zostaje dzieckiem <body> (ukryty przy
+       `body.bd-on`) i obsługuje wyłącznie `?legacy=1`. W tablicy postęp
+       niesie belka górna, a litery przyznaje zdarzenie gry — nie ma czego
+       wpisywać, więc nie ma po co przenosić panelu. */
 
     const blok = view.querySelector("#" + c.game.block);
 
-    /* N2.1 — wyjście z rozdziału = pełny stop gry Genially, tak jak przy
-       prototypach K07/K08/K16. Bez tego blok wracał do ukrytego `<main>`
-       z nadal ustawionym `src`: przeglądarka odtwarzała kontekst ramki
-       i gra startowała od nowa w niewidocznym poddrzewie (razem z dźwiękiem).
-       `data-src` zostaje, więc ponowne wejście doczytuje grę leniwie —
-       obserwator w `initGenially` nie ma już `once`, a po naprawie N2
-       blok w ukrytym `<main>` liczy się jako „poza kadrem", więc powrót
-       do widocznej sceny jest dla niego świeżym wejściem.
-       Zdejmujemy też klasy stanu, żeby uczeń zobaczył normalne
-       „Wczytywanie gry…", a nie zastany komunikat „Gra gotowa". */
-    const gWrap = blok && blok.querySelector("[data-genially]");
-    const gFrame = gWrap && gWrap.querySelector("iframe");
-    if (gFrame) {
-      chapterCleanup.push(() => {
-        try {
-          gFrame.removeAttribute("src");
-          gWrap.classList.remove("is-ready", "is-loading");
-          const st = gWrap.querySelector(".genially__status");
-          if (st) st.textContent = "";
-        } catch (e) { /* ignore */ }
-      });
-    }
+    /* Etap A6: blok czyszczenia ramki Genially zniknął razem z ostatnią taką
+       grą — każdy prototyp zdejmuje teraz swój `src` we własnym okablowaniu
+       (wireK04, wireK06), bo tylko ono wie, jaki status i jakie klasy
+       przywrócić. */
 
     /* Etap A5: w P04 grą jest prototyp „Latarka w kuchni" (`[data-frame]`),
        nie materiał Genially — okablowanie ma własną funkcję, bo dochodzi
@@ -4229,36 +4452,175 @@
       }
     }
 
-    /* Przycisk NARRACYJNY: ręczne potwierdzenie ucznia, nie weryfikacja systemu.
-       Zostaje wyłącznie w P03, gdzie grą jest Genially (cross-origin — nie mamy
-       pewnego sygnału ukończenia i nie udajemy, że mamy). W P04 od Etapu A5 gra
-       zgłasza się sama, więc konfiguracja rozdziału nie ma już `game.cta`
-       i przycisk w ogóle nie powstaje. */
-    const done = view.querySelector("#bd-game-done");
-    if (!done) return;
+    /* Etap A6: w P03 grą jest prototyp „Rurociąg" (`[data-frame]`), nie
+       materiał Genially — okablowanie ma własną funkcję, tak jak przy K06. */
+    if (c.id === "p03" && blok) wireK04(c, view, blok);
+  }
 
-    /* P03: przycisk odsłania dalszą część tropu. Tu — i dopiero tu — klocek
-       gry liczy się jako przerobiony; K05 zaliczy się osobno, po przejściu
-       sekwencji zlewu (rozstrzygnięcie 2). */
-    done.addEventListener("click", () => {
-      if (NS.state && NS.state.visit) NS.state.visit(c.game.block);
-      view.classList.add("is-odsloniete");
-      LATER_SCENES.forEach((id) => {
-        const s = view.querySelector("#" + id);
-        if (s) { s.hidden = false; setSceneActive(s, true); }
-      });
-      /* diagram: o miejscu (faza przypięta ↔ sekcja przepływu) decyduje
-         wireDiagram — tu tylko prosimy o przeliczenie po odsłonięciu */
-      if (NS.__bdPrzelaczDiagram) NS.__bdPrzelaczDiagram();
-      /* przycisk był wyłącznie przejściem — po aktywacji sceny znika,
-         żeby nie wisiał nad tytułem jako konkurencyjny element */
-      const cta = done.closest(".bd-gamecta");
-      if (cta) cta.hidden = true;
-      announce("Odkryty dowód. Możesz czytać dalej.");
-      /* najpierw zmierz pasek, potem przewijaj: `scroll-margin-top` liczy się
-         ze zmiennej --bd-bar-h, a odsłonięcie scen mogło zmienić jego wysokość */
-      syncBarHeight(view);
-      requestAnimationFrame(() => scrollToHeading(view.querySelector("#bd-scene-proof"), view));
+  /** ODSŁONA DALSZEJ CZĘŚCI TROPU 3 (Etap A6).
+      Do tej pory robił to wyłącznie ręczny przycisk „Gdy skończysz grę,
+      pokaż odkryty dowód" — i to on jeden trzymał TRZY rzeczy naraz: scenę
+      dowodu z sekwencją zlewu (K05), sekcję diagramu kart (`wireDiagram`
+      czyta klasę `is-odsloniete`) i przewinięcie. Przycisk zniknął razem
+      z Genially, więc odsłonę przejęło zdarzenie gry.
+
+      W przeciwieństwie do P04 rozdział NIE miał ścieżki dla powracających:
+      uczeń, który przeszedł już grę, i tak musiał klikać przycisk. Dlatego
+      ta sama funkcja obsługuje oba wejścia — świeże ukończenie (z
+      przewinięciem) i powrót do tropu z zaliczonym K04 (bez skoku). */
+  function odslonDowod(view, odRazu) {
+    if (view.classList.contains("is-odsloniete")) return;
+    view.classList.add("is-odsloniete");
+    LATER_SCENES.forEach((id) => {
+      const s = view.querySelector("#" + id);
+      if (s) { s.hidden = false; setSceneActive(s, true); }
+    });
+    /* diagram: o miejscu (faza przypięta ↔ sekcja przepływu) decyduje
+       wireDiagram — tu tylko prosimy o przeliczenie po odsłonięciu */
+    if (NS.__bdPrzelaczDiagram) NS.__bdPrzelaczDiagram();
+    syncBarHeight(view);
+    if (odRazu) return;
+    announce("Odkryty dowód. Możesz czytać dalej.");
+    /* najpierw zmierz pasek, potem przewijaj: `scroll-margin-top` liczy się
+       ze zmiennej --bd-bar-h, a odsłonięcie scen mogło zmienić jego wysokość */
+    requestAnimationFrame(() => scrollToHeading(view.querySelector("#bd-scene-proof"), view));
+  }
+
+  /** Okablowanie gry K04 „Rurociąg" w P03 (Etap A6) — wzorzec `wireK06`. */
+  function wireK04(c, view, blok) {
+    const wrap = blok.querySelector('[data-frame="k04"]');
+    const frame = wrap && wrap.querySelector("iframe");
+    const statusEl = blok.querySelector(".frame__status");
+    if (!frame) return;
+
+    const gotowe = () =>
+      "Gra ukończona. Litera P trafiła do paska postępu na górze.";
+
+    const laduj = () => {
+      if (!frame.dataset.src || frame.src) return;
+      wrap.classList.remove("is-ready", "is-error");
+      wrap.classList.add("is-loading");
+      if (statusEl) statusEl.textContent = "Wczytywanie gry…";
+      const bazowy = frame.dataset.src;
+      frame.src = bazowy + (bazowy.indexOf("?") >= 0 ? "&" : "?") + "embed=board";
+    };
+
+    /* Wysokość = kadr rozdziału pod paskiem; gra wypełnia ramkę i sama reaguje
+       na zmianę rozmiaru, więc nie mierzymy treści i nie ma drugiego paska. */
+    const fitFrame = () => {
+      if (!frame.src) return;
+      const bar = parseFloat(getComputedStyle(view).getPropertyValue("--bd-bar-h")) || 64;
+      const h = Math.min(Math.max(Math.round((view.clientHeight - bar) * 0.92), 460), 900);
+      frame.style.height = h + "px";
+    };
+    if ("ResizeObserver" in window) {
+      const ro = new ResizeObserver(fitFrame);
+      ro.observe(view);
+      chapterCleanup.push(() => ro.disconnect());
+    }
+
+    /* JEDYNE źródło zaliczenia w trybie tablicy (legacy'owy `initFrames` ma
+       osłonę `body.bd-on`). Wzorzec N1: zaliczenie liczy się raz, ale literę
+       przyznajemy przy KAŻDEJ wygranej — `awardLetter` jest idempotentne.
+       Ogłoszenie zdobycia niesie belka (`wireBelkaProg`), więc tutaj mówimy
+       już tylko o tym, co dzieje się dalej w tropie. */
+    const onDone = () => {
+      const S = NS.state;
+      if (!S) return;
+      const noweZaliczenie = S.completeInteraction("k04");
+      if (S.visit) S.visit("k04");
+      if (S.awardLetter) S.awardLetter("P");
+      if (statusEl) statusEl.textContent = gotowe();
+      if (noweZaliczenie) {
+        announce("Zator odnaleziony. Zobacz teraz, co zatkało rurę.");
+      }
+      odslonDowod(view, !noweZaliczenie);
+    };
+
+    /* DOPISEK do etapu: gra ma własną tablicę końcową z przyciskiem
+       „Zapisz literę i kontynuuj e-lekcję". Zdarzenie `k04:continue` mówi, że
+       uczeń go nacisnął — wtedy przewijamy do sceny dowodu i stawiamy fokus na
+       zdobytej literze. Nasłuch jest DEFENSYWNY: litera i odsłona idą z
+       `k04:completed` niezależnie, więc brak tego zdarzenia niczego nie psuje. */
+    const onContinue = () => {
+      odslonDowod(view, true);
+      const scena = view.querySelector("#bd-scene-proof");
+      if (scena) requestAnimationFrame(() => scrollToHeading(scena, view));
+      /* Etap S1.A: fokus szedł dotąd na pole wpisania litery P, którego już
+         nie ma. Idzie teraz na kwadracik P w belce — uczeń klawiatury dostaje
+         wskaźnik dokładnie tam, gdzie właśnie coś przybyło. Fokus stawiamy PO
+         przewinięciu (`scrollToHeading` sam ogniskuje scenę), inaczej scena by
+         go odebrała; 1400 ms przepuszcza jeszcze animację zdobycia. */
+      if (view.__bdFokusLitery) {
+        setTimeout(() => { if (view.__bdFokusLitery) view.__bdFokusLitery("P"); }, 1400);
+      }
+    };
+
+    const bind = () => {
+      try {
+        const win = frame.contentWindow;
+        if (!win || win.__bdK04Bound) return;
+        win.__bdK04Bound = true;
+        /* gra emituje wyłącznie na oknie (bubbles) — jeden nasłuch, jedno
+           zaliczenie; nasłuch na dokumencie dołożyłby drugie wywołanie */
+        win.addEventListener("k04:completed", onDone);
+        win.addEventListener("k04:continue", onContinue);
+        chapterCleanup.push(() => {
+          try {
+            win.removeEventListener("k04:completed", onDone);
+            win.removeEventListener("k04:continue", onContinue);
+          } catch (e) { /* okno zwolnione */ }
+        });
+      } catch (e) { /* cisza */ }
+    };
+
+    /* AWARIA: przy same-origin `error` na ramce jest prawie zawsze nieme —
+       serwer oddaje stronę błędu, więc ramka „wczytuje się" i tylko nie ma
+       w niej gry. Sprawdzamy obecność jej korzenia. */
+    const modulJest = () => {
+      try {
+        const doc = frame.contentDocument;
+        return !doc || !!doc.querySelector("#game");
+      } catch (e) { return true; }
+    };
+    const onFrameLoad = () => {
+      wrap.classList.remove("is-loading");
+      if (!modulJest()) {
+        wrap.classList.add("is-error");
+        if (statusEl) statusEl.textContent =
+          "Nie udało się wczytać gry. Otwórz ją w nowej karcie linkiem pod oknem — " +
+          "wynik wróci do lekcji dopiero po ukończeniu gry w tym oknie.";
+        return;
+      }
+      wrap.classList.add("is-ready");
+      bind(); fitFrame();
+      if (statusEl) {
+        statusEl.textContent = (NS.state && NS.state.isCompleted && NS.state.isCompleted("k04"))
+          ? gotowe()
+          : "Gra gotowa. Wyznacz drogę do zatoru.";
+      }
+    };
+    frame.addEventListener("load", onFrameLoad);
+    chapterCleanup.push(() => frame.removeEventListener("load", onFrameLoad));
+    laduj();
+    if (frame.contentDocument && frame.src) { bind(); fitFrame(); }
+
+    /* Ponowne wejście: uczeń z zaliczoną grą dostaje odsłoniętą dalszą część
+       tropu od razu — bez tego straciłby scenę dowodu i diagram, bo przycisk,
+       który je odsłaniał, już nie istnieje. */
+    if (NS.state && NS.state.isCompleted && NS.state.isCompleted("k04")) {
+      if (NS.state.awardLetter) NS.state.awardLetter("P");
+      odslonDowod(view, true);
+    }
+
+    /* Wyjście z rozdziału = pełny stop gry: zdejmujemy `src` (`data-src`
+       zostaje), więc gra nie chodzi dalej w ukrytym <main>. */
+    chapterCleanup.push(() => {
+      try {
+        frame.removeAttribute("src");
+        wrap.classList.remove("is-ready", "is-loading", "is-error");
+        if (statusEl) statusEl.textContent = "";
+      } catch (e) { /* ignore */ }
     });
   }
 
@@ -4820,16 +5182,27 @@
     draw();
   }
 
-  /** Panel postępu: dodajemy wyłącznie instrukcję dla ucznia. Logika liter,
-      pola i licznik pozostają dotychczasowe — nie budujemy drugiego systemu. */
-  function explainProgress(view) {
-    const prog = view.querySelector("#progress-panel");
-    if (!prog || prog.querySelector(".bd-proghint")) return;
-    const hint = h("p", "bd-proghint",
-      "Po ukończeniu gry znajdź literę i wpisz ją w pierwsze wolne pole.");
-    const title = prog.querySelector(".progress__title");
-    if (title && title.parentNode) title.parentNode.insertBefore(hint, title.nextSibling);
-    else prog.insertBefore(hint, prog.firstChild);
+  /** ETYKIETA TROPU W TREŚCI (Etap S1.A).
+      Belka straciła okruszek „Trop X z 9 · tytuł", więc numer wraca tam,
+      gdzie należy do opowieści: nad tytuł PIERWSZEJ sceny tropu, ponad
+      istniejącym kickerem. Szukamy pierwszego nadtytułu albo tytułu
+      w pierwszej scenie — dziewięć tropów ma dziewięć różnych szablonów
+      (kicker silnika w P03, kicker przeniesionego klocka w P01 i P04),
+      więc bierzemy pierwszy pasujący element, nie ustalony selektor.
+
+      Wołane PO przeniesieniu bloków, bo w P04 nadtytuł przychodzi razem
+      z klockiem. Odwracalne — etykieta znika z rozdziałem. */
+  function wstawEtykieteTropu(view, idx) {
+    if (view.querySelector(".bd-troplabel")) return;
+    const scena = view.querySelector(".bd-chscene") || view.querySelector(".bd-page__in")
+      || view.querySelector(".bd-page");
+    if (!scena) return;
+    const cel = scena.querySelector(
+      ".bd-scene__kicker, .kicker, .bd-scene__title, h1, h2");
+    if (!cel || !cel.parentNode) return;
+    const et = h("p", "bd-troplabel", `TROP ${idx + 1} Z 9`);
+    cel.parentNode.insertBefore(et, cel);
+    chapterCleanup.push(() => et.remove());
   }
 
   /** Obserwator widoczności w lesson-state liczy geometrię i nasłuchuje scrolla
@@ -4904,8 +5277,8 @@
       : `${bg}
         <div class="bd-page">
           <div class="bd-sheetfx" aria-hidden="true"></div>
+          ${barHtml(c, idx)}
           <div class="bd-page__in">
-            ${barHtml(c, idx)}
             <div class="bd-page__grid">
               <div class="bd-page__main" id="bd-slot-a"></div>
               <aside class="bd-page__aside">${evidenceHtml(c, idx)}</aside>
@@ -4946,15 +5319,20 @@
       c.blocks.forEach((b) => moveBlockInto(b, slotA));
     }
 
-    /* ── AUDIO ROZDZIAŁU ────────────────────────────────────────────
-       A3: panel dźwięku siedzi w BELCE i jest w KAŻDYM tropie — stary
-       panel z rogu obsługuje już wyłącznie starą lekcję. Do tego dwie
-       rzeczy z wcześniejszych etapów, potrzebne wszędzie tam, gdzie
-       narracja ma ruszać sama:
+    /* ── BELKA I AUDIO ROZDZIAŁU ────────────────────────────────────
+       S1.A: belka niesie postęp i przełącznik trybu, w KAŻDYM tropie —
+       stary panel dźwięku w rogu obsługuje już wyłącznie starą lekcję.
+       Do tego dwie rzeczy z wcześniejszych etapów, potrzebne wszędzie
+       tam, gdzie narracja ma ruszać sama:
        • mostek przewijania (obserwator widoczności słucha scrolla
          OKNA, a rozdział przewija własny kontener),
        • doczytanie scen zbudowanych przed chwilą przez silnik. */
-    wireAudioUI(view);
+    wireBelka(view);
+    wyciszNarracjeGrą(view);
+    /* także kickery zbudowane przez SILNIK (sceny gier, dział „Sprawa…") —
+       te z przeniesionych klocków bierze już `moveBlockInto` */
+    ukryjKickery(view);
+    wstawEtykieteTropu(view, idx);
     if (NS.audio && NS.audio.scanScenes) NS.audio.scanScenes(view);
     if (c.id === "p01") wstrzyknijChipyK01(view);
     {
@@ -4967,8 +5345,6 @@
     document.body.classList.add("bd-chapter");
     wireChapterCta(c, view);
     view.querySelector("#bd-ch-back").addEventListener("click", backToBoard);
-    const rep = view.querySelector("#bd-ch-replay");
-    if (rep) rep.addEventListener("click", () => replayAnimation(c));
     if (c.video) {
       wireFilmModal(c, view);
       wireArrow(c, view);
@@ -4977,7 +5353,6 @@
     if (c.game) {
       wireDiagram(c, view);
       wireSeq(c, view);
-      explainProgress(view);
       wireSceneFx(view);               /* paralaksa tła, wejście scen */
       /* mostek: scroll rozdziału → obserwator geometrii w lesson-state,
          inaczej gra nigdy nie zostanie doczytana (patrz nudgeWatchers) */
@@ -5008,7 +5383,7 @@
   function syncBarHeight(view) {
     const v = view || chapterView();
     if (!v) return;
-    const bar = v.querySelector(".bd-page__bar");
+    const bar = v.querySelector(".bd-topbar");
     if (!bar) return;
     v.style.setProperty("--bd-bar-h", Math.round(bar.offsetHeight) + "px");
   }
@@ -5317,18 +5692,11 @@
     btn.setAttribute("aria-label", `Trop ${i + 1} z 9: ${c.title}. ${c.lead}. ${STATUS.active}.`);
   }
 
-  /** Ponowne odtworzenie animacji tropu: strona znika (pod nią kamera już
-      stoi przy polaroidzie), film gra ponownie w polu zdjęcia. */
-  async function replayAnimation(c) {
-    stopAllMedia();
-    const p = c[layoutKey()];
-    el.scene.style.transition = "none";
-    camApply(p.x, p.y, CAM.zoom);       /* niewidoczne pod stroną */
-    const btn = document.getElementById("bd-" + c.id);
-    btn.querySelector(".bd-pol__img").src = c.frameStart;
-    await closeChapterFade();
-    await playInPolaroid(c);
-  }
+  /* Etap S1.A: „Odtwórz animację" zniknęło z belki, a razem z przyciskiem
+     zniknęła funkcja `replayAnimation` — była jego jedynym klientem. Powtórka
+     animacji polaroidu zostaje tam, gdzie jest naturalna: przy wejściu w trop
+     z tablicy (`playInPolaroid`), z pominięciem kliknięciem w polaroid
+     (T-ANIM.1). */
 
   /* ── PODRÓŻ DO KOLEJNEGO TROPU ───────────────────────────────── */
   async function travelTo(nextId) {

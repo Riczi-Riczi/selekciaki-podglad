@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Akcja kanalizacja — gra labiryntowa e-lekcji SELEKT dla klas 4–5. Prowadzisz wodę rurami od lejka do zatkanej rury.">
+  <title>Akcja kanalizacja — gra SELEKT</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 10h10v12h14' fill='none' stroke='%234a6b4a' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M4 10h10v12h14' fill='none' stroke='%2335a7ee' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <!-- Tryb osadzenia w tablicy lekcji (wzorzec K06/K16): ?embed=board → klasa na <html>,
+       żeby strona lekcji mogła schować własne marginesy gry. Bez parametru nic się nie zmienia. -->
+  <script>
+    try {
+      if (new URLSearchParams(location.search).get("embed") === "board") {
+        document.documentElement.classList.add("k04-embed");
+      }
+    } catch (e) { /* brak URLSearchParams nie może wywrócić gry */ }
+  </script>
+  <link rel="stylesheet" href="k04.css?v=1">
+</head>
+<body>
+
+<div id="game" class="game" data-state="intro">
+
+  <!-- ══════════════ HUD ══════════════ -->
+  <header class="hud">
+    <p class="hud-stat">
+      RUCHY: <strong id="statMoves">0</strong>
+      <span class="hud-sep" aria-hidden="true">·</span>
+      COFNIĘCIA: <strong id="statUndos">0</strong>
+    </p>
+    <button id="btnSound" class="btn-sound" type="button" aria-pressed="true">Dźwięk: włączony</button>
+  </header>
+
+  <!-- ══════════════ KADR LABIRYNTU ══════════════
+       Kadr jest kwadratowy (1:1) — dokładnie tak, jak oryginalna grafika.
+       Nad obrazem leżą trzy warstwy w tym samym układzie współrzędnych
+       (viewBox 0 0 100 100 = procenty kadru):
+         1. woda   — kopia labiryntu z niebieskimi rurami, odsłaniana maską
+         2. debug  — SVG, graf i trasa wzorcowa (tylko ?debug=1)
+         3. arrows — strzałki kierunków (HTML, żeby miały fokus i 48 px) -->
+  <div class="stage" id="stage">
+    <div class="scene" id="scene">
+
+      <img class="maze" id="mazeImg" src="assets/images/labirynt.webp" width="1800" height="1800"
+           alt="Przekrój ulicy: pod jezdnią plątanina rur kanalizacyjnych. W prawym górnym rogu niebieski lejek, którym wpada woda. Na dole pośrodku rura zatkana zastygłym tłuszczem.">
+
+      <!-- WSTĘGA WODY. Na oryginale leży kopia labiryntu z rurami przebarwionymi
+           na błękit (kolory nauczone ze slajdów Genially, alfa obcięta do maski
+           rur). Odsłania ją JEDNA maska: „trailDone” to przebyte odcinki sklejone
+           w ciągłą polilinię, „trailLive” to odcinek animowany w tej chwili. -->
+      <svg class="water" id="water" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <defs>
+          <mask id="k04-trail" maskUnits="objectBoundingBox" maskContentUnits="userSpaceOnUse">
+            <rect x="0" y="0" width="100" height="100" fill="black"></rect>
+            <path id="trailDone" class="ribbon" d=""></path>
+            <path id="trailLive" class="ribbon" d=""></path>
+          </mask>
+        </defs>
+        <image id="blueLayer" href="assets/images/labirynt-niebieski.webp"
+               x="0" y="0" width="100" height="100"
+               preserveAspectRatio="xMidYMid meet" mask="url(#k04-trail)"></image>
+      </svg>
+
+      <svg class="debug-layer" id="debugSvg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true" hidden></svg>
+
+      <!-- Strzałki kierunków wstawia k04.js -->
+      <div class="arrows" id="arrows"></div>
+
+      <!-- Błysk alarmu przy dojściu do zatoru -->
+      <div class="alarm-flash" id="alarmFlash" aria-hidden="true"></div>
+
+    </div>
+
+    <!-- Podpowiedź siedzi w tej samej kolumnie co kadr, więc zawsze jest
+         tuż pod nim — na telefonie w pionie też, bez liczenia pozycji w JS. -->
+    <p class="hint" id="hint" aria-hidden="true">Kliknij strzałkę, żeby puścić wodę w tę stronę.</p>
+  </div>
+
+  <!-- ══════════════ KARTA HYDRAULIKA ══════════════
+       Nie jest modalem na pełny ekran — labirynt ma zostać widoczny,
+       żeby uczeń widział, skąd woda się cofa. -->
+  <aside class="card" id="card" hidden>
+    <img class="card-img" id="cardImg" src="" alt="" width="760" height="760">
+    <p class="card-text" id="cardText"></p>
+    <button class="card-close" id="cardClose" type="button">Rozumiem</button>
+  </aside>
+
+  <!-- Komunikaty hydraulika dla czytnika ekranu (drugi tor) -->
+  <div id="srStatus" class="sr-only" aria-live="polite"></div>
+
+  <!-- Odczyt pozycji kursora — tylko ?debug=1 -->
+  <p class="debug-readout" id="debugReadout" hidden></p>
+
+
+  <!-- ══════════════ EKRAN STARTOWY ══════════════
+       Jak przy finale: dwie postacie tej samej treści, przełączane po
+       ZMIERZONEJ szerokości, do jakiej tablica realnie się skaluje
+       (patrz updateBoards() w k04.js) — nie po media query na oknie. -->
+  <section id="screenIntro" class="overlay" aria-labelledby="introTitle">
+
+    <!-- ——— tablica graficzna ——— -->
+    <div class="board board--start">
+      <img src="assets/images/tablica-poczatkowa.webp" width="1200" height="1262" alt="">
+      <button class="board-go js-start" type="button">Schodzimy pod ziemię</button>
+    </div>
+
+    <!-- Treść wpalona w grafikę, powtórzona dla czytnika ekranu. Znika
+         (display:none, więc i z drzewa dostępności), gdy widać kartę HTML —
+         inaczej czytnik przeczytałby to samo dwa razy. -->
+    <div class="sr-only sr-board" id="introSr">
+      <h1 id="introTitle">Zaczynamy akcję kanalizacja</h1>
+      <p>Ktoś wylał zużyty olej do zlewu. Pod ulicą tłuszcz zastygł i zatkał rurę.
+         Puść wodę od lejka aż do zatoru i pokaż hydraulikowi, którędy biegnie droga.</p>
+      <p>Na każdym skrzyżowaniu klikasz strzałkę albo naciskasz strzałki na klawiaturze.
+         Jaśniejsza strzałka cofa wodę — zawsze możesz wrócić. Nie ma czasu ani przegranej.</p>
+      <p>Hydraulik mówi na głos — dźwięk wyciszysz przyciskiem w rogu.</p>
+    </div>
+
+    <!-- ——— karta HTML: małe kadry ——— -->
+    <div class="panel panel--small">
+      <img class="panel-cover" src="assets/images/tytul.webp" width="1200" height="1200"
+           alt="Hydraulik z uniesionym kciukiem na tle rur, obok zbliżenie rury zatkanej zastygłym tłuszczem. Napis: akcja kanalizacja.">
+      <h2 class="panel-title">Akcja kanalizacja</h2>
+      <p class="panel-text">
+        Ktoś wylał zużyty olej do zlewu. Pod ulicą tłuszcz zastygł i&nbsp;zatkał rurę.
+        Puść wodę <strong>od lejka</strong> aż do&nbsp;<strong>zatoru</strong> i&nbsp;pokaż hydraulikowi,
+        którędy biegnie droga.
+      </p>
+      <div class="panel-info">
+        <svg class="panel-info-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 8h.01M12 11v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p>Na każdym skrzyżowaniu klikasz strzałkę albo naciskasz&nbsp;← → ↑ ↓.
+          <strong>Jaśniejsza strzałka cofa wodę</strong>&nbsp;— zawsze możesz wrócić.
+          Nie ma czasu ani przegranej.</p>
+      </div>
+      <button class="btn btn--primary js-start" type="button">SCHODZIMY POD ZIEMIĘ</button>
+      <p class="panel-hint">Hydraulik mówi na głos — dźwięk wyciszysz przyciskiem w&nbsp;rogu.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ EKRAN FINAŁOWY ══════════════
+       Dwie postacie tej samej treści, przełączane wyłącznie CSS-em:
+
+         .board--final  tablica graficzna — od 640 × 700 px w górę
+         .panel--small  karta HTML — na mniejszych ekranach
+
+       Powód progu: napisy na tablicy są WPALONE w grafikę i skalują się
+       razem z nią. Zmierzona x-height najmniejszego wiersza to 1,23 %
+       szerokości tablicy, czyli 4,5 px na kadrze 366 px (telefon 390 px) —
+       nieczytelne. Dopiero od ~640 px kadr daje x-height ≈ 7,9 px.
+       Obie postacie są w DOM, więc czytnik ekranu ma treść zawsze. -->
+  <section id="screenFinal" class="overlay overlay--final is-hidden" aria-labelledby="finalTitle">
+
+    <!-- ——— tablica graficzna ——— -->
+    <div class="board board--final" id="finalBoard">
+      <img src="assets/images/tablica-koncowa.webp" width="1200" height="1144"
+           alt="Tablica z napisem: Misja wykonana! Zator rozbito! Hydraulik unosi kciuk. Na tablicy złota litera P i napis: zdobywasz poszlakę do śledztwa, litera trafia do Twojego Notatnika Śledczego.">
+      <!-- Liczby dosadzamy w układzie współrzędnych grafiki (2114 × 2016),
+           bo tylko tam linia bazowa y=1620 trafia co do piksela w miejsce po
+           wypalonych cyfrach. Pola po nich są wyczyszczone w samym pliku. -->
+      <svg class="vals" viewBox="0 0 2114 2016" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <text id="valMoves" x="703"  y="1620"></text>
+        <text id="valDead"  x="1235" y="1620"></text>
+        <text id="valUndos" x="1674" y="1620"></text>
+      </svg>
+      <button class="board-go js-final" type="button">Zapisz literę i kontynuuj e-lekcję</button>
+    </div>
+    <p class="board-note">
+      Tłuszcz z&nbsp;jednego zlewu potrafi zatkać rurę całej ulicy&nbsp;— dlatego zużyty
+      olej trafia do&nbsp;butelki i&nbsp;Olejomatu, nie do&nbsp;kanalizacji.
+    </p>
+
+    <!-- ——— karta HTML: małe ekrany ——— -->
+    <div class="panel panel--small">
+      <img class="panel-cover panel-cover--plate" src="assets/images/hydraulik/swietna-robota.webp"
+           width="760" height="760"
+           alt="Hydraulik z uniesionym kciukiem mówi: Świetna robota! Wierzyłem w Ciebie.">
+      <h2 id="finalTitle" class="panel-title">Misja wykonana! Zator rozbito!</h2>
+      <p class="panel-text panel-text--verdict">
+        Woda dotarła do&nbsp;zatoru. Tłuszcz z&nbsp;jednego zlewu potrafi zatkać rurę
+        całej ulicy&nbsp;— dlatego zużyty olej trafia do&nbsp;butelki i&nbsp;Olejomatu, nie do&nbsp;kanalizacji.
+      </p>
+      <p class="panel-text panel-text--label">Zdobywasz poszlakę do śledztwa:</p>
+      <div class="reward-letter">P</div>
+      <p class="panel-text">Litera trafia do Twojego Notatnika Śledczego.</p>
+      <p class="panel-score" id="finalScore"></p>
+      <button class="btn btn--primary js-final" type="button">ZAPISZ LITERĘ I KONTYNUUJ</button>
+    </div>
+  </section>
+
+</div>
+
+<script src="k04-mapa.js?v=1"></script>
+<script src="k04.js?v=1"></script>
+</body>
+</html>
