@@ -16,7 +16,7 @@
       }
     } catch (e) { /* brak URLSearchParams nie może wywrócić gry */ }
   </script>
-  <link rel="stylesheet" href="k04.css?v=1">
+  <link rel="stylesheet" href="k04.css?v=4">
 </head>
 <body>
 
@@ -119,8 +119,12 @@
 
     <!-- ——— karta HTML: małe kadry ——— -->
     <div class="panel panel--small">
-      <img class="panel-cover" src="assets/images/tytul.webp" width="1200" height="1200"
-           alt="Hydraulik z uniesionym kciukiem na tle rur, obok zbliżenie rury zatkanej zastygłym tłuszczem. Napis: akcja kanalizacja.">
+      <!-- Etap S2 pkt 12: karta małych ekranów ma szatę tablicy z desktopu,
+           więc okładką jest portret hydraulika w bulaju, a nie szeroka
+           grafika tytułowa (ta niosła własny napis „akcja kanalizacja",
+           powtarzany zaraz niżej przez tabliczkę). -->
+      <img class="panel-cover" src="assets/images/hydraulik-portret.webp" width="340" height="340"
+           alt="Hydraulik w koszuli roboczej uśmiecha się na tle rur.">
       <h2 class="panel-title">Akcja kanalizacja</h2>
       <p class="panel-text">
         Ktoś wylał zużyty olej do zlewu. Pod ulicą tłuszcz zastygł i&nbsp;zatkał rurę.
@@ -175,9 +179,9 @@
 
     <!-- ——— karta HTML: małe ekrany ——— -->
     <div class="panel panel--small">
-      <img class="panel-cover panel-cover--plate" src="assets/images/hydraulik/swietna-robota.webp"
-           width="760" height="760"
-           alt="Hydraulik z uniesionym kciukiem mówi: Świetna robota! Wierzyłem w Ciebie.">
+      <img class="panel-cover panel-cover--plate" src="assets/images/hydraulik-portret.webp"
+           width="340" height="340"
+           alt="Hydraulik w koszuli roboczej uśmiecha się na tle rur.">
       <h2 id="finalTitle" class="panel-title">Misja wykonana! Zator rozbito!</h2>
       <p class="panel-text panel-text--verdict">
         Woda dotarła do&nbsp;zatoru. Tłuszcz z&nbsp;jednego zlewu potrafi zatkać rurę

@@ -1368,7 +1368,7 @@ h2.lead,h3.lead{ font-weight:800; }
    odtwarzacz miał kadr 0 × 0 (pomiar F1). Wcześniej ratowała go plansza
    `.ph--video` z własną proporcją — po jej usunięciu trzeba to powiedzieć
    wprost. */
-#k17-film-wrap{ width:100%; }
+#k17-film-wrap{ width:100%; max-width:960px; margin:26px auto 0; }
 .film{ width:100%; max-width:960px; margin-inline:auto; }
 .film__kadr{
   position:relative; width:100%; aspect-ratio:16/9;
@@ -1420,3 +1420,11 @@ h2.lead,h3.lead{ font-weight:800; }
   color:#4d5a4a; text-align:center;
 }
 .film__nota[hidden]{ display:none !important; }
+
+/* ── FILM: SZEROKOŚĆ ARKUSZA (Etap S2, pkt 8a) ──
+   Odtwarzacz zajmuje szerokość jasnego arkusza minus 16 px z każdej strony,
+   nie więcej niż 1280 px. Kadr trzyma 16:9. Reguła bazowa `.film` zostaje
+   dla wariantu `?legacy=1`, gdzie arkusza nie ma. */
+/* Reguły szerokości dla trybu tablicy siedzą w arkuszu tablicy
+   (`lekcja-4-5-integracja-board.css`, sekcja „TROP 9: FILM…”) — ten arkusz
+   ładuje się później, więc tam wygrywają z bazowym `max-width:960px`. */

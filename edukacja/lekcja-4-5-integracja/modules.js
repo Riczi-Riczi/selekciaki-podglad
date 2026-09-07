@@ -1941,6 +1941,26 @@
       poster.remove();
       powiedz("Film się odtwarza.");
 
+      /* Etap S2 (pkt 8b): PASEK Z TYTUŁEM I LOGO NALEŻY DO YOUTUBE.
+         Nie da się go wyłączyć parametrem osadzenia: `showinfo` YouTube
+         usunął w 2018, a `modestbranding` wycofał w 2023 — dokładanie ich
+         dziś to tylko zaśmiecanie adresu. Pasek chowa się sam po ok. 3 s
+         BEZCZYNNOŚCI wskaźnika nad odtwarzaczem, więc jedyne, co możemy
+         zrobić po swojej stronie, to nie trzymać tam uwagi przeglądarki:
+         zaraz po starcie oddajemy fokus nagłówkowi sceny. Kursora nie da
+         się przesunąć programowo — jeśli uczeń zostawi go nad filmem,
+         pasek zostanie i to jest zachowanie YouTube, nie lekcji. */
+      const naglowek = wrap.closest(".bd-chscene")
+        && wrap.closest(".bd-chscene").querySelector(".bd-scene__title, h2, h1");
+      if (naglowek) {
+        setTimeout(() => {
+          try {
+            naglowek.setAttribute("tabindex", "-1");
+            naglowek.focus({ preventScroll: true });
+          } catch (e) { /* ignore */ }
+        }, 400);
+      }
+
       /* bramka: stan ENDED z API, a gdy API nie wstanie w 3 s — zapas */
       zegarZapasu = setTimeout(() => koniecFilmu("zapas"), ZAPAS_MS);
       zaladujApi().then(() => {

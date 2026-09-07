@@ -3683,6 +3683,12 @@ body.bd-on .ob-domkniecie{
   width:100%; max-width:52ch; margin:0 auto;
   opacity:var(--ob-x); overflow:hidden;
   max-height:calc(28svh * var(--ob-x));
+  /* Bez `flex:none` blok domykający był ostatnim elementem, który flex mógł
+     ścisnąć — i ściskał: przy kole 665 px tekst miał 53 px treści w 33 px
+     ramki, więc drugi wiersz znikał pod `overflow:hidden` (zmierzone na
+     1440 × 900). Miejsce dla niego rezerwuje teraz bezpiecznik wysokości
+     koła powyżej, a te dwa zdania nie oddają już ani piksela. */
+  flex:none;
 }
 
 /* ── kadr odpięty (ograniczony ruch): wszystko widoczne, nic nie rośnie ── */
@@ -3741,20 +3747,23 @@ body.bd-on .bd-chscene--p08koniec{ padding-block:clamp(24px,6vh,64px); }
    jego `max-width:1320px` nigdy nie zaczął obowiązywać (patrz raport 68).
    Scena gry wychodzi więc POZA kartkę i niesie jej kremowe tło ze sobą —
    tylko ta jedna sekcja, reszta tropu bez zmian. */
+/* Etap S2, poprawka B: scena WRACA w obręb jasnego arkusza.
+   Wcześniej rozpychała się do `min(1180px, 94vw)` ujemnym marginesem
+   i wystawała poza arkusz — 18 px z każdej strony na 1440 i 48 px na 1366
+   (zmierzone). Teraz trzyma szerokość arkusza, a kolumna zostawia równe
+   16 px luzu z obu stron, tak samo jak gra PSZOK i odtwarzacz filmu. */
 body.bd-on .bd-chscene--k16{
   padding-block:clamp(20px,5vh,56px);
-  /* `.bd-chscene` wnosi ~49 px paddingu z każdej strony — razem
-     z paddingiem kolumny zjadało to 144 px z poszerzonego kadru
-     (zmierzone: scena 1180, ramka 1036). Odstęp daje sama kolumna. */
+  /* `.bd-chscene` wnosi ~49 px paddingu z każdej strony — odstęp daje
+     tu sama kolumna, więc wypełnienie boczne sceny zerujemy. */
   padding-inline:0;
-  width:min(1180px, 94vw); max-width:none;
-  margin-inline:calc(50% - min(590px, 47vw));
+  width:100%; max-width:none; margin-inline:0;
   background:rgba(255,252,247,var(--sheet-opacity, .96));
   border-radius:10px;
 }
 body.bd-on #bd-scene-k16 .bd-chscene__in{
-  max-width:1180px; margin-inline:auto;
-  padding:0 clamp(10px,1.2vw,18px);
+  max-width:none; margin-inline:0;
+  padding:0 16px;
 }
 body.bd-on #bd-scene-k16 .bd-page__main{ max-width:none; }
 body.bd-on #bd-slot-k16 #k16{
@@ -3814,6 +3823,22 @@ body.bd-on .bd-film [data-ph="k17-film"]{ display:none; }
    do werdyktu, bramkowany końcem filmu. */
 body.bd-on .bd-filmcta{ margin:clamp(12px,2.4vh,22px) 0 0; text-align:center; }
 body.bd-on .bd-filmcta[hidden]{ display:none !important; }
+
+/* ── TROP 9: FILM NA SZEROKOŚĆ ARKUSZA (Etap S2, pkt 8a) ──
+   Odtwarzacz zajmuje szerokość jasnego arkusza minus 16 px z każdej strony,
+   nie więcej niż 1280 px; kadr trzyma 16:9. Kolumna sceny oddaje na to swoje
+   wypełnienia boczne — tekst nad filmem jest wyśrodkowany, więc rozsuwa się
+   wyłącznie kadr. Trzy rzeczy, które wcześniej to blokowały (pomiar S2:
+   960 px zamiast 1077): styl liniowy `max-width:960px` w HTML (usunięty),
+   `body.bd-on .bd-film{max-width:960px}` powyżej oraz reguła zapisana
+   w arkuszu lekcji, który ładuje się WCZEŚNIEJ niż ten. */
+@media (min-width: 1024px){
+  body.bd-on #bd-scene-film .bd-chscene__in{ max-width:none; padding-inline:16px; }
+  body.bd-on .bd-chscene--odtajnienie{ padding-inline:0; }
+  body.bd-on .bd-film{ max-width:none; margin-inline:0; }
+  body.bd-on .bd-film #k17-film-wrap{ max-width:none; }
+  body.bd-on .bd-film .film{ max-width:1280px; margin-inline:auto; }
+}
 
 /* ── 3. WERDYKT: hasło zapalane literą po literze ── */
 body.bd-on .bd-chscene--werdykt{ padding-block:clamp(28px,7vh,72px); }
@@ -4038,4 +4063,132 @@ body.bd-on .bd-stempel.is-przybity{ animation:bd-stempel-in .5s cubic-bezier(.2,
 }
 @media (prefers-reduced-motion: reduce){
   .bd-trybbtn, .bd-trybbtn__ring, .bd-trybbtn__panel{ transition:none; }
+}
+
+/* ── PRZYCISK „KONTYNUUJ LEKCJĘ" POD GRĄ K04 (Etap S2) ──
+   Tablica końcowa Rurociągu ma własny przycisk, ale leży w iframie i czyta
+   się jak element gry. Ten należy do LEKCJI: pełna szerokość jasnego
+   arkusza, wyśrodkowany, ta sama pigułka co pozostałe CTA tropu. */
+body.bd-on .bd-k04cta{
+  width:100%; margin:clamp(14px,2.4vh,26px) 0 0; text-align:center;
+}
+body.bd-on .bd-k04cta[hidden]{ display:none !important; }
+body.bd-on .bd-k04cta__btn{
+  min-height:56px; padding:15px 34px; font-size:clamp(15px,1.2vw,18px);
+}
+
+/* ═══════════ TROP 7: GRA PSZOK NA JEDNYM EKRANIE (Etap S2) ═══════════
+   (b) Ramka zajmuje szerokość jasnego arkusza minus 16 px z każdej strony.
+       `.bd-chscene` ma własne wypełnienie boczne, więc odejmujemy je
+       ujemnym marginesem i dokładamy równe 16 px.
+   (c) Tekst nad grą plus ramka mają zmieścić się na 1440 × 900. Plansza
+       16:10 przy szerokości arkusza zjada większość kadru, więc nagłówek
+       i akapit dostają ciaśniejszą typografię i mniejsze odstępy — treść
+       zostaje ta sama, zmienia się tylko jej gęstość. */
+@media (min-width: 1024px){
+  /* Scena gry rezygnuje z własnych marginesów bocznych: kolumna staje się
+     całą szerokością jasnego arkusza minus równe 16 px. Tekst nad grą i tak
+     ma własne ograniczenia (`max-width:74ch`, wyśrodkowanie), więc rozsuwa
+     się tylko plansza. Poprzednia wersja próbowała rozepchnąć samą ramkę
+     ujemnym marginesem liczonym z `3.4vw` — zmienną zapisano jednak na
+     `.bd-chscene--pszok` (scena placu), a nie `--k15` (scena gry), więc
+     reguła nigdy nie działała: zmierzona ramka miała 925 px zamiast 1077. */
+  body.bd-on #bd-scene-k15 .bd-chscene__in{
+    max-width:none; padding-inline:16px;
+  }
+  body.bd-on .bd-chscene--k15{ padding-inline:0; }
+  /* Kadr nie może przekroczyć wysokości ekranu pod belką minus miejsce na
+     tekst NAD planszą i notę POD nią. Odejmowana stała to zmierzona wysokość
+     tej obudowy przy zaciśniętej typografii (1440 × 900: 36 + 34 + 6 + 22 +
+     14 + 10 + 8 + 20 + 36 = 186 px, z zapasem 200 px na dwuwierszowy tytuł
+     przy węższych oknach). Do etapu S2 stała wynosiła 210 px, ale liczyła
+     wyłącznie tekst nad grą — nota pod ramką wystawała 18 px poza ekran.
+     Pełny rachunek na 1440 × 900 (zmierzony): 12 px odstępu pod belką +
+     13 px wypełnienia sceny + 51 px zdania przejścia + 34 px tytułu +
+     6 + 22 px celu + 14 px odstępu + 10 px ramki + 8 + 20 px noty = 190,
+     zaokrąglone w górę do 215 px na dwuwierszowy tytuł i dwuwierszową notę
+     w węższych oknach. */
+  body.bd-on #k15 .frame__box--pszok{
+    max-height:calc(100svh - var(--bd-bar-h, 64px) - 215px);
+    max-width:calc((100svh - var(--bd-bar-h, 64px) - 215px) * 1.6);
+    margin-inline:auto;
+  }
+  body.bd-on .bd-chscene--k15{ padding-block:clamp(10px,1.4vh,18px); }
+  body.bd-on #k15 > .lead{
+    font-size:clamp(26px, 2.1vw, 34px); line-height:1.14;
+    margin-block:0 6px;
+  }
+  body.bd-on #k15 > .body-text{
+    font-size:clamp(15px, 1.05vw, 17px); line-height:1.45;
+    margin-block:0 4px; max-width:74ch;
+  }
+  body.bd-on #k15 .frame--pszok{ margin-top:10px; }
+  body.bd-on #k15 > .note{
+    margin-block:8px 0; font-size:14px; line-height:1.4; max-width:none;
+  }
+}
+
+/* (d) Zdanie „Gra ukończona. Litera O trafiła…" mówi teraz tablica wyników
+   WEWNĄTRZ gry. Pod ramką zostaje wyłącznie dla czytnika ekranu — dwa razy
+   ta sama informacja na ekranie to szum, ale odebranie jej czytnikowi
+   byłoby regresją dostępności. */
+body.bd-on #k15 .frame__status{
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0;
+}
+
+/* ═══════════ TROP 8: OBIEG WIĘKSZY (Etap S2, pkt 5) ═══════════
+   Koło rośnie na desktopie o ok. 1,3× — pod warunkiem, że scena nadal
+   mieści się w jednym kadrze 1440 × 900. Dlatego limit `60svh` idzie do
+   `74svh`, a nie do wartości stałej: przy niższym oknie koło samo zejdzie
+   do rozmiaru, który się mieści. Podpisy przystanków o 2 px większe. */
+@media (min-width: 1024px){
+  body.bd-on .ob-kolo{
+    /* Czwarty człon to bezpiecznik wysokości dołożony po teście S2:
+       poza samym kołem kadr musi pomieścić podpisy przystanków (28 px pod
+       kołem) i zdanie „Materiał nie znika…" (53 px), a `74svh` o tym nie
+       wie. Na 1440 × 900 nic nie zmienia (672 > 666), niżej samo przycina. */
+    --ob-bok: min(74svh, 92%, 830px,
+                  calc(100svh - var(--bd-bar-h, 64px) - 178px));
+  }
+  body.bd-on .ob-stop__etykieta{
+    font-size:clamp(13px, 1.3vw, 17px);
+  }
+}
+
+/* ═══════ TROP 8: GRUPA OBIEGU WYŻEJ W KADRZE (Etap S2, poprawka A) ═══════
+   `.ob-stage` centruje treść w pionie, więc pustka nad kołem i zapas pod
+   zdaniem końcowym były zawsze równe (zmierzone na 1440 × 900: 52 px u góry,
+   39 px pod zdaniem). W oknie realnej przeglądarki, niższym o pasek adresu,
+   te 39 px znikały i zdanie wypadało pod krawędź.
+
+   Zamiast rezygnować z centrowania (co szarpnęłoby fazą 1, gdzie na scenie
+   jest sam tytuł) dokładamy dolne wypełnienie sterowane tym samym `--ob-k`,
+   które prowadzi całe przejście. Grupa jedzie w górę o połowę tej wartości,
+   płynnie, bez skoku. `safe center` to druga warstwa zabezpieczenia — gdyby
+   treść mimo wszystko przerosła kadr, wyrówna się do GÓRY zamiast uciekać
+   w obie strony. */
+body.bd-on .ob-stage{
+  justify-content:safe center;
+  padding-block:clamp(8px,1.6vh,22px)
+                calc(clamp(8px,1.6vh,22px) + 70px * var(--ob-k, 0));
+}
+
+/* ═══════════ TROP 8: SCENA K16 SAMA WCHODZI W KADR (Etap S2, pkt 6) ═══════════
+   Po zjeździe z obiegu scena „Drugie życie odpadów" zostawała rozdarta między
+   dwoma kadrami i uczeń musiał ją dosuwać myszką.
+
+   Pierwsze podejście stawiało na `scroll-snap-type: y proximity` z
+   `scroll-margin-top: var(--bd-bar-h)`. POMIAR TO ODRZUCIŁ: po prawdziwym
+   geście kółkiem scena zatrzymywała się 27 px pod belką (góra sceny na
+   51 px przy dolnej krawędzi belki 78 px), bo `proximity` jest uznaniowe —
+   przeglądarka MOŻE dociągnąć, ale nie musi, i w tym układzie nie dociągała.
+   Wymaganie „scena sama wskakuje w kadr" nie może wisieć na „może".
+
+   Dosunięcie robi więc silnik (`wireDosuniecieSceny` w board-stage.js):
+   po ustaniu ruchu, przy widoczności ≥ 40%, jednym płynnym przewinięciem.
+   Zostaje tu tylko `scroll-margin-top` — z niego korzysta `scrollIntoView`
+   przy skokach programowych, żeby scena nie chowała się pod belkę. */
+body.bd-on .bd-chapterlay--p08 .bd-chscene--k16{
+  scroll-margin-top: var(--bd-bar-h, 64px);
 }

@@ -228,6 +228,14 @@
       klik przerywa poprzedni i nigdy nie słychać dwóch nagrań naraz. */
   function playClip(src, tytul) {
     if (!src) return;
+    /* BRAMKA TRYBU W JEDNYM MIEJSCU (Etap S2). „Czytam" znaczy CISZA —
+       także dla klipów, które są odpowiedzią na kliknięcie ucznia. Do tej
+       pory każdy klient `playClip` pilnował tego sam i jeden z nich tego nie
+       robił: karty diagramu K05 mówiły lektorem również w „Czytam". Warunek
+       stoi tu, więc żadne przyszłe wywołanie nie ominie go przez przeoczenie.
+       Bramka jest PRZED `ensureAudio()`, czyli po plik nie leci ani jedno
+       żądanie sieciowe. */
+    if (S.get().audioMode !== "both") return;
     if (unavailable.has(srcOf(src))) return;
     const a = ensureAudio();
     const nowe = przypnijZrodlo(src);
@@ -284,6 +292,8 @@
 
   /* ── obserwator scen ── */
   const obserwowane = new WeakSet();
+  /* ścieżki nagrań, które w tej sesji zagrały już SAME (bez prośby ucznia) */
+  const autoStartowane = new Set();
 
   /** Doczytanie scen zbudowanych PO starcie strony (Etap A2).
       Rozdziały tablicy powstają dopiero przy wejściu w trop, więc ich
@@ -314,9 +324,24 @@
           blokadaTwarda = false; scenaBlokady = null; suspended = false;
         }
         loadScene(scene);
-        /* auto-start tylko w trybie słuchania i tylko dla NOWEJ sceny
-           (powrót do sceny nie restartuje nagrania samoczynnie) */
-        if (isNew && autoOn() && !suspended) play(true);
+        /* Auto-start tylko w trybie słuchania i tylko dla sceny, która
+           jeszcze sama nie zagrała w tej sesji.
+
+           Do etapu S2 warunkiem było `scene !== currentScene`. Chroniło to
+           przed powtórką w obrębie jednego przewinięcia, ale nie przed
+           powrotem: wyjście na tablicę zeruje `currentScene`, a rozdział
+           powstaje od nowa, więc ta sama scena wracała jako „nowa" i głos
+           startował drugi raz (zmierzone na 390 px w Tropie 3). Pamięć
+           trzymamy po ŚCIEŻCE nagrania, bo węzły DOM giną razem z widokiem.
+           Powtórzenie na życzenie zostaje — od tego jest „Od początku"
+           w belce, które woła `play(true)` z pominięciem obserwatora. */
+        const kluczSceny = scene.dataset.audioSrc
+          ? srcOf(scene.dataset.audioSrc) : null;
+        const juzGrala = kluczSceny && autoStartowane.has(kluczSceny);
+        if (isNew && !juzGrala && autoOn() && !suspended) {
+          if (kluczSceny) autoStartowane.add(kluczSceny);
+          play(true);
+        }
       },
     });
   }
@@ -402,6 +427,13 @@
   NS.audio = {
     init, play, pause, stop, suspend, resumeAllowed,
     loadScene, playClip, scanScenes, setMode,
+    /* Silnik startuje narrację pierwszej sceny tropu sam (Etap S2 pkt 11).
+       Zgłasza to tutaj, żeby obserwator nie policzył tej sceny drugi raz
+       przy powrocie do rozdziału. */
+    oznaczAutoStart(scene) {
+      const src = scene && scene.dataset ? scene.dataset.audioSrc : null;
+      if (src) autoStartowane.add(srcOf(src));
+    },
     stanUi,
     onUi(fn) { widoki.add(fn); try { fn(stanUi()); } catch (e) {} return () => widoki.delete(fn); },
     isSuspended: () => suspended,

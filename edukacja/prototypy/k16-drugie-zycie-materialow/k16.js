@@ -122,6 +122,44 @@
     }
     return sfx[name];
   }
+  /* Etap S2. Przeglądarka może ODMÓWIĆ odtworzenia, dopóki w TYM dokumencie
+     nie było gestu — a gra żyje w ramce lekcji, więc kliknięcie na stronie
+     nadrzędnej się nie liczy. Do tej pory odmowa była połykana przez puste
+     `catch`, przycisk dalej głosił „Dźwięk: włączony", a uczeń słyszał ciszę
+     i miał prawo uznać, że przełącznik nie działa. Teraz: odmowę widać na
+     przycisku, a pierwszy gest w grze odblokowuje dźwięk. */
+  let dzwiekOdblokowany = false;
+  let odmowa = false;
+  const btnSound = document.getElementById('k16-sound');
+
+  function odswiezPrzycisk() {
+    if (!btnSound) return;
+    btnSound.setAttribute('aria-pressed', String(soundOn));
+    btnSound.textContent = !soundOn ? 'Dźwięk: wyłączony'
+      : odmowa ? 'Dźwięk: dotknij, aby włączyć'
+      : 'Dźwięk: włączony';
+  }
+
+  /* „Ciche” odblokowanie: krótkie play()+pause() na wyciszonym elemencie
+     w chwili pierwszego gestu. Bez tego pierwszy efekt rundy bywa gubiony,
+     bo przeglądarka odrzuca odtworzenie tuż przed zarejestrowaniem gestu. */
+  function odblokujDzwiek() {
+    if (dzwiekOdblokowany) return;
+    dzwiekOdblokowany = true;
+    try {
+      const a = sfxGet('poprawna');
+      const glos = a.volume;
+      a.volume = 0;
+      const p = a.play();
+      const koniec = () => { try { a.pause(); a.currentTime = 0; a.volume = glos; } catch (e) {} };
+      if (p && p.then) p.then(() => { koniec(); if (odmowa) { odmowa = false; odswiezPrzycisk(); } })
+        .catch(() => { a.volume = glos; });
+      else koniec();
+    } catch (e) { /* brak audio nie może zatrzymać gry */ }
+  }
+  ['pointerdown', 'keydown', 'touchstart'].forEach((t) =>
+    document.addEventListener(t, odblokujDzwiek, { once: false, passive: true }));
+
   function sfxPlay(name) {
     if (!soundOn) return;
     try {
@@ -131,7 +169,10 @@
          a jedna instancja Audio wyklucza równoległe kopie */
       a.currentTime = 0;
       const p = a.play();
-      if (p && p.catch) p.catch(() => {});
+      if (p && p.catch) {
+        p.then(() => { if (odmowa) { odmowa = false; odswiezPrzycisk(); } })
+         .catch(() => { odmowa = true; odswiezPrzycisk(); });
+      }
     } catch (e) { /* nigdy nie blokujemy gry */ }
   }
   function sfxStopLoop(fade) {
@@ -155,19 +196,26 @@
     if (sfx.loop) sfx.loop.volume = SFX_DEF.loop[1];
   }
 
-  const btnSound = document.getElementById('k16-sound');
   if (btnSound) {
     btnSound.addEventListener('click', () => {
       soundOn = !soundOn;
-      btnSound.setAttribute('aria-pressed', String(soundOn));
-      btnSound.textContent = soundOn ? 'Dźwięk: włączony' : 'Dźwięk: wyłączony';
+      /* włączenie jest gestem — wykorzystujemy go do odblokowania audio,
+         żeby pierwszy efekt po włączeniu nie przepadł na odmowie */
+      if (soundOn) { odmowa = false; odblokujDzwiek(); }
+      odswiezPrzycisk();
       /* wyłączenie ucisza natychmiast; włączenie NICZEGO nie odtwarza —
          dźwięki wracają dopiero przy następnej interakcji */
       if (!soundOn) sfxStopAll();
     });
   }
+  /* Etap S2: powrót do karty WZNAWIA pętlę, jeśli maszyna wciąż pracuje.
+     Do tej pory `visibilitychange` tylko ją zatrzymywał i nic jej nie
+     wznawiało — uczeń, który zerknął w inną kartę w trakcie pracy maszyny,
+     dostawał ciszę do końca rundy. To najpewniejszy trop pod zgłoszenie
+     „dźwięk gaśnie w trakcie pracy maszyny". */
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) sfxStopLoop(false);
+    if (document.hidden) { sfxStopLoop(false); return; }
+    if (soundOn && machine && machine.dataset.state === 'work') sfxPlay('loop');
   });
 
   /* ── stan gry ── */

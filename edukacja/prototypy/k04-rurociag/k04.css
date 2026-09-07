@@ -582,3 +582,149 @@ body {
    mówi wszystko, a dwa komunikaty naraz to szum. */
 .game[data-state="final"] .hint,
 .game[data-state="intro"] .hint { display: none; }
+
+/* ══════════════ KARTA HTML W SZACIE TABLICY (etap S2, pkt 12) ══════════════
+   Poniżej ~640 px grafiki tablic są nieczytelne (wpalone napisy schodzą do
+   x-height 4,5 px), więc zostaje karta HTML — ale dotąd wyglądała jak obcy
+   element: biały prostokąt w środku świata rur i mosiądzu.
+
+   Odbudowujemy tu wygląd tablicy z desktopu SAMYM CSS-em, bez dotykania
+   mechaniki i kontraktu zdarzeń: ciemnozielona płyta z nitami, złota
+   tabliczka z tytułem, okrągły portret hydraulika w bulaju i zielony
+   przycisk w złotej obwódce. Napisy zostają prawdziwym tekstem, więc
+   skalują się i czyta je czytnik ekranu — to jedyna przewaga karty nad
+   grafiką i nie oddajemy jej dla samego wyglądu.
+
+   Kolory zdjęte pipetą z `tablica-koncowa.webp` i `tablica-poczatkowa.webp`:
+   rura #3f4c39 / #5a6b4e, nit #a9743f, wnętrze #3b3f42, złoto #f0d08a →
+   #a97c31, zieleń przycisku #236330. */
+.panel--small {
+  --tb-plyta:    #4a5b40;
+  --tb-plyta-c:  #35422e;
+  --tb-nit:      #b07a41;
+  --tb-wnetrze:  #3b3f42;
+  --tb-zloto-1:  #f6e2a8;
+  --tb-zloto-2:  #c99a3c;
+  --tb-zloto-c:  #7d5a16;
+  --tb-zielen:   #2b6f36;
+  --tb-zielen-c: #17491f;
+
+  /* Wypełnienie musi być SZERSZE niż pas nitów (inset 8 px + promień 2,6 px),
+     inaczej długie wiersze wchodzą na nity — na 390 px tekst przykrywał je
+     po obu stronach, a podpowiedź na dole biegła przez trzy z nich. */
+  padding: 20px 28px 30px;
+  background: linear-gradient(180deg, var(--tb-plyta) 0%, var(--tb-plyta-c) 100%);
+  border: 3px solid var(--tb-plyta-c);
+  border-radius: 20px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45),
+              inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  color: #f3ede0;
+  overflow: hidden;
+}
+
+/* Nity: powtarzalny gradient promienisty wzdłuż wewnętrznej krawędzi płyty.
+   Warstwa jest dekoracją, więc leży w ::before i nie łapie zdarzeń. */
+.panel--small::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 14px;
+  border: 2px solid rgba(0, 0, 0, 0.22);
+  /* Pasy pionowe zaczynają się 22 px niżej, więc w narożnikach nie siadają
+     dwa nity obok siebie (widoczne na pierwszym zrzucie w prawym górnym rogu). */
+  background:
+    radial-gradient(circle, var(--tb-nit) 0 2.6px, transparent 2.9px) 0 0 / 30px 30px repeat-x,
+    radial-gradient(circle, var(--tb-nit) 0 2.6px, transparent 2.9px) 0 100% / 30px 30px repeat-x,
+    radial-gradient(circle, var(--tb-nit) 0 2.6px, transparent 2.9px) 0 22px / 30px 30px repeat-y,
+    radial-gradient(circle, var(--tb-nit) 0 2.6px, transparent 2.9px) 100% 22px / 30px 30px repeat-y;
+  pointer-events: none;
+}
+.panel--small { position: relative; }
+
+/* treść leży NAD warstwą nitów */
+.panel--small > * { position: relative; z-index: 1; }
+.panel--small > .btn { width: 100%; }
+.panel--small > *:last-child { margin-bottom: 0; }
+
+/* PORTRET W BULAJU — okrągła ramka jak właz w tablicy z desktopu */
+.panel--small .panel-cover,
+.panel--small .panel-cover--plate {
+  width: 108px; height: 108px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 5px solid var(--tb-plyta-c);
+  box-shadow: 0 0 0 3px rgba(176, 122, 65, 0.75),
+              0 8px 18px rgba(0, 0, 0, 0.4);
+  background: #cfd6c6;
+}
+
+/* ZŁOTA TABLICZKA Z TYTUŁEM */
+.panel--small .panel-title {
+  display: block;
+  padding: 9px 16px;
+  background: linear-gradient(180deg, var(--tb-zloto-1) 0%, var(--tb-zloto-2) 100%);
+  border: 2px solid var(--tb-zloto-c);
+  border-radius: 12px;
+  color: #4a2c12;
+  font-size: clamp(1.05rem, 4.6vw, 1.35rem);
+  line-height: 1.16;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.34),
+              inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* WNĘTRZE TABLICY — ciemna płyta pod treścią */
+.panel--small .panel-text,
+.panel--small .panel-score {
+  color: #ece5d6;
+}
+.panel--small .panel-text--verdict {
+  color: #ffe9b8;
+  padding: 10px 12px;
+  background: var(--tb-wnetrze);
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+}
+.panel--small .panel-text--label {
+  color: #f0c469;
+  opacity: 1;
+}
+.panel--small .panel-info {
+  background: rgba(59, 63, 66, 0.92);
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  color: #e6e0d2;
+}
+.panel--small .panel-info-icon { color: #f0c469; }
+.panel--small .panel-hint { color: #d8cfbb; opacity: 0.9; }
+
+/* litera nagrody — złota ramka zamiast niebieskiego kwadratu */
+.panel--small .reward-letter {
+  background: linear-gradient(180deg, #2e5fa8 0%, #14356b 100%);
+  border: 3px solid var(--tb-zloto-2);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+/* ZIELONY PRZYCISK W ZŁOTEJ OBWÓDCE — jak pigułka na tablicy */
+.panel--small .btn--primary {
+  background: linear-gradient(180deg, #3a8a45 0%, var(--tb-zielen-c) 100%);
+  border: 3px solid var(--tb-zloto-2);
+  color: #fff6dd;
+  text-transform: uppercase;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.42),
+              inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.panel--small .btn--primary:hover {
+  background: linear-gradient(180deg, #45a052 0%, var(--tb-zielen) 100%);
+}
+.panel--small .btn--primary:focus-visible {
+  outline: 3px solid var(--tb-zloto-1);
+  outline-offset: 3px;
+}
+
+/* Ograniczony ruch nic tu nie zmienia — karta jest statyczna, ale gdyby
+   ktoś dołożył animację, ma jej nie dostać. */
+@media (prefers-reduced-motion: reduce) {
+  .panel--small { transition: none; }
+}

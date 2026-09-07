@@ -511,6 +511,12 @@
       ruszyl = true;
       v.removeEventListener("timeupdate", narratorNaCzas);
       narratorNaCzas = null;
+      /* Etap S2: narrator intro milczy w trybie „Czytam". Intro leci przed
+         wyborem trybu, a domyślny to „Czytam" — uczeń, który zaraz wybierze
+         czytanie, i tak nie powinien usłyszeć lektora. Sprawdzamy PRZED
+         ustawieniem `src`, więc plik nie jest pobierany. */
+      const St = NS.state;
+      if (St && St.get && St.get().audioMode !== "both") return;
       /* jedno nagranie naraz: narracja sceny milknie na czas intro */
       if (NS.audio && NS.audio.suspend) NS.audio.suspend("Trwa animacja wprowadzająca.");
       if (!narrator.src) narrator.src = CFGa.introVoice;   /* dopiero teraz pobranie */
@@ -790,6 +796,44 @@
     nudgeWatchers();
     requestAnimationFrame(() => { syncBarHeight(view); nudgeWatchers(); });
     setTimeout(nudgeWatchers, 260);
+    startPierwszejNarracji(view);
+  }
+
+  /* ── NARRACJA PIERWSZEJ SCENY TROPU (Etap S2, pkt 11) ──
+     Nagranie sceny startuje z obserwatora widoczności (`zaobserwuj`
+     w audio-manager: próg widoczności + dwell). Dla PIERWSZEJ sceny tropu
+     ten warunek bywa niespełniony od razu: na 390 px scena wstępu Tropu 3
+     jest wyższa od kadru, więc jej udział widoczności nie sięga progu i głos
+     odzywał się dopiero, gdy uczeń dojechał do gry — czyli po tym, jak
+     przeczytał to, co nagranie miało przeczytać jemu.
+
+     Wołamy więc pierwszą scenę wprost, po wejściu w rozdział. Ograniczenia:
+       • tylko w trybie „Czytam i słucham" (`autoOn`) i bez zawieszenia,
+       • tylko RAZ na trop w tej sesji — powrót do tropu nie restartuje głosu,
+       • nigdy, jeśli głos już gra (Trop 5 sam odzywa się z mechaniki slajdów),
+       • po 420 ms, czyli po wjeździe strony — inaczej głos wchodziłby
+         w trakcie animacji tablicy.
+     Kolejne sceny zostają przy obserwatorze; „Od początku" w belce działa
+     jak dotąd, bo idzie przez `NS.audio.play(true)` na scenie bieżącej. */
+  const narracjaTropu = new Set();
+  function startPierwszejNarracji(view) {
+    const trop = view && view.dataset ? view.dataset.trop : null;
+    if (!trop || narracjaTropu.has(trop)) return;
+    const A = NS.audio;
+    if (!A || !A.autoOn || !A.autoOn() || A.isSuspended()) return;
+    setTimeout(() => {
+      if (!view.isConnected || narracjaTropu.has(trop)) return;
+      if (!A.autoOn() || A.isSuspended()) return;
+      const st = A.stanUi ? A.stanUi() : null;
+      if (st && st.gra) { narracjaTropu.add(trop); return; }   /* już mówi */
+      const scena = view.querySelector(
+        "[data-audio-src]:not([data-audio-manual])");
+      if (!scena) return;
+      narracjaTropu.add(trop);
+      if (A.oznaczAutoStart) A.oznaczAutoStart(scena);
+      A.loadScene(scena);
+      A.play(true);
+    }, 420);
   }
 
   function focusChapterHead(view, c, instant) {
@@ -1177,6 +1221,35 @@
   function wireBelka(view) {
     wireBelkaProg(view);
     wireBelkaTryb(view);
+  }
+
+  /* ── WSTĘPNE POBRANIE GRAFIK NASTĘPNEGO TROPU (Etap S2) ─────────
+     Gry siedzą w ramkach ładowanych leniwie, więc ich grafiki zaczynają
+     się pobierać dopiero wtedy, gdy uczeń już patrzy na puste miejsce.
+     Po optymalizacji plansze ważą kilkadziesiąt kilobajtów, więc można je
+     ściągnąć wcześniej — w tle, gdy bieżący trop jest już na ekranie.
+
+     Trzy ograniczenia, żeby to nie zaszkodziło: pobieramy DOPIERO po
+     2,5 s (najpierw ma się domknąć bieżąca scena), pomijamy przy
+     `saveData` i przy połączeniu 2G, i tylko po jednym pliku na trop —
+     to zapowiedź, nie prefetch całego rozdziału. */
+  const WSTEPNE = {
+    p03: ["../assets/images/lekcja45/07-droga-butelki/plansza-droga-butelki-3d.webp"],
+    p04: ["../assets/images/lekcja45/07-droga-butelki/plansza-droga-butelki-3d.webp"],
+    p06: ["../assets/images/lekcja45/16-drugie-zycie-materialow/webp/modul-recyklingu-3d-koncepcja-v5.webp"],
+    p07: ["../assets/images/lekcja45/16-drugie-zycie-materialow/webp/modul-recyklingu-3d-koncepcja-v5.webp"],
+  };
+  function pobierzZWyprzedzeniem(c) {
+    const lista = WSTEPNE[c && c.id];
+    if (!lista || !lista.length) return;
+    try {
+      const con = navigator.connection;
+      if (con && (con.saveData || /(^|-)2g$/.test(con.effectiveType || ""))) return;
+    } catch (e) { /* brak API — pobieramy */ }
+    const t = setTimeout(() => {
+      lista.forEach((src) => { const i = new Image(); i.decoding = "async"; i.src = src; });
+    }, 2500);
+    chapterCleanup.push(() => clearTimeout(t));
   }
 
   /* ── NARRACJA MILKNIE, GDY UCZEŃ ZACZYNA GRAĆ (Etap S1.A.1) ──────
@@ -3120,6 +3193,19 @@
           kickerK15.hidden = true;
           chapterCleanup.push(() => { kickerK15.hidden = false; });
         }
+        /* Etap S2 pkt 4c: nota awaryjna pod grą zajmowała dwa wiersze i —
+           co gorsza — obiecywała wpisanie litery „w polu postępu śledztwa",
+           którego w tablicy nie ma od etapu S1.A. Skracamy do jednego
+           wiersza i mówimy prawdę: w osobnej karcie litera nie wróci.
+           Zmiana odwracalna, więc `?legacy=1` zostaje przy oryginale. */
+        const notaK15 = blokK15 && blokK15.querySelector(":scope > .note");
+        if (notaK15) {
+          titleFixes.push({ el: notaK15, html: notaK15.innerHTML });
+          notaK15.innerHTML = "Gra się nie wczyta? Otwórz ją w&nbsp;osobnej karcie: "
+            + "<a href=\"gry/pszok/\" target=\"_blank\" rel=\"noopener\">"
+            + "Otwórz grę w nowej karcie ↗</a> — litera wróci do śledztwa "
+            + "tylko z&nbsp;gry uruchomionej tutaj.";
+        }
         /* Etap S1.A: panel postępu nie wjeżdża już do tropu — postęp
            pokazuje belka górna. Panel zostaje dzieckiem <body>, ukrytym
            przy `body.bd-on`, i służy wyłącznie wariantowi `?legacy=1`. */
@@ -3363,6 +3449,9 @@
         tytulK16.textContent = "Drugie życie odpadów";
       }
     }
+
+    /* Etap S2 pkt 6: scena K16 sama wchodzi w kadr pod belką. */
+    wireDosuniecieSceny(view, view.querySelector("#bd-scene-k16"));
 
     const wrapK16 = blokK16 && blokK16.querySelector('[data-frame="k16"]');
     const ramka = wrapK16 && wrapK16.querySelector("iframe");
@@ -4003,11 +4092,23 @@
     if (!runway || !stage || !wiz || !maszyna || !butelka) return;
 
     /* Nagranie wprowadzenia: kontrolka istnieje tylko, gdy plik jest
-       zadeklarowany (rozstrzygnięcie 3 — bez atrap i bez 404). */
+       zadeklarowany (rozstrzygnięcie 3 — bez atrap i bez 404) ORAZ gdy uczeń
+       wybrał słuchanie (Etap S2). W trybie „Czytam" lekcja jest niema, więc
+       przycisk odtwarzania byłby zaproszeniem do złamania własnej obietnicy;
+       subskrypcja menedżera pokazuje go, gdy tryb się zmieni. */
     let introAudio = null;
     const audioSlot = view.querySelector("#bd-p05-intro-audio");
+    if (P05_INTRO_MP3 && audioSlot && NS.audio && NS.audio.onUi) {
+      const odepnijTryb = NS.audio.onUi((dd) => {
+        audioSlot.hidden = dd.tryb !== "both";
+        if (dd.tryb !== "both" && introAudio && !introAudio.paused) {
+          try { introAudio.pause(); } catch (e) { /* ignore */ }
+        }
+      });
+      chapterCleanup.push(odepnijTryb);
+    }
     if (P05_INTRO_MP3 && audioSlot) {
-      audioSlot.hidden = false;
+      audioSlot.hidden = !(NS.state && NS.state.get && NS.state.get().audioMode === "both");
       audioSlot.innerHTML = '<button type="button" class="bd-btn bd-btn--sm" ' +
         'id="bd-p05-intro-play" aria-pressed="false" ' +
         'aria-label="Odtwórz nagranie wprowadzenia do Olejomatu">' +
@@ -4510,8 +4611,42 @@
     const fitFrame = () => {
       if (!frame.src) return;
       const bar = parseFloat(getComputedStyle(view).getPropertyValue("--bd-bar-h")) || 64;
-      const h = Math.min(Math.max(Math.round((view.clientHeight - bar) * 0.92), 460), 900);
+      /* Etap S2: po wygranej pod ramką staje żółty przycisk „Kontynuuj
+         lekcję". Bez rezerwy ramka brała 92% ekranu i przycisk lądował POD
+         krawędzią — uczeń widział tablicę gry, ale nie widział wyjścia z niej
+         (zmierzone na 1440 × 900). Czytamy realną wysokość stopki z DOM-u,
+         a nie stałą z głowy; gdy przycisku nie ma, rezerwa wynosi zero. */
+      const stopka = view.querySelector("#bd-slot-progress .bd-k04cta");
+      const rezerwa = stopka
+        ? Math.ceil(stopka.getBoundingClientRect().height) + 12 : 0;
+      /* Minimum wysokości ramki. Gdy scena jest JEDNOKOLUMNOWA, tekst stoi nad
+         grą i zjada kadr — przy dnie 460 px rezerwa nie miała z czego brać
+         i żółty przycisk lądował pod krawędzią (zmierzone: 44 px na 768
+         i 49 px na 1024). Tam dno schodzi do 410 px.
+
+         Warunek czytamy z REALNEGO układu, nie z progu w pikselach. Pierwsza
+         wersja pytała o `innerWidth < 1200` i była to zła granica: pomiar
+         pokazał, że kolumna jest jedna jeszcze na 1200 px (dwie pojawiają się
+         dopiero wyżej), więc dokładnie na 1200 px dno wracało do 460 i
+         przycisk spadał 77 px pod krawędź — gorzej niż przed poprawką. */
+      const kolumny = view.querySelector(".bd-p03open");
+      const jednaKolumna = !kolumny
+        || getComputedStyle(kolumny).gridTemplateColumns.trim().split(/\s+/).length < 2;
+      const dno = jednaKolumna ? 410 : 460;
+      const h = Math.min(
+        Math.max(Math.round((view.clientHeight - bar - rezerwa) * 0.92), dno), 900);
       frame.style.height = h + "px";
+      /* Sama rezerwa nie wystarczyła: między ramką a przyciskiem leży jeszcze
+         link awaryjny i wypełnienie sceny (zmierzone: dół przycisku na 910 px
+         przy ekranie 900). Domykamy nadmiarem liczonym z WYSOKOŚCI sceny, nie
+         z jej położenia — wynik nie zależy więc od tego, gdzie akurat stoi
+         przewijanie. Gdy treść mieści się w kadrze, `scrollHeight` równa się
+         minimalnej wysokości sceny i nadmiar wychodzi zerowy. */
+      if (!stopka) return;
+      const scena = frame.closest(".bd-chscene");
+      if (!scena) return;
+      const nadmiar = scena.scrollHeight - (view.clientHeight - bar);
+      if (nadmiar > 0) frame.style.height = Math.max(h - nadmiar - 2, dno) + "px";
     };
     if ("ResizeObserver" in window) {
       const ro = new ResizeObserver(fitFrame);
@@ -4534,7 +4669,36 @@
       if (noweZaliczenie) {
         announce("Zator odnaleziony. Zobacz teraz, co zatkało rurę.");
       }
-      odslonDowod(view, !noweZaliczenie);
+      /* Etap S2: odsłona BEZ przewijania — dokładnie jak w K06, K08 i PSZOK-u.
+         Wcześniej strona zjeżdżała w dół już na `k04:completed` i uczeń nie
+         zdążył zobaczyć tablicy „Misja wykonana" we własnej grze. O przejściu
+         decyduje teraz on sam: przyciskiem w grze albo tym pod ramką. */
+      odslonDowod(view, true);
+      pokazPrzyciskDalej();
+    };
+
+    /* ŻÓŁTY PRZYCISK LEKCJI POD RAMKĄ (Etap S2).
+       Tablica końcowa gry ma własny przycisk, ale leży w iframie i wygląda
+       jak element gry. Ten jest elementem LEKCJI: pełna szerokość jasnego
+       arkusza, ta sama pigułka co pozostałe CTA. Obie drogi robią to samo. */
+    let przyciskDalej = null;
+    const pokazPrzyciskDalej = () => {
+      if (przyciskDalej) { przyciskDalej.hidden = false; return; }
+      const stopka = view.querySelector("#bd-slot-progress")
+        || (wrap && wrap.parentNode) || blok;
+      if (!stopka) return;
+      const p = h("p", "bd-k04cta");
+      const btn = h("button", "bd-btn bd-k04cta__btn");
+      btn.type = "button";
+      btn.id = "bd-k04-dalej";
+      btn.textContent = "Kontynuuj lekcję";
+      p.appendChild(btn);
+      stopka.appendChild(p);
+      przyciskDalej = p;
+      chapterCleanup.push(() => { p.remove(); przyciskDalej = null; });
+      btn.addEventListener("click", () => onContinue());
+      /* ramka oddaje przyciskowi tyle wysokości, ile ten realnie zajął */
+      fitFrame();
     };
 
     /* DOPISEK do etapu: gra ma własną tablicę końcową z przyciskiem
@@ -4611,6 +4775,7 @@
     if (NS.state && NS.state.isCompleted && NS.state.isCompleted("k04")) {
       if (NS.state.awardLetter) NS.state.awardLetter("P");
       odslonDowod(view, true);
+      pokazPrzyciskDalej();          /* także dla powracającego (S2) */
     }
 
     /* Wyjście z rozdziału = pełny stop gry: zdejmujemy `src` (`data-src`
@@ -4629,22 +4794,36 @@
   function wireDiagram(c, view) {
     const d = c.diagram;
     if (!d) return;
-    let sfx = null;
-    if (d.sfx) {
+    /* Efekt powstaje LENIWIE — przy pierwszym odwróceniu karty w trybie ze
+       słuchaniem. Wcześniej `new Audio(d.sfx)` z `preload="auto"` pobierał
+       `card-flip.mp3` już przy budowie diagramu, więc w trybie „Czytam"
+       leciało żądanie po plik, którego lekcja i tak nigdy nie odtworzy
+       (pomiar S2). Odtwarzania nie było, ale obietnica „w Czytam nic nie
+       rusza" była łamana na poziomie sieci. */
+    let sfx = null, sfxNieudany = false;
+    const dajSfx = () => {
+      if (sfx || sfxNieudany || !d.sfx) return sfx;
       sfx = new Audio(d.sfx);
       sfx.preload = "auto";
       /* brak pliku nie może niczego przerwać ani zalogować błędu */
-      sfx.addEventListener("error", () => { sfx = null; }, { once: true });
-    }
-    /* „Globalne wyciszenie efektów" nie ma jeszcze własnego przełącznika
-       w interfejsie (raport 38, ograniczenie znane). Do czasu jego dodania
-       respektujemy dwa istniejące sygnały: kartę w tle oraz wspólną flagę
-       `LK45I.sfxMuted`, którą przyszły przełącznik będzie tylko ustawiał.
-       Efekt gra we wszystkich trzech trybach lekcji — to dźwięk interfejsu,
-       nie narracja treści. */
+      sfx.addEventListener("error", () => { sfx = null; sfxNieudany = true; }, { once: true });
+      return sfx;
+    };
+    /* Etap S2: efekt odwrócenia karty MILCZY w trybie „Czytam".
+       Wcześniej grał we wszystkich trybach z uzasadnieniem „to dźwięk
+       interfejsu, nie narracja treści" — ale dla ucznia, który wybrał
+       czytanie, każdy dźwięk z lekcji jest dźwiękiem z lekcji. „Czytam"
+       znaczy cisza, bez wyjątków dla kategorii technicznych.
+       Pozostałe sygnały bez zmian: karta w tle i flaga `LK45I.sfxMuted`. */
+    const trybCiszy = () => {
+      const S = NS.state;
+      return !S || !S.get || S.get().audioMode !== "both";
+    };
     const playFlip = () => {
-      if (!sfx || NS.sfxMuted || document.hidden) return;
-      try { sfx.currentTime = 0; sfx.play().catch(() => {}); } catch (e) { /* cisza */ }
+      if (NS.sfxMuted || document.hidden || trybCiszy()) return;
+      const a = dajSfx();
+      if (!a) return;
+      try { a.currentTime = 0; a.play().catch(() => {}); } catch (e) { /* cisza */ }
     };
 
     /* ── NAGRANIA KART (Etap A2) ──────────────────────────────────
@@ -4665,7 +4844,10 @@
       clearTimeout(czekaGlos);
       const start = () => NS.audio.playClip(k.glos, "Karta: " + k.label);
       /* bez efektu (wyciszony, brak pliku, karta w tle) głos rusza od razu */
-      if (!sfx || NS.sfxMuted || document.hidden) { start(); return; }
+      /* `playClip` i tak milczy w „Czytam" (bramka w menedżerze), więc tutaj
+         chodzi już tylko o to, CZY czekać na efekt: bez efektu głos rusza od
+         razu. `dajSfx()` nie tworzy elementu w trybie ciszy. */
+      if (NS.sfxMuted || document.hidden || trybCiszy() || !dajSfx()) { start(); return; }
       czekaGlos = setTimeout(start, dlugoscSfx());
     };
     chapterCleanup.push(() => clearTimeout(czekaGlos));
@@ -5224,6 +5406,7 @@
     const idx = CFG.chapters.indexOf(c);
     const view = h("section", "bd-chapterlay");
     view.id = "bd-chapterlay";
+    view.dataset.trop = c.id;          /* Etap S2 pkt 11: kto woła narrację */
     view.setAttribute("aria-label", `Trop ${idx + 1} z 9: ${c.title}`);
     const scenowy = c.id === "p05" || c.id === "p06" || c.id === "p07" || c.id === "p08" || c.id === "p09";
     if (c.video || c.game || scenowy) view.classList.add("bd-chapterlay--scenes");
@@ -5329,6 +5512,7 @@
        • doczytanie scen zbudowanych przed chwilą przez silnik. */
     wireBelka(view);
     wyciszNarracjeGrą(view);
+    pobierzZWyprzedzeniem(c);
     /* także kickery zbudowane przez SILNIK (sceny gier, dział „Sprawa…") —
        te z przeniesionych klocków bierze już `moveBlockInto` */
     ukryjKickery(view);
@@ -5402,6 +5586,51 @@
     setTimeout(() => {
       if (host.scrollTop === before) target.scrollIntoView({ behavior: "auto", block: "start" });
     }, 450);
+  }
+
+  /* ── DOSUNIĘCIE SCENY JEDNOEKRANOWEJ (Etap S2, pkt 6) ──
+     Scena zostawała rozdarta między dwoma kadrami i uczeń musiał ją dosuwać
+     myszką. CSS-owe `scroll-snap: proximity` okazało się uznaniowe (pomiar:
+     27 px pod belką po prawdziwym geście), więc dociągamy sami — ale tylko
+     wtedy, gdy to POMAGA, nigdy w trakcie ruchu ucznia:
+
+       • dopiero po 180 ms bez zdarzenia `scroll` (gest skończony),
+       • tylko gdy scena wypełnia ≥ 40% kadru (uczeń realnie do niej doszedł),
+       • tylko gdy brakuje mniej niż pół kadru (dociągamy, nie przenosimy),
+       • raz na wejście — po wyjściu sceny z kadru mechanizm się odblokowuje,
+       • nigdy przy `prefers-reduced-motion`.
+
+     Własne przewinięcie ignorujemy przez `ruchWlasny`, inaczej dosunięcie
+     wywołałoby samo siebie. */
+  function wireDosuniecieSceny(view, scena) {
+    if (!scena || reduceMotion) return;
+    let timer = 0, zrobione = false, ruchWlasny = false;
+    const belka = () =>
+      parseFloat(getComputedStyle(view).getPropertyValue("--bd-bar-h")) || 64;
+    const sprawdz = () => {
+      const b = belka();
+      const kadr = view.clientHeight - b;
+      if (kadr < 200) return;
+      const r = scena.getBoundingClientRect();
+      const widoczne = Math.min(r.bottom, view.clientHeight) - Math.max(r.top, b);
+      if (widoczne / Math.min(r.height, kadr) < 0.4) { zrobione = false; return; }
+      const odchylka = r.top - b;
+      if (zrobione || Math.abs(odchylka) < 4 || Math.abs(odchylka) > kadr * 0.5) return;
+      zrobione = true;
+      ruchWlasny = true;
+      view.scrollTo({ top: view.scrollTop + odchylka, behavior: "smooth" });
+      setTimeout(() => { ruchWlasny = false; }, 700);
+    };
+    const naScroll = () => {
+      if (ruchWlasny) return;
+      clearTimeout(timer);
+      timer = setTimeout(sprawdz, 180);
+    };
+    view.addEventListener("scroll", naScroll, { passive: true });
+    chapterCleanup.push(() => {
+      view.removeEventListener("scroll", naScroll);
+      clearTimeout(timer);
+    });
   }
 
   /** Strzałka „Przejdź do odprawy": skrót i wskazówka, NIGDY kłódka —
