@@ -4611,28 +4611,42 @@
     const fitFrame = () => {
       if (!frame.src) return;
       const bar = parseFloat(getComputedStyle(view).getPropertyValue("--bd-bar-h")) || 64;
-      /* Etap S2: po wygranej pod ramką staje żółty przycisk „Kontynuuj
-         lekcję". Bez rezerwy ramka brała 92% ekranu i przycisk lądował POD
-         krawędzią — uczeń widział tablicę gry, ale nie widział wyjścia z niej
-         (zmierzone na 1440 × 900). Czytamy realną wysokość stopki z DOM-u,
-         a nie stałą z głowy; gdy przycisku nie ma, rezerwa wynosi zero. */
-      const stopka = view.querySelector("#bd-slot-progress .bd-k04cta");
-      const rezerwa = stopka
-        ? Math.ceil(stopka.getBoundingClientRect().height) + 12 : 0;
-      /* Minimum wysokości ramki. Gdy scena jest JEDNOKOLUMNOWA, tekst stoi nad
-         grą i zjada kadr — przy dnie 460 px rezerwa nie miała z czego brać
-         i żółty przycisk lądował pod krawędzią (zmierzone: 44 px na 768
-         i 49 px na 1024). Tam dno schodzi do 410 px.
-
-         Warunek czytamy z REALNEGO układu, nie z progu w pikselach. Pierwsza
-         wersja pytała o `innerWidth < 1200` i była to zła granica: pomiar
-         pokazał, że kolumna jest jedna jeszcze na 1200 px (dwie pojawiają się
-         dopiero wyżej), więc dokładnie na 1200 px dno wracało do 460 i
-         przycisk spadał 77 px pod krawędź — gorzej niż przed poprawką. */
+      /* Układ sceny czytamy z DOM-u, nie z progu w pikselach: przy dwóch
+         kolumnach tekst stoi OBOK gry, przy jednej NAD nią. */
       const kolumny = view.querySelector(".bd-p03open");
       const jednaKolumna = !kolumny
         || getComputedStyle(kolumny).gridTemplateColumns.trim().split(/\s+/).length < 2;
-      const dno = jednaKolumna ? 410 : 460;
+
+      /* ── UKŁAD JEDNOKOLUMNOWY (telefon, 768, 1024) — etap S2.1 ──
+         Ramka ma ZAWSZE pomieścić kartę gry w całości. Etap S2 robił tu coś
+         odwrotnego: żeby zmieścić żółty przycisk pod ramką, obniżał ramkę aż
+         do 410 px. Na telefonie gra przełącza się wtedy na kartę HTML, która
+         jest WYŻSZA od tablicy graficznej — karta startowa „Akcja
+         kanalizacja" i finałowa „Misja wykonana" wychodziły poza kadr razem
+         z przyciskami. Uczeń nie mógł zacząć gry (zgłoszenie z telefonu,
+         wydanie-04).
+
+         Kolejność ważności jest jednoznaczna: najpierw gra musi być
+         obsługiwalna, potem wygoda przycisku lekcji. Ramka bierze więc cały
+         kadr pod belką minus 24 px oddechu, w granicach 560–900 px. Żółty
+         przycisk „Kontynuuj lekcję" zostaje pod ramką i poniżej 1440 px
+         sięga się po niego przewinięciem — świadoma decyzja, nie przeoczenie.
+         Rezerwy na stopkę i korekty nadmiarem sceny ta gałąź NIE stosuje. */
+      if (jednaKolumna) {
+        const hj = Math.min(Math.max(view.clientHeight - bar - 24, 560), 900);
+        frame.style.height = hj + "px";
+        return;
+      }
+
+      /* ── DWIE KOLUMNY — jak dotąd ──
+         Etap S2: po wygranej pod ramką staje żółty przycisk „Kontynuuj
+         lekcję". Bez rezerwy ramka brała 92% ekranu i przycisk lądował POD
+         krawędzią (zmierzone na 1440 × 900). Czytamy realną wysokość stopki
+         z DOM-u; gdy przycisku nie ma, rezerwa wynosi zero. */
+      const stopka = view.querySelector("#bd-slot-progress .bd-k04cta");
+      const rezerwa = stopka
+        ? Math.ceil(stopka.getBoundingClientRect().height) + 12 : 0;
+      const dno = 460;
       const h = Math.min(
         Math.max(Math.round((view.clientHeight - bar - rezerwa) * 0.92), dno), 900);
       frame.style.height = h + "px";

@@ -728,3 +728,110 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .panel--small { transition: none; }
 }
+
+/* ══════════ NAKŁADKI ZAWSZE PRZEWIJALNE (etap S2.1) ══════════
+   Zabezpieczenie ostatniej szansy. Karta jest wyższa od tablicy graficznej,
+   a wysokość ramki ustala LEKCJA — gdyby kiedykolwiek wypadła niższa, niż
+   karta potrzebuje, przycisk „Schodzimy pod ziemię" / „Zapisz literę"
+   zniknąłby pod krawędzią i gry NIE DAŁOBY SIĘ zacząć ani skończyć.
+   Tak było na wydaniu-04 przy ramce obniżonej do 410 px.
+
+   Nakładka dostaje więc własne przewijanie i dolny zapas. To nie zastępuje
+   poprawnej wysokości ramki — to gwarancja, że przycisk zawsze da się
+   dosięgnąć, niezależnie od tego, jaki kadr dostaniemy z zewnątrz.
+
+   Dwie rzeczy, bez których samo `overflow-y:auto` (było tu od początku) nic
+   nie dawało:
+     • `place-items: center` przy treści wyższej od kadru wypycha ją w OBIE
+       strony — góra karty ląduje nad krawędzią i przewijanie do niej nie
+       sięga. `safe center` w takiej sytuacji wyrównuje do góry;
+     • `.panel{max-height:100%}` przycinał kartę do wysokości nakładki, więc
+       nadmiaru nie było czym przewinąć — po prostu znikał. */
+.overlay {
+  place-items: safe center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+.overlay .panel { max-height: none; }
+
+/* ══════════ KARTA KOMPAKTOWA (etap S2.1) ══════════
+   Cel: obie karty — startowa i finałowa — mieszczą się w kadrze 360 × 560 px
+   w całości, bez przewijania. Wersja pełna (desktop) zostaje bez zmian.
+
+   Próg to WYSOKOŚĆ kadru, nie szerokość okna: gra siedzi w ramce lekcji,
+   więc `@media` w jej dokumencie mierzy właśnie ten kadr. */
+@media (max-height: 700px), (max-width: 560px) {
+  .panel--small {
+    /* dolne 24 px to miejsce na rząd nitów pod podpowiedzią — przy 18 px
+       ostatni wiersz „Hydraulik mówi na głos…" wchodził na nie (zmierzone
+       na 390 px) */
+    padding: 12px 16px 24px;
+    border-radius: 16px;
+  }
+  .panel--small::before { inset: 5px; border-radius: 11px; }
+
+  /* portret: limit 120 px z zlecenia, w praktyce mniejszy, bo to on
+     najtaniej oddaje wysokość (108 → 82 px to 26 px dla treści) */
+  .panel--small .panel-cover,
+  .panel--small .panel-cover--plate {
+    width: 82px; height: 82px;
+    max-height: 120px;
+    margin-bottom: 8px;
+    border-width: 4px;
+  }
+
+  .panel--small .panel-title {
+    padding: 6px 12px;
+    font-size: clamp(0.98rem, 4.2vw, 1.15rem);
+    line-height: 1.1;
+    margin-bottom: 8px;
+    border-radius: 10px;
+  }
+
+  .panel--small .panel-text {
+    font-size: 0.86rem;
+    line-height: 1.34;
+    margin-bottom: 8px;
+  }
+  .panel--small .panel-text--verdict { padding: 8px 10px; }
+  .panel--small .panel-text--label { margin-bottom: 2px; }
+
+  /* Kolumna tekstu notki jest tu najwęższym miejscem karty, a notka niesie
+     instrukcję gry — więc zamiast zmniejszać pismo, oddajemy jej marginesy:
+     ciaśniejsze wypełnienie, mniejsza ikona i mniejszy odstęp. Stopień pisma
+     zostaje czytelny (12,5 px), bo czyta to dziesięciolatek na telefonie. */
+  .panel--small .panel-info {
+    gap: 6px;
+    padding: 7px 8px;
+    margin-bottom: 10px;
+    font-size: 0.78rem;
+    line-height: 1.32;
+    margin-inline: -6px;
+  }
+  .panel--small .panel-info-icon { flex-basis: 15px; width: 15px; height: 15px; }
+  /* Notka zostaje w PEŁNEJ treści — decyzja użytkownika po zrzutach S2.1.
+     Trzy wiersze zamiast dwóch, bo zdanie o cofaniu wody jest instrukcją gry,
+     a nie ozdobą: uczeń bez niego nie wie, że da się wrócić. Karta ma na to
+     zapas — pomiar na 360 × 640 w raporcie 85. */
+
+  .panel--small .reward-letter {
+    width: 56px; height: 56px;
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+    border-radius: 15px;
+  }
+  .panel--small .panel-score { font-size: 0.74rem; margin-bottom: 8px; }
+
+  .panel--small .btn {
+    min-height: 46px;
+    padding: 10px 18px;
+    font-size: 0.92rem;
+  }
+  .panel--small .panel-hint {
+    margin-top: 7px;
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+}
