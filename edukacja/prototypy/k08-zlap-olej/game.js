@@ -55,7 +55,7 @@ const GAME_CONFIG = {
 
   lifeToastMs: 1200,        // ms przerwy po utracie życia (komunikat + rozbryzg)
 
-  rewardLetter: "Z",        // litera-nagroda do finałowego hasła (kanon: Z = K08)
+  rewardLetter: "I",        // litera-nagroda do hasła OBIEG (kanon: I = K08)
 
   bottleSpeed: 1.05,        // prędkość butelki (szerokości planszy / s) — klawiatura i test uczciwości
   fairnessSafety: 1.3,      // margines bezpieczeństwa testu uczciwości (>1 = łatwiej)
@@ -547,7 +547,7 @@ function onWin() {
   hideToast();
   playSound("win");
   announce(`Brawo! Złapano wszystkie ${GAME_CONFIG.targetDrops} kropli. ` +
-    `Zdobywasz literę ${GAME_CONFIG.rewardLetter}.`);
+    `Litera ${GAME_CONFIG.rewardLetter} została zapisana w pasku postępu.`);
 
   showOverlay(el.screenWin);
   el.btnNext.focus();
@@ -1010,16 +1010,16 @@ function bindControls() {
 
   el.btnResume.addEventListener("click", resumeGame);
 
-  /* „LITERA Z GOTOWA" mówi lekcji, że uczeń chce iść dalej — ten sam
+  /* „LITERA I GOTOWA" mówi lekcji, że uczeń chce iść dalej — ten sam
      kontrakt, co `k04:continue` w Rurociągu i `k06:continue` w kuchni
      (Etap S1.A.1). Zdarzenie na `window`, z `bubbles`, DOKŁADNIE RAZ;
      lekcja przewija wtedy do kolejnej sceny. Litera idzie osobno,
      z `k08:completed` — brak tego zdarzenia niczego nie psuje. */
   el.btnNext.addEventListener("click", () => {
     if (game.state !== STATES.WON) return;
-    announce("Litera Z gotowa. Wracasz do e-lekcji.");
+    announce("Litera I zapisana w pasku postępu. Wracasz do e-lekcji.");
     el.btnNext.disabled = true;
-    el.btnNext.textContent = "LITERA Z GOTOWA ✓";
+    el.btnNext.textContent = "Kontynuuj lekcję ✓";
     if (game.continueSent) return;
     game.continueSent = true;
     try {

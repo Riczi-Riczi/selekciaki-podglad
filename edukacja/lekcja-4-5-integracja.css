@@ -679,8 +679,17 @@ h2.lead,h3.lead{ font-weight:800; }
   border-radius:var(--lk-radius); text-align:center;
 }
 .terminal.is-unlocked{ border-color:var(--lk-amber); box-shadow:0 0 0 3px rgba(242,177,39,.18); }
-.terminal__missing{ font-size:14px; line-height:1.5; opacity:.8; margin-top:10px; }
+.terminal__missing{ font-size:15px; line-height:1.55; opacity:.85; margin-top:10px; }
 .terminal__msg{ font-size:clamp(17px,2vw,22px); line-height:1.5; font-weight:600; }
+
+/* Etap P (A04): lista brakujących zadań z drogą powrotną przy każdym.
+   Kafelki, nie punktory — każda pozycja jest przyciskiem, a nie tekstem
+   do przeczytania i odszukania gdzie indziej. */
+.terminal__zadania{ list-style:none; margin:16px 0 0; padding:0;
+  display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+.terminal__zadanie{ display:flex; flex-direction:column; align-items:center; gap:4px; }
+.terminal__wroc{ min-height:44px; }
+.terminal__trop{ font-size:12px; letter-spacing:.08em; text-transform:uppercase; opacity:.65; }
 
 /* ═══════════ K18 — DYPLOM ═══════════ */
 .diploma-form{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; justify-content:center; margin-top:18px; }
@@ -798,7 +807,7 @@ h2.lead,h3.lead{ font-weight:800; }
 .btn-lk--ghost{ background:transparent; color:var(--lk-green); border-color:var(--lk-green); }
 
 /* =====================================================================
-   K14 — SPACER PO PSZOK-u (.pszok-journey)
+   K14 — SPACER PO PSZOK (.pszok-journey)
    Dwa tryby z jednego markupu:
    • BAZOWY (bez JS / mobile / reduced-motion) — 14 stacji jako pionowy stos,
      pełna treść czytelna, zero animacji. To jest stan domyślny w CSS.

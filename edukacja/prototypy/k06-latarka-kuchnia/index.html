@@ -151,18 +151,26 @@
   <section id="screenFinal" class="overlay overlay--final is-hidden" aria-labelledby="finalTitle">
     <div class="panel">
       <h2 id="finalTitle" class="panel-title">Kuchnia przeszukana</h2>
+      <!-- ETAP T (A07): pięć poszlak nie daje pewności, co zrobił chłopiec —
+           mówi o tym, co w tej kuchni jest przygotowane. -->
       <p class="panel-text panel-text--verdict">
-        Pięć śladów, jeden wniosek&nbsp;— w&nbsp;tej kuchni olej nie trafia do zlewu.
+        Masz pięć poszlak. W&nbsp;tej kuchni są rzeczy potrzebne do zbierania oleju
+        i&nbsp;segregacji odpadów.
       </p>
       <p class="panel-text panel-text--label">Zdobywasz kolejną literę do hasła:</p>
-      <div class="reward-letter">S</div>
-      <p class="panel-text">Zapamiętaj literę „<strong>S</strong>”. Wpiszesz ją w&nbsp;polu postępu śledztwa.</p>
-      <button id="btnFinal" class="btn btn--primary" type="button">LITERA S GOTOWA</button>
+      <div class="reward-letter">B</div>
+      <!-- Etap P (A05): gra nie każe niczego przepisywać. Litery przyznaje
+           lekcja na zdarzenie `k06:completed`, więc polecenie „wpiszesz ją
+           w polu postępu” mówiło uczniowi o czynności, której od Etapu S1.A
+           nie ma — pola liter zniknęły razem z panelem postępu. -->
+      <p class="panel-text">Litera <strong>B</strong> została zapisana w&nbsp;pasku postępu
+        u&nbsp;góry. Teraz sprawdź, jak bezpiecznie zebrać olej.</p>
+      <button id="btnFinal" class="btn btn--primary" type="button">Kontynuuj lekcję</button>
     </div>
   </section>
 
 </div>
 
-<script src="k06.js?v=1"></script>
+<script src="k06.js?v=3"></script>
 </body>
 </html>

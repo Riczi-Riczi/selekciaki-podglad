@@ -16,7 +16,7 @@
       }
     } catch (e) { /* brak URLSearchParams nie może wywrócić gry */ }
   </script>
-  <link rel="stylesheet" href="k04.css?v=8">
+  <link rel="stylesheet" href="k04.css?v=11">
 </head>
 <body>
 
@@ -81,7 +81,14 @@
        Nie jest modalem na pełny ekran — labirynt ma zostać widoczny,
        żeby uczeń widział, skąd woda się cofa. -->
   <aside class="card" id="card" hidden>
-    <img class="card-img" id="cardImg" src="" alt="" width="760" height="760">
+    <!-- ETAP T (A06): plansze trzech komunikatów mają STARY tekst wpalony
+         w dymek. Do czasu nowych grafik zasłaniamy sam dymek białą łatką —
+         portret hydraulika i podpis pod spodem zostają. Prostokąt zmierzony
+         na wszystkich planszach (dymki mieszczą się w x 57,5–98 %,
+         y 4,2–36,2 %), stąd łatka od 54 % szerokości i 40 % wysokości. -->
+    <span class="card-imgbox">
+      <img class="card-img" id="cardImg" src="" alt="" width="760" height="760">
+    </span>
     <p class="card-text" id="cardText"></p>
     <button class="card-close" id="cardClose" type="button">Rozumiem</button>
   </aside>
@@ -166,7 +173,15 @@
     <!-- ——— tablica graficzna ——— -->
     <div class="board board--final" id="finalBoard">
       <img src="assets/images/tablica-koncowa.webp" width="1200" height="1144"
-           alt="Tablica z napisem: Misja wykonana! Zator rozbito! Hydraulik unosi kciuk. Na tablicy złota litera P i napis: zdobywasz poszlakę do śledztwa, litera trafia do Twojego Notatnika Śledczego.">
+           alt="Tablica z napisem: Misja wykonana! Zator znaleziony! Hydraulik unosi kciuk. Na tablicy złota litera O — poszlaka do śledztwa, zapisana w pasku postępu lekcji.">
+      <!-- ETAP H: hasłem lekcji jest OBIEG, więc ten klocek daje literę O.
+           Stara litera P jest WPALONA w grafikę (zmierzone: plakietka
+           536–681 × 463–615 px w pliku 1200 × 1144, środek 609 × 540),
+           więc do czasu nowej grafiki zasłaniamy ją plakietką HTML. Pozycja
+           w procentach kadru — jak przy `.board-go` — więc skaluje się
+           razem z tablicą na każdym ekranie. Litera jest dekoracją: treść
+           niesie `alt` obrazu i komunikat dla czytnika. -->
+      <span class="board-litera" aria-hidden="true">O</span>
       <!-- Liczby dosadzamy w układzie współrzędnych grafiki (2114 × 2016),
            bo tylko tam linia bazowa y=1620 trafia co do piksela w miejsce po
            wypalonych cyfrach. Pola po nich są wyczyszczone w samym pliku. -->
@@ -175,7 +190,7 @@
         <text id="valDead"  x="1235" y="1620"></text>
         <text id="valUndos" x="1674" y="1620"></text>
       </svg>
-      <button class="board-go js-final" type="button">Zapisz literę i kontynuuj e-lekcję</button>
+      <button class="board-go js-final" type="button">Kontynuuj lekcję</button>
     </div>
     <p class="board-note">
       Tłuszcz z&nbsp;jednego zlewu potrafi zatkać rurę całej ulicy&nbsp;— dlatego zużyty
@@ -187,22 +202,30 @@
       <img class="panel-cover panel-cover--plate" src="assets/images/hydraulik-portret.webp"
            width="340" height="340"
            alt="Hydraulik w koszuli roboczej uśmiecha się na tle rur.">
-      <h2 id="finalTitle" class="panel-title">Misja wykonana! Zator rozbito!</h2>
+      <!-- ETAP T (A06): „Zator rozbito" i sama informacja, że woda dotarła
+           do zatoru, sugerowały, że przepływ wody usuwa tłuszcz. Zadaniem
+           ucznia było ZNALEŹĆ zator; usuwa go hydraulik. -->
+      <h2 id="finalTitle" class="panel-title">Misja wykonana! Zator znaleziony!</h2>
       <p class="panel-text panel-text--verdict">
-        Woda dotarła do&nbsp;zatoru. Tłuszcz z&nbsp;jednego zlewu potrafi zatkać rurę
+        Woda dotarła do&nbsp;zatoru. Hydraulik wie już, gdzie naprawić rurę.
+        Tłuszcz z&nbsp;jednego zlewu potrafi zatkać rurę
         całej ulicy&nbsp;— dlatego zużyty olej trafia do&nbsp;butelki i&nbsp;Olejomatu, nie do&nbsp;kanalizacji.
       </p>
       <p class="panel-text panel-text--label">Zdobywasz poszlakę do śledztwa:</p>
-      <div class="reward-letter">P</div>
-      <p class="panel-text">Litera trafia do Twojego Notatnika Śledczego.</p>
+      <!-- Etap P (A05): karta telefonu została z literą P sprzed zmiany hasła
+           (Etap H przeniósł na nią O tylko w tablicy graficznej wyżej), więc
+           uczeń na wąskim ekranie widział literę spoza hasła OBIEG. -->
+      <div class="reward-letter">O</div>
+      <p class="panel-text">Litera <strong>O</strong> została zapisana w&nbsp;pasku
+        postępu u&nbsp;góry.</p>
       <p class="panel-score" id="finalScore"></p>
-      <button class="btn btn--primary js-final" type="button">ZAPISZ LITERĘ I KONTYNUUJ</button>
+      <button class="btn btn--primary js-final" type="button">Kontynuuj lekcję</button>
     </div>
   </section>
 
 </div>
 
 <script src="k04-mapa.js?v=1"></script>
-<script src="k04.js?v=1"></script>
+<script src="k04.js?v=5"></script>
 </body>
 </html>

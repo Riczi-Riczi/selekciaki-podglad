@@ -294,6 +294,67 @@ body.bd-chapter .bd-boardbar{ display:none !important; }
   .bd-boardbar__actions{ flex-direction:column; align-items:flex-end; gap:6px; }
 }
 
+/* ═══ ETAP P (A02): POWRÓT DO PRZERWANEGO ŚLEDZTWA ═══════════════════
+   „Kontynuuj: <nazwa tropu>" jest tu jedynym przyciskiem w barwie
+   działania — reszta klastra to kontrolki pomocnicze. Nazwa tropu bywa
+   długa („Tajemnica zakorkowanego miasta"), więc przycisk ma sufit
+   szerokości i ucina nadmiar wielokropkiem; pełne brzmienie niesie
+   `aria-label`, więc czytnik ekranu nie traci niczego. */
+.bd-btn--dalej{ max-width:min(52vw, 420px); }
+.bd-btn__trop{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* „Zacznij od nowa" ma być dostępne, a nie zapraszające — kasuje postęp */
+.bd-btn--cichy{ background:rgba(13,21,18,.42); border-color:rgba(248,252,246,.34);
+  color:rgba(248,252,246,.86); font-weight:600; }
+.bd-btn--cichy:hover{ background:rgba(13,21,18,.66); border-color:#f8fcf6; color:#f8fcf6; }
+.bd-btn--alarm{ background:#b4231d; border-color:#b4231d; color:#fff6f0; }
+.bd-btn--alarm:hover{ background:#8f1a15; border-color:#8f1a15; }
+.bd-boardbar__pomoc{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;
+  pointer-events:auto; }
+
+@media (max-width: 640px){
+  /* Trzy kontrolki jedna pod drugą urosły do 109 px i weszły w róg Tropu 3
+     (pomiar: 1115 px² na 320, 422 px² na 360 — przed etapem P pasek miał
+     56 px i nie dotykał niczego). Na telefonie plansza wypełnia ekran co do
+     piksela, więc jedynym miejscem bez polaroidów jest pas POD nią: tam
+     schodzą obie kontrolki pomocnicze, a „Kontynuuj" — jedyna, po którą
+     uczeń naprawdę sięga — zostaje na górze, na pełną szerokość. */
+  .bd-boardbar{ bottom:0; }
+  /* `flex:1 1 auto` na kontenerze jest tu warunkiem, nie ozdobą: bez niego
+     kontener kurczy się do treści i „100%" w przycisku znaczy tyle, co jego
+     własna szerokość — pełny wiersz wcale nie byłby pełny. */
+  .bd-boardbar__actions{ flex:1 1 auto; flex-direction:row; flex-wrap:wrap;
+    justify-content:flex-end; }
+  .bd-btn--dalej{ flex:1 0 100%; max-width:none; }
+  .bd-boardbar__pomoc{
+    position:absolute; left:max(10px, env(safe-area-inset-left));
+    right:max(10px, env(safe-area-inset-right));
+    /* 6 px, nie 10: przy 320×568 plansza sięga dolnej krawędzi ekranu
+       i przy 10 px rząd wchodził 6 px w dolny róg Tropu 9 (65 px²). */
+    bottom:max(6px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Okno potwierdzenia — wąskie, ciemne, dwa wyjścia w jednym rzędzie. */
+.bd-dialog--potwierdz{ border:none; padding:0; background:transparent; max-width:min(94vw, 460px); }
+.bd-dialog--potwierdz::backdrop{ background:rgba(8,14,11,.72); }
+.bd-potwierdz{ background:#12211b; color:#f8fcf6; border:2px solid rgba(248,252,246,.24);
+  border-radius:18px; padding:clamp(18px,4vw,26px); text-align:center; }
+.bd-potwierdz__title{ font-family:'Cabinet Grotesk', system-ui, sans-serif;
+  font-size:clamp(19px,2.6vw,24px); font-weight:800; margin-bottom:10px; }
+.bd-potwierdz__txt{ font-size:15px; line-height:1.55; opacity:.9; }
+.bd-potwierdz__akcje{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:18px; }
+
+/* ═══ ETAP P (A03): PANEL „ZADANIE CZEKA" ═══════════════════════════
+   Stoi dokładnie tam, gdzie po zdobyciu litery stanie domknięcie tropu,
+   więc uczeń nie traci orientacji: to samo miejsce, inny komunikat. */
+.bd-czeka{ max-width:56ch; margin-inline:auto; text-align:center; }
+.bd-czeka__title{ margin-bottom:10px; }
+.bd-chscene--czeka .bd-chscene__in{ display:flex; align-items:center;
+  justify-content:center; min-height:100%; }
+
+/* Etap P pkt 6: zasady liter w odprawie — akapit dokłada silnik tablicy. */
+.bd-zasady{ margin-top:10px; }
+
 /* ═══════════ 4. STRONA ROZDZIAŁU (storyboard klatka 5) ═══════════ */
 /* Jedna warstwa przewijania: scrolluje .bd-chapterlay. Boki = korek
    (powiększona tekstura tablicy), centrum = jasna strona bez obrotu. */
@@ -887,7 +948,7 @@ body.bd-chapter .bd-boardbar{ display:none !important; }
 
 /* offset przewijania — sticky pasek nie może przykrywać początku sceny */
 /* Cele przewijania omijają przyklejoną belkę. Poza scenami dotyczy to
-   elementów, do których lekcja skacze wprost: zdania po wygranej w PSZOK-u
+   elementów, do których lekcja skacze wprost: zdania po wygranej w PSZOK
    (S1.A.1 pkt 7) i zdania wprowadzającego scenę K08. */
 .bd-chscene,
 .bd-chapterlay #k15-po,
@@ -1225,8 +1286,14 @@ body.bd-chapter .bd-boardbar{ display:none !important; }
   backface-visibility:hidden; border-radius:10px; overflow:hidden;
   box-shadow:0 8px 20px rgba(43,24,6,.22); }
 .mdo-card__face--front{ background:rgb(var(--mdo-pastel)); }
-.mdo-card__face--back{ transform:rotateY(180deg); background:#fff; }
-.mdo-card__face--back img{ width:100%; height:100%; object-fit:contain; padding:6%; }
+/* ETAP T (A08): rewers karty to teraz KOLUMNA — obraz z etykietą u góry,
+   ocena pod nim. Bez tego oba elementy trafiały do jednej komórki siatki
+   i leżałyby na sobie. Obraz oddaje wysokość ocenie (`flex:1 1 auto` +
+   `min-height:0`), więc dłuższe zdania nie wypychają go poza kartę. */
+.mdo-card__face--back{ transform:rotateY(180deg); background:#fff;
+  display:flex; flex-direction:column; align-items:stretch; padding:6% 5% 4%; gap:2%; }
+.mdo-card__face--back img{ width:100%; flex:1 1 auto; min-height:0;
+  height:auto; object-fit:contain; padding:0; }
 .mdo-card__hand{ width:38%; height:auto; opacity:.75; }
 .mdo-card:focus-visible{ outline:3px solid var(--bd-info); outline-offset:4px; border-radius:12px; }
 
@@ -1290,12 +1357,34 @@ body.bd-chapter .bd-boardbar{ display:none !important; }
   cursor:pointer; box-shadow:0 4px 10px rgba(43,24,6,.18);
 }
 .mdo-kslot__close:focus-visible{ outline:3px solid var(--bd-info); outline-offset:2px; }
+/* ── ETAP T (A08): OCENA SPOSOBU ──────────────────────────────────────
+   Znak i barwa są powtórzeniem tego, co mówi pierwsze słowo zdania —
+   nigdy jedynym nośnikiem sensu. Kontrast barw liczony na białym rewersie
+   karty: zieleń #1f6b33 (6,2:1), czerwień #b4231d (6,4:1), szarość
+   #4d5a4a (7,3:1) — wszystkie ponad progiem 4,5:1 dla tekstu. */
+.mdo-ocena{ display:flex; align-items:flex-start; gap:.35em; margin:0;
+  font-size:clamp(9px, 1.05vw, 13px); line-height:1.25; text-align:left;
+  font-weight:600; }
+.mdo-ocena__znak{ flex:none; font-weight:800; line-height:1.15; }
+.mdo-ocena--tak{ color:#1f6b33; }
+.mdo-ocena--nie{ color:#b4231d; }
+.mdo-ocena--rozne{ color:#4d5a4a; }
+
 .mdo-fig{ margin:0; width:100%; display:grid; place-items:center; }
+.mdo-fig figcaption{ width:100%; margin-top:8px; }
+.mdo-fig .mdo-ocena{ font-size:clamp(12.5px, 3.4vw, 14px); line-height:1.35; }
 .mdo-fig[hidden]{ display:none !important; }
 .mdo-fig img{ width:100%; max-width:220px; max-height:clamp(150px,22svh,205px);
   object-fit:contain; height:auto; display:block; border-radius:10px; }
 /* koniec pulsowania wycinków po komplecie odkryć */
 .mdo-tresc.is-complete .mdo-wyc img{ animation:none !important; }
+
+/* Puenta diagramu (Etap T, A08) — jedno zdanie pod kompletem siedmiu ocen. */
+.mdo-puenta{ max-width:56ch; margin:clamp(10px,1.6svh,16px) auto 0;
+  text-align:center; font-weight:700; }
+.mdo-puenta[hidden]{ display:none !important; }
+.mdo-tresc.is-komp .mdo-puenta{ font-size:clamp(13.5px,3.7vw,15px);
+  margin-top:clamp(6px,1.2svh,10px); }
 
 /* ── typografia kompaktu wg makiety (Etap 1F): zwarty nagłówek, diagram
    ~32–35svh, wszystko wyżej — bez martwej przestrzeni pod paskiem ── */
@@ -3809,6 +3898,19 @@ body.bd-on #bd-slot-k17 #k17 .lead{ color:#f4f8f2; }
 body.bd-on #bd-slot-k17 .terminal{ margin-inline:auto; max-width:62ch; }
 body.bd-on #bd-slot-k17 .terminal__msg{ color:#e8f0e6; }
 body.bd-on #bd-slot-k17 .terminal__missing{ color:#f2b127; }
+/* Etap P (A04): przyciski brakujących zadań na ciemnym terminalu.
+   Reguła `.bd-page__main .btn` daje w rozdziale pełny bursztyn — pięć
+   takich plam obok siebie krzyczałoby głośniej niż jedyne działanie
+   główne tego ekranu („Odtwórz rozwiązanie sprawy"), a jej margines
+   górny rozrywał listę na osobne wiersze. Stąd obrys zamiast wypełnienia
+   i zerowy margines: odstępy trzyma siatka listy. */
+body.bd-on #bd-slot-k17 .terminal__wroc{
+  margin-top:0; background:transparent; color:#f2b127; border-color:#f2b127;
+}
+body.bd-on #bd-slot-k17 .terminal__wroc:hover{
+  background:#f2b127; color:#241a02; border-color:#f2b127;
+}
+body.bd-on #bd-slot-k17 .terminal__trop{ color:#cfe0c8; }
 /* atrapa terminala 3D nie jest potrzebna w kadrze — treść niesie tekst */
 body.bd-on #bd-slot-k17 [data-ph="k17-terminal"]{ display:none; }
 
@@ -3868,6 +3970,47 @@ body.bd-on .bd-werdykt__litera.is-on{
   box-shadow:0 10px 24px rgba(30,40,28,.16);
 }
 body.bd-on .bd-werdykt__zdanie{ max-width:52ch; margin-inline:auto; }
+
+/* ── OBJAŚNIENIE HASŁA (Etap H) ──
+   Wchodzi razem z piątą literą. Cztery akapity to sporo tekstu na scenie,
+   która dotąd miała jedno zdanie — dlatego stopień pisma jest mniejszy niż
+   w innych scenach, a kolumna węższa: krótki wiersz czyta się szybciej,
+   a scena ma zmieścić się na telefonie bez przewijania. */
+body.bd-on .bd-werdykt__opis{
+  max-width:46ch; margin:clamp(4px,1.4vh,14px) auto clamp(8px,2vh,18px);
+  text-align:center;
+}
+body.bd-on .bd-werdykt__opis[hidden]{ display:none !important; }
+body.bd-on .bd-werdykt__opis p{
+  margin:0 0 clamp(6px,1.2vh,12px);
+  font-size:clamp(14px,1.15vw,17px);
+  line-height:1.45;
+  color:#2f4a2a;
+}
+body.bd-on .bd-werdykt__opis p:last-child{ margin-bottom:0; }
+/* Puenta — wyróżniona spokojnie: cięższy krój i ciemniejszy atrament,
+   bez wersalików i bez skoku stopnia, żeby nie brzmiała jak okrzyk. */
+body.bd-on .bd-werdykt__puenta{
+  font-weight:700; color:#1f4d24;
+  font-size:clamp(15px,1.25vw,18px) !important;
+  margin-top:clamp(8px,1.6vh,14px) !important;
+}
+
+/* Na telefonie scena finału niesie hasło, cztery akapity i zdanie
+   zamykające — wszystko ma się zmieścić w jednym kadrze, więc litery
+   i odstępy schodzą o klasę niżej. Sprawdzone na 390 × 844. */
+@media (max-width: 560px){
+  body.bd-on .bd-chscene--werdykt{ padding-block:clamp(14px,3vh,26px); }
+  body.bd-on .bd-werdykt{
+    margin-block:clamp(6px,1.4vh,12px) clamp(8px,1.8vh,14px);
+    gap:6px;
+  }
+  body.bd-on .bd-werdykt__litera{ width:clamp(44px,13vw,58px); border-radius:14px; }
+  body.bd-on .bd-werdykt__znak{ font-size:clamp(22px,7vw,30px); }
+  body.bd-on .bd-werdykt__opis p{ font-size:13.5px; line-height:1.4; margin-bottom:7px; }
+  body.bd-on .bd-werdykt__puenta{ font-size:14.5px !important; margin-top:9px !important; }
+  body.bd-on .bd-werdykt__zdanie{ font-size:13.5px; margin-top:9px; }
+}
 
 /* ── 4. DYPLOM ── */
 body.bd-on .bd-chscene--dyplom{ padding-block:clamp(24px,6vh,64px); }

@@ -12,8 +12,8 @@
 
    KONTRAKT INTEGRACYJNY (patrz README):
      • po dojściu do zatoru: `k04:completed` na `window`, bubbles, DOKŁADNIE RAZ
-       detail: { letter: "P", moves, wrongTurns, undos }
-     • gra NIE przyznaje litery i niczego nie zapisuje — literę P zapisuje
+       detail: { letter: "O", moves, wrongTurns, undos }
+     • gra NIE przyznaje litery i niczego nie zapisuje — literę O zapisuje
        strona lekcji (lesson-state.js: unlockLetterEntry)
      • most z lekcji (opcjonalny): { type: "k04:key", key, down } od window.parent
 
@@ -35,7 +35,7 @@ function reducedMotion() {
   catch (e) { return false; }
 }
 
-const REWARD_LETTER = "P";
+const REWARD_LETTER = "O";
 const MOVE_MS = 600;            /* czas przepływu wody przez jeden odcinek */
 
 /* Odsunięcie przycisków od węzła. Liczone w PIKSELACH, nie na sztywno w
@@ -77,13 +77,19 @@ const SAY = {
   doubt:   { plate: "czy-dobra-droga",   text: "Hm… Czy to na pewno dobra droga? Spróbuj jeszcze raz.", voice: "watp-czy-dobra" },
   /* próba wpłynięcia w rurę, którą woda już płynie (blokada pętli)
      albo trzy złe ruchy z rzędu — zawsze po WSKAZANIU rury, nigdy po cofnięciu */
-  loop:    { plate: "chcesz-sie-krecic", text: "Nie żartuj. Chcesz tak kręcić się w kółko?",            voice: "dlugo-krecic" },
+  /* ETAP T (A06): komunikaty nie oceniają już ANI CZASU, ANI DŁUGOŚCI TRASY.
+     Gra nie ma zegara i nie ma przegranej — a „nie mamy na to całego dnia"
+     i „znajdź krótszą trasę" mówiły coś odwrotnego. Nowe brzmienia
+     podpowiadają, co zrobić, zamiast oceniać, jak uczeń szuka.
+     UWAGA: plansze w dymkach mają STARY tekst wpalony w grafikę
+     (assets/images/hydraulik/*.webp) — do wymiany przez użytkownika. */
+  loop:    { plate: "chcesz-sie-krecic", zaslonDymek: true, text: "Tu woda już była. Spróbuj innej drogi.",                voice: "dlugo-krecic" },
   /* eskalacja: pięć złych ruchów z rzędu */
-  tooLong: { plate: "nie-mamy-dnia",     text: "Rety… nie mamy na to całego dnia!",                     voice: "dlugo-nie-mamy-dnia" },
+  tooLong: { plate: "nie-mamy-dnia",     zaslonDymek: true, text: "Spokojnie, nie ma czasu ani przegranej. Szukaj dalej.", voice: "dlugo-nie-mamy-dnia" },
   /* dwa ruchy od zatoru */
-  near:    { plate: "prawie-na-miejscu", text: "Jesteś prawie na miejscu! Ale znajdź krótszą trasę.",   voice: "blisko-prawie" },
+  near:    { plate: "prawie-na-miejscu", zaslonDymek: true, text: "Jesteś blisko zatoru. Sprawdź, które połączenie prowadzi dalej.", voice: "blisko-prawie" },
   /* finał */
-  win:     { plate: "swietna-robota",    text: "Świetna robota! Wierzyłem w Ciebie.",                   voice: "final-gratulacje" },
+  win:     { plate: "swietna-robota",    text: "Świetna robota! Znalazłeś zator.",                      voice: "final-gratulacje" },
 };
 
 /* Płaska lista wszystkich trójek. showCard() przyjmuje WYŁĄCZNIE obiekt
@@ -651,8 +657,14 @@ function showCard(item, autoClose, after) {
     el.cardImg.src = P + item.plate + ".webp";
     el.cardImg.alt = "Hydraulik mówi: " + item.text;
     el.cardImg.hidden = false;
+    /* ETAP T (A06): plansza z nieaktualnym dymkiem dostaje łatkę (CSS).
+       Opis alternatywny niesie NOWY tekst, więc czytnik nigdy nie usłyszy
+       zdania, które zostało wycofane. */
+    if (item.zaslonDymek) el.card.dataset.dymek = "ukryty";
+    else delete el.card.dataset.dymek;
   } else {
     el.cardImg.hidden = true;
+    delete el.card.dataset.dymek;
   }
   el.cardText.textContent = item.text;
   el.card.hidden = false;
@@ -708,6 +720,9 @@ function finish() {
      żadnego licznika zamknięcia. */
   clearTimeout(state.cardTimer);
   state.afterCard = null;
+  /* Kadr zatoru NIE jest planszą hydraulika, więc łatka na dymek musi zejść —
+     inaczej zostałaby po poprzedniej karcie i przykryła róg zdjęcia. */
+  delete el.card.dataset.dymek;
   el.cardImg.src = "assets/images/zator-zblizenie.webp";
   el.cardImg.alt = "Zbliżenie rury zatkanej zastygłym, przypalonym tłuszczem.";
   el.cardImg.hidden = false;
@@ -721,7 +736,9 @@ function finish() {
     el.alarmFlash.classList.remove("is-on");
     /* rura udrożniona: podmiana JEDNEGO obrazu, ta sama geometria kadru */
     el.mazeImg.src = "assets/images/labirynt-drozny.webp";
-    el.mazeImg.alt = "Ten sam labirynt rur — zatkana rura na dole jest już czysta i drożna.";
+    /* ETAP T (A06): opis mówi, KTO udrożnił rurę. „Jest już czysta i drożna"
+       zaraz po przepłynięciu wody czytało się jak skutek samego przepływu. */
+    el.mazeImg.alt = "Ten sam labirynt rur — hydraulik udrożnił zatkaną rurę na dole.";
     say(SAY.win.voice, true);
     try {
       const j = clip("jingiel", 0.5, false);
@@ -852,7 +869,7 @@ function emitContinue() {
     b.setAttribute("aria-disabled", "true");
     b.classList.add("is-done");
   });
-  say2("Litera P zapisana. Wracasz do e-lekcji.");
+  say2("Litera O zapisana w pasku postępu. Wracasz do e-lekcji.");
   try {
     window.dispatchEvent(new CustomEvent("k04:continue", { bubbles: true }));
   } catch (e) { /* zdarzenie jest opcjonalne dla samego prototypu */ }

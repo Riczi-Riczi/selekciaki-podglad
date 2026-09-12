@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Eko-detektyw: Tajemnica zakorkowanego miasta — struktura integracyjna K01–K18 | SELEKT</title>
 <meta name="description" content="Równoległa strona integracyjna e-lekcji dla klas 4–5. Pełna kolejność klocków K01–K18 do przeglądu kompozycji przed podmianą produkcyjną.">
-<link rel="stylesheet" href="lekcja-4-5-integracja.css?v=84">
+<link rel="stylesheet" href="lekcja-4-5-integracja.css?v=86">
 
 <!-- Tablica śledztwa jest wariantem DOMYŚLNYM. Skrypt startowy stoi na końcu
      <body>, więc bez tej blokady stara lekcja zdążyłaby mignąć przed jej
@@ -58,11 +58,11 @@
   <div class="progress__body">
     <h2 class="progress__title" id="progress-title">Postęp śledztwa</h2>
     <ol class="progress__slots">
-      <li class="prog__slot" data-letter="P"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 4" hidden><span class="prog__check" hidden>✓</span></li>
-      <li class="prog__slot" data-letter="S"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 6" hidden><span class="prog__check" hidden>✓</span></li>
-      <li class="prog__slot" data-letter="Z"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 8" hidden><span class="prog__check" hidden>✓</span></li>
-      <li class="prog__slot" data-letter="O"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 15" hidden><span class="prog__check" hidden>✓</span></li>
-      <li class="prog__slot" data-letter="K"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 16" hidden><span class="prog__check" hidden>✓</span></li>
+      <li class="prog__slot" data-letter="O"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 4" hidden><span class="prog__check" hidden>✓</span></li>
+      <li class="prog__slot" data-letter="B"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 6" hidden><span class="prog__check" hidden>✓</span></li>
+      <li class="prog__slot" data-letter="I"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 8" hidden><span class="prog__check" hidden>✓</span></li>
+      <li class="prog__slot" data-letter="E"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 15" hidden><span class="prog__check" hidden>✓</span></li>
+      <li class="prog__slot" data-letter="G"><span class="prog__dot" aria-hidden="true">•</span><input class="prog__input" type="text" maxlength="1" inputmode="text" autocomplete="off" aria-label="Wpisz literę zdobytą w klocku 16" hidden><span class="prog__check" hidden>✓</span></li>
     </ol>
     <p class="progress__counter" id="progress-counter">Ukończono 0 z 5 punktów</p>
     <p class="progress__msg" id="progress-msg"></p>
@@ -189,7 +189,7 @@
 
   <!-- Etap A6: gra „Rurociąg" zastąpiła materiał Genially — ostatni w lekcji.
        Genially był cross-origin i nigdy nie mówił stronie, że uczeń skończył:
-       klocek zaliczał ręczny przycisk, a litera P otwierała się już przy
+       klocek zaliczał ręczny przycisk, a litera O otwierała się już przy
        ZAŁADOWANIU ramki. Prototyp emituje `k04:completed` (kontrakt w jego
        README), więc litera należy się dopiero po dojściu do zatoru. -->
   <div class="frame" data-frame="k04" data-stops-audio style="max-width:900px;margin:22px 0">
@@ -204,7 +204,7 @@
     postępu śledztwa. Jeśli gra się nie wczyta, otwórz ją w&nbsp;osobnej karcie:
     <a class="frame__open" href="prototypy/k04-rurociag/" target="_blank"
        rel="noopener">Otwórz grę w nowej karcie ↗</a>. Uwaga: w&nbsp;osobnej karcie gra nie przekaże
-    wyniku lekcji, więc po powrocie literę P trzeba będzie wpisać samodzielnie
+    wyniku lekcji, więc po powrocie literę O trzeba będzie wpisać samodzielnie
     w&nbsp;polu postępu śledztwa.</p>
 </section>
 
@@ -256,9 +256,9 @@
 
   <!-- Etap A5: gra „Latarka w kuchni" zastąpiła materiał Genially. Genially był
        cross-origin i nigdy nie mówił stronie, że uczeń skończył — dlatego klocek
-       zaliczało się ręcznym przyciskiem, a litera S otwierała się już przy
+       zaliczało się ręcznym przyciskiem, a litera B otwierała się już przy
        ZAŁADOWANIU gry. Prototyp emituje `k06:completed` (kontrakt w jego README),
-       więc litera S należy się dopiero po odnalezieniu pięciu śladów. Ramka
+       więc litera B należy się dopiero po odnalezieniu pięciu śladów. Ramka
        ładuje się leniwie i wypełnia się sama (gra jest `position:fixed`). -->
   <div class="frame" data-frame="k06" data-stops-audio style="max-width:960px;margin:22px 0">
     <div class="frame__box">
@@ -272,7 +272,7 @@
     w&nbsp;drugim polu postępu śledztwa. Jeśli gra się nie wczyta, otwórz ją w&nbsp;osobnej karcie:
     <a class="frame__open" href="prototypy/k06-latarka-kuchnia/" target="_blank"
        rel="noopener">Otwórz grę w nowej karcie ↗</a>. Uwaga: w&nbsp;osobnej karcie gra nie przekaże
-    wyniku lekcji, więc po powrocie literę S trzeba będzie wpisać samodzielnie
+    wyniku lekcji, więc po powrocie literę B trzeba będzie wpisać samodzielnie
     w&nbsp;polu postępu śledztwa.</p>
 
   <details style="max-width:62ch">
@@ -583,8 +583,11 @@
              od połowy sceny i przeczyło licznikowi, który pokazywał wtedy
              dopiero kilkanaście stadionów. Komplet liczb wchodzi na końcu,
              w bloku #k11-final. -->
+        <!-- ETAP T (A12): „zbiera się" mówiło o ilości ZEBRANEJ; liczba
+             opisuje ilość POWSTAJĄCĄ. Różnica jest ogromna — zbiórka to
+             ułamek tej masy — i to właśnie ona jest tematem lekcji. -->
         <p class="seq__step" data-from="0.5" data-to="1.01">
-          Tyle zużytego oleju zbiera się na świecie w&nbsp;ciągu roku.
+          Tyle zużytego oleju powstaje na świecie w&nbsp;ciągu roku — tak szacują naukowcy.
           Policzmy, ile to takich stadionów.</p>
       </div>
       <div class="k11__meter">
@@ -605,7 +608,7 @@
              Blok odsłania się DOPIERO po skompletowaniu 41 sylwetek. -->
         <p class="k11__final" id="k11-final">
           <span class="k11__final-ton"><span class="k11__final-liczba">42 000 000</span>
-            <span class="k11__final-jedn">ton rocznie</span></span>
+            <span class="k11__final-jedn">ton rocznie (szacunek)</span></span>
           <span class="k11__final-rownanie">≈ 41 takich stadionów</span>
         </p>
       </div>
@@ -615,11 +618,28 @@
 
 <section class="scene" data-tone="deep">
   <p class="note" style="max-width:64ch">
+    <strong>Szacunek ilości powstającego zużytego oleju, nie ilości zebranej.</strong>
     To przybliżenie porównujące <strong>kubatury</strong>, a nie dosłowne wypełnienie wnętrza
     stadionu. Podstawa obliczenia: 42 000 000 t ÷ 0,92 t/m³ ÷ 1 106 308,8 m³ ≈ 41,3.
     Podczas największych koncertów stadion może pomieścić ponad 80 tysięcy osób.
+    Źródło liczby: przegląd naukowy „Valorization of used cooking oil"
+    (Discover Sustainability, 2025), który szacuje światowe powstawanie zużytego
+    oleju na 41–67 mln ton rocznie.
     <!-- Źródła redakcyjne (dokument 09, klocek 11):
-         42 mln ton UCO rocznie — sciencedirect.com/science/article/pii/S2772275926000031
+         ETAP T (A12) — SPRAWDZENIE ŹRÓDŁA LICZBY 42 MLN T.
+         Dotychczasowy odnośnik (sciencedirect.com/…/S2772275926000031) prowadzi
+         do czasopisma „Measurement: Food" (ISSN 2772-2759), rocznik 2026;
+         treści nie da się sprawdzić automatycznie (ScienceDirect oddaje 403),
+         więc NIE podajemy go uczniowi jako źródła.
+         Źródło zaproponowane przez audyt — Mannu i in. 2020,
+         10.1016/j.jclepro.2020.125129 — podaje ok. 15 mln t olejów roślinnych
+         odpadowych rocznie, czyli NIE potwierdza liczby 42 mln.
+         Potwierdzony zakres: Kumar i in., „Valorization of used cooking oil:
+         challenges, current developments, life cycle assessment and future
+         prospects", Discover Sustainability 2025, 10.1007/s43621-025-00905-7 —
+         41–67 mln t rocznie (ilość POWSTAJĄCA). 42 mln mieści się w tym
+         zakresie i zgadza się z bazą wiedzy projektu (docs/Olejomat_baza
+         wiedzy.txt: „na świecie powstaje rocznie aż 42 miliony ton").
          gęstość zużytego oleju 920 kg/m³ — pmc.ncbi.nlm.nih.gov/articles/PMC6908722/
          kubatura PGE Narodowego 1 106 308,8 m³ — pgenarodowy.pl (ogłoszenie o dialogu)
          do 80 tys. gości podczas koncertów — pgenarodowy.pl/o-stadionie/ -->
@@ -749,11 +769,15 @@
                src="../assets/images/lekcja45/k12-ciezarowka-2.webp"
                width="563" height="315" loading="lazy" decoding="async">
         </div>
-        <p class="k12__fakt-podpis" id="k12-podpis">Tyle odpadów leśnicy wywożą
-          z&nbsp;polskich lasów przez <u>cały rok</u>.</p>
+        <!-- ETAP T (A12): podpis bez roku i bez źródła brzmiał jak stan
+             stały. Liczba pochodzi z konkretnego roku i konkretnej instytucji. -->
+        <p class="k12__fakt-podpis" id="k12-podpis">Tyle odpadów leśnicy wywieźli
+          z&nbsp;polskich lasów w&nbsp;<u>2024 roku</u> — średnio ponad dwie ciężarówki
+          dziennie (dane Lasów Państwowych).</p>
         <p class="k12__pyt-pigulka" id="k12-pyt-pigulka">Co jest najdziwniejsze?</p>
         <p class="k12__fakt k12__fakt--echo" id="k12-fakt2">Dzikie wysypiska znajdowano
-          kilkaset metrów od miejsc, gdzie te same odpady można oddać za&nbsp;darmo.</p>
+          kilkaset metrów od miejsc, gdzie wiele z&nbsp;tych odpadów można oddać
+          za&nbsp;darmo w&nbsp;PSZOK.</p>
         <p class="k12__question">Skoro nie do lasu ani zwykłego kosza — to dokąd?</p>
       </div>
     </div>
@@ -762,13 +786,13 @@
 
 <section class="scene" data-tone="deep">
   <!-- KOREKTA MERYTORYCZNA (Etap 3B): usunięte zdanie „Zużyty olej spożywczy
-       możesz oddać również do PSZOK-u, jeżeli przewidują to lokalne zasady".
+       możesz oddać również do PSZOK, jeżeli przewidują to lokalne zasady".
        Regulamin PSZOK Związku Międzygminnego SELEKT wymienia oleje jadalne
        na liście odpadów NIEPRZYJMOWANYCH (site/baza-wiedzy/regulamin-PSZOK.md,
        „Oleje jadalne, oleje silnikowe oraz opakowania po nich"), a osobną
        ścieżkę dla nich wskazuje w Olejomatach. Droga oleju = Olejomat,
        dokładnie tak, jak uczy Trop 5. -->
-  <p class="body-text">Do PSZOK-u trafiają odpady, które nie mają miejsca
+  <p class="body-text">Do PSZOK trafiają odpady, które nie mają miejsca
     w&nbsp;zwykłych pojemnikach. Dzięki temu fotel, gruz, puszki po farbie, elektroodpady
     czy opony nie muszą trafiać do lasu ani przypadkowego kosza. Zużyty olej spożywczy
     ma własną drogę — Olejomat.</p>
@@ -818,14 +842,15 @@
       <p class="body-text" style="margin-inline:auto">To specjalne miejsce, do którego mieszkańcy mogą
         przywozić wybrane odpady powstające w&nbsp;domu. Każdy rodzaj odpadu trafia do odpowiedniej strefy.</p>
       <p class="note" style="margin-inline:auto">Szczegółowy wykaz przyjmowanych odpadów i&nbsp;zasady
-        korzystania mogą zależeć od lokalnego regulaminu.</p>
+        korzystania mogą zależeć od lokalnego regulaminu. Zanim pojedziecie, dorosły
+        sprawdza, co przyjmuje Wasz punkt.</p>
       <a class="btn" href="#k14">Zajrzyjmy do środka</a>
     </div>
   </div>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════
-     K14 — SPACER PO PSZOK-u
+     K14 — SPACER PO PSZOK
      Markup przeniesiony 1:1 z zaakceptowanej lekcji (lekcja-4-5.html).
      Host niżej dodaje tylko identyfikator klocka dla centralnego stanu;
      samego modułu nie modyfikujemy.
@@ -836,12 +861,12 @@
      (wzorzec z K09–K13, raport 51 §10). Planowana ścieżka (do podpięcia,
      gdy nagranie powstanie):
      assets/audio/lekcja45/07-pszok/07-spacer-pszok-02.mp3
-     (data-audio-title: „Spacer po PSZOK-u") -->
+     (data-audio-title: „Spacer po PSZOK") -->
 <div class="k14-host" id="k14" data-block="k14">
   <section class="act act--three pszok-journey" id="rail-pszok" data-bg="sage"
            aria-labelledby="pj-title">
     <div class="pj__head">
-      <h3 class="pj__title" id="pj-title">Spacer po PSZOK-u</h3>
+      <h3 class="pj__title" id="pj-title">Spacer po PSZOK</h3>
       <p class="pj__lead">PSZOK to nie jedno wielkie miejsce na wszystko naraz.
       To zbiór oznaczonych stref. Każda frakcja jest oddzielona ze względu na
       rozmiar, budowę, możliwość odzysku albo potrzebę ostrożnego postępowania.
@@ -928,20 +953,22 @@
                  alt="Otwarty szary kontener">
             <img class="pj-station__waste" loading="lazy" width="1600" height="1094"
                  data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-02-gruz-odpady-remontowe.webp"
-                 alt="Cegły, beton, płytki i ceramika">
+                 alt="Czysty gruz z remontu domowego i cegły">
             <noscript>
               <img class="pj-station__container" loading="lazy" width="1600" height="840"
                    src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-szary.webp"
                    alt="Otwarty szary kontener">
               <img class="pj-station__waste" loading="lazy" width="1600" height="1094"
                    src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-02-gruz-odpady-remontowe.webp"
-                   alt="Cegły, beton, płytki i ceramika">
+                   alt="Czysty gruz z remontu domowego i cegły">
             </noscript>
           </div>
           <div class="pj-station__text">
             <h4 class="pj-station__title">Gruz i odpady remontowe</h4>
-            <p class="pj-station__desc">Cegły, beton, płytki i ceramika są ciężkie i nie
-            pasują do zwykłego pojemnika. W PSZOK-u mają oddzielne miejsce.</p>
+            <!-- ETAP T (punkt 9): bez płytek i ceramiki — strefa przyjmuje
+                 czysty gruz z remontu domowego. -->
+            <p class="pj-station__desc">Czysty gruz, cegły i beton z domowego remontu są
+            ciężkie i nie pasują do zwykłego pojemnika. W PSZOK mają oddzielne miejsce.</p>
           </div>
         </article>
 
@@ -991,7 +1018,7 @@
           <div class="pj-station__text">
             <h4 class="pj-station__title">Papier, karton i tektura</h4>
             <p class="pj-station__desc">Papier zwykle segregujemy w domu. Większe ilości
-            kartonu i tektury mogą mieć także osobną strefę w PSZOK-u — zgodnie
+            kartonu i tektury mogą mieć także osobną strefę w PSZOK — zgodnie
             z lokalnymi zasadami.</p>
           </div>
         </article>
@@ -1106,21 +1133,23 @@
                  alt="Szary kontener z klapami">
             <img class="pj-station__waste" loading="lazy" width="1368" height="866"
                  data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-09-styropian.webp"
-                 alt="Płyty i kształtki styropianowe">
+                 alt="Czysty styropian opakowaniowy">
             <noscript>
               <img class="pj-station__container" loading="lazy" width="1600" height="947"
                    src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-szary.webp"
                    alt="Szary kontener z klapami">
               <img class="pj-station__waste" loading="lazy" width="1368" height="866"
                    src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-09-styropian.webp"
-                   alt="Płyty i kształtki styropianowe">
+                   alt="Czysty styropian opakowaniowy">
             </noscript>
           </div>
           <div class="pj-station__text">
-            <h4 class="pj-station__title">Styropian</h4>
-            <p class="pj-station__desc">Styropian zajmuje dużo miejsca i łatwo rozpada się
-            na drobne kawałki. W punkcie powinien trafić do oznaczonego, osobnego
-            kontenera.</p>
+            <!-- ETAP T (punkt 11): strefa dotyczy styropianu OPAKOWANIOWEGO —
+                 wkładek i form ochronnych z pudełek, nie płyt budowlanych. -->
+            <h4 class="pj-station__title">Styropian opakowaniowy</h4>
+            <p class="pj-station__desc">Czysty styropian z opakowań — wkładki i formy
+            ochronne ze sprzętu — zajmuje dużo miejsca i łatwo rozpada się na drobne
+            kawałki. W punkcie powinien trafić do oznaczonego, osobnego kontenera.</p>
           </div>
         </article>
 
@@ -1264,7 +1293,7 @@
       <div class="pj__ui">
         <div class="pj__texts"></div>
         <p class="pj__note">Dokładny zakres i sposób przyjmowania odpadów określa
-        regulamin lokalnego PSZOK-u.</p>
+        regulamin lokalnego PSZOK.</p>
       </div>
     </div>
   </section>
@@ -1276,13 +1305,13 @@
   <p class="kicker">Klocek 15 • punkt kontrolny</p>
   <h2 class="lead" id="k15-title">Obsłuż PSZOK</h2>
   <p class="body-text"><strong>Cel:</strong> dopasuj odpady przywiezione samochodem do właściwych
-    stref PSZOK-u.</p>
+    stref PSZOK.</p>
   <p class="body-text">Rozładuj kolejne transporty. Odpad przeznaczony na dalszą planszę zostaje
     na przyczepie — pojedzie z&nbsp;Tobą dalej.</p>
 
   <!-- Etap 4C: gra „Obsłuż PSZOK" w finalnej wersji. Ramka ładuje się
        LENIWIE (przy zbliżeniu do sceny), a po ukończeniu gra wysyła
-       `pszok:completed` przez postMessage — to lekcja odblokowuje literę O.
+       `pszok:completed` przez postMessage — to lekcja odblokowuje literę E.
        Kontrakt i filtr źródła opisane w README gry. -->
   <div class="frame frame--pszok" data-frame-pszok data-stops-audio>
     <!-- Etap 4C: na wąskim pionie gra kurczy się do ~19% swojej planszy
@@ -1313,7 +1342,7 @@
   <p class="note">Jeśli gra się nie wczyta, otwórz ją w&nbsp;osobnej karcie:
     <a href="gry/pszok/" target="_blank" rel="noopener">Otwórz grę w nowej karcie ↗</a>.
     Uwaga: w&nbsp;osobnej karcie gra nie przekaże wyniku lekcji, więc po powrocie
-    literę O trzeba będzie wpisać samodzielnie w&nbsp;polu postępu śledztwa.</p>
+    literę E trzeba będzie wpisać samodzielnie w&nbsp;polu postępu śledztwa.</p>
 
   <!-- Uświadomienie PO grze (decyzja użytkownika, etap 4C): krótko,
        bez liczb i bez morału. -->
@@ -1354,7 +1383,7 @@
   <p class="frame__status" role="status" aria-live="polite"></p>
   <p class="note"><a class="frame__open" href="prototypy/k16-drugie-zycie-materialow/"
     target="_blank" rel="noopener">Otwórz moduł w nowej karcie ↗</a> · Moduł otwarty w osobnej
-    karcie nie przekazuje wyniku do lekcji — po ukończeniu wróć tutaj i&nbsp;wpisz literę K
+    karcie nie przekazuje wyniku do lekcji — po ukończeniu wróć tutaj i&nbsp;wpisz literę G
     w&nbsp;piątym polu postępu śledztwa.</p>
 
   <!-- Zdanie po wygranej. Odsłania je WYŁĄCZNIE silnik rozdziału (etap 5B),
@@ -1363,7 +1392,7 @@
     <p class="k15__po-tytul">Każda z&nbsp;tych rzeczy powstała z&nbsp;czegoś,
       co ktoś oddał osobno.</p>
     <p class="body-text" style="margin-inline:auto">To ostatni dowód w&nbsp;tej sprawie.
-      Wpisz literę K w&nbsp;polu postępu.</p>
+      Wpisz literę G w&nbsp;polu postępu.</p>
   </div>
 </section>
 
@@ -1382,6 +1411,10 @@
     <div id="k17-locked">
       <p class="terminal__msg">Terminal jest zamknięty.</p>
       <p class="terminal__missing" id="k17-missing" role="status" aria-live="polite"></p>
+      <!-- Etap P (A04): brakujące zadania z nazwy, każde ze swoim przyciskiem
+           powrotu. Lista jest budowana ze stanu lekcji (patrz renderTerminal),
+           więc pusty kontener jest tu jedynym, co da się zapisać w dokumencie. -->
+      <ul class="terminal__zadania" id="k17-zadania" aria-label="Zadania do dokończenia"></ul>
     </div>
     <div id="k17-open" hidden>
       <p class="terminal__msg">Ukończono wszystkie etapy śledztwa i&nbsp;zebrano komplet dowodów.
@@ -1485,12 +1518,12 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
-<script src="lekcja-4-5-integracja/lesson-state.js?v=11"></script>
+<script src="lekcja-4-5-integracja/lesson-state.js?v=14"></script>
 <script src="lekcja-4-5-integracja/audio-manager.js?v=17"></script>
-<script src="lekcja-4-5-integracja/modules.js?v=48"></script>
-<script src="lekcja-4-5-integracja.js?v=52"></script>
+<script src="lekcja-4-5-integracja/modules.js?v=49"></script>
+<script src="lekcja-4-5-integracja.js?v=54"></script>
 <!-- Nowe otwarcie lekcji (intro → tablica → 9 polaroidów) w trybie podglądu.
      Bez ?boardPreview=1 ten skrypt kończy się natychmiast i niczego nie ładuje. -->
-<script src="lekcja-4-5-integracja/board-boot.js?v=136"></script>
+<script src="lekcja-4-5-integracja/board-boot.js?v=138"></script>
 </body>
 </html>

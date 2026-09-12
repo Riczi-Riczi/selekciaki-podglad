@@ -6,7 +6,7 @@
    Rozdzielone gałęzie stanu (wymóg promptu):
      visitedBlocks          — odwiedzone obowiązkowe klocki narracyjne
      completedInteractions  — realnie ukończone interakcje (K07, K09, K13, K14…)
-     checkpointLetters      — P/S/Z/O/K (tablica: `awardLetter` po wygranej;
+     checkpointLetters      — O/B/I/E/G (tablica: `awardLetter` po wygranej;
                               ?legacy=1: `submitLetter` po wpisaniu przez ucznia)
      audioMode              — read | both  (Etap A3: „Słucham" usunięty)
      finalUnlocked          — wynik podwójnego warunku, nigdy „na skróty”
@@ -28,14 +28,29 @@
   const KEY_PREVIEW = "lk45int_preview_state_v1";
   const KEY_AUDIO   = "lk45int_audio_mode";   // sessionStorage — wspólne urządzenie szkolne
 
-  /* Litera ↔ klocek. Kolejność pól postępu = kolejność w lekcji. */
+  /* Litera ↔ klocek. Kolejność pól postępu = kolejność w lekcji.
+
+     ETAP H: hasłem lekcji jest OBIEG, nie PSZOK. Powód jest merytoryczny —
+     „PSZOK" to nazwa punktu zbiórki, którą Trop 7 tłumaczy jako skrót
+     (Punkt Selektywnej Zbiórki Odpadów Komunalnych). To samo słowo w roli
+     hasła kazało uczniowi trzymać w głowie dwa różne znaczenia naraz.
+     „OBIEG" nazywa to, czego lekcja uczy, i nie koliduje z niczym. */
   const LETTERS = [
-    { letter: "P", block: "k04", label: "Agent śledczy w kanalizacji" },
-    { letter: "S", block: "k06", label: "Przeszukanie kuchni" },
-    { letter: "Z", block: "k08", label: "Złap zużyty olej" },
-    { letter: "O", block: "k15", label: "Obsłuż PSZOK" },
-    { letter: "K", block: "k16", label: "Drugie życie materiałów" },
+    { letter: "O", block: "k04", label: "Agent śledczy w kanalizacji" },
+    { letter: "B", block: "k06", label: "Przeszukanie kuchni" },
+    { letter: "I", block: "k08", label: "Złap zużyty olej" },
+    { letter: "E", block: "k15", label: "Obsłuż PSZOK" },
+    { letter: "G", block: "k16", label: "Drugie życie materiałów" },
   ];
+
+  /* Stare hasło → nowe, PO KLOCKACH. Uczeń, który zaczął lekcję na wydaniu
+     05, ma w przeglądarce litery P/S/Z/O/K; gdyby scalić je wprost, „O"
+     znaczyłoby co innego niż znaczyło (dawniej PSZOK, dziś Rurociąg) i
+     postęp byłby przekłamany. Mapujemy więc przez klocek, który literę
+     przyznał — to jedyne odwzorowanie, które nie gubi ani nie zmyśla
+     ukończonej gry. */
+  const STARE_LITERY = { P: "O", S: "B", Z: "I", O: "E", K: "G" };
+  const WERSJA_HASLA = 2;
 
   /* Obowiązkowa ścieżka do finału: wszystkie klocki K01–K16.
      Klocki narracyjne zaliczamy obecnością, interakcyjne — zdarzeniem. */
@@ -46,11 +61,41 @@
   /* Klocki, których NIE wolno zaliczyć samym scrollem */
   const REQUIRED_INTERACTIONS = ["k04","k06","k07","k08","k09","k13","k14","k15","k16"];
 
+  /* ═══ ETAP P (A04): IDENTYFIKATOR → NAZWA ZADANIA → TROP ═══════════
+     Terminal mówił dotąd „niedokończone zadania: K07, K09" — kodem, który
+     poza kodem źródłowym nic nie znaczy. Uczeń klas 4–5 nie ma jak
+     odgadnąć, do czego wrócić, a słowo „klocek" jest wewnętrzną nazwą
+     redakcyjną i nie ma prawa pojawić się w interfejsie.
+
+     Ta mapa jest JEDYNYM źródłem nazw zadań: czyta z niej terminal
+     (obie odmiany lekcji), panel „Zadanie czeka" na stronie tropu
+     i przycisk „Kontynuuj" na tablicy. `trop` wskazuje rozdział tablicy,
+     `nr` — numer tropu widoczny dla ucznia. */
+  const ZADANIA = {
+    k01: { nazwa: "Otwarcie sprawy",             trop: "p01", nr: 1 },
+    k02: { nazwa: "Nagranie: początek sprawy",   trop: "p02", nr: 2 },
+    k03: { nazwa: "Odprawa",                     trop: "p02", nr: 2 },
+    k04: { nazwa: "Agent śledczy w kanalizacji", trop: "p03", nr: 3 },
+    k05: { nazwa: "Odkryty dowód: olej w rurze", trop: "p03", nr: 3 },
+    k06: { nazwa: "Przeszukanie kuchni",         trop: "p04", nr: 4 },
+    k07: { nazwa: "Ułóż drogę butelki",          trop: "p05", nr: 5 },
+    k08: { nazwa: "Złap zużyty olej",            trop: "p04", nr: 4 },
+    k09: { nazwa: "Co może trafić do butelki?",  trop: "p05", nr: 5 },
+    k10: { nazwa: "Olej rusza w dalszą drogę",   trop: "p05", nr: 5 },
+    k11: { nazwa: "Skala problemu",              trop: "p06", nr: 6 },
+    k12: { nazwa: "Ślady w lesie",               trop: "p06", nr: 6 },
+    k13: { nazwa: "Co kryje się za skrótem?",    trop: "p07", nr: 7 },
+    k14: { nazwa: "Spacer po PSZOK",             trop: "p07", nr: 7 },
+    k15: { nazwa: "Obsłuż PSZOK",                trop: "p07", nr: 7 },
+    k16: { nazwa: "Drugie życie materiałów",     trop: "p08", nr: 8 },
+  };
+
   const emptyState = () => ({
     visitedBlocks: [],
     completedInteractions: [],
     lettersReady: [],                       // litery odblokowane do wpisania
-    checkpointLetters: { P:false, S:false, Z:false, O:false, K:false },
+    checkpointLetters: { O:false, B:false, I:false, E:false, G:false },
+    hasloV: WERSJA_HASLA,                   // Etap H — znacznik wersji hasła
     audioMode: "read",
     finalUnlocked: false,
     /* Etap 6A: stempel „SPRAWA ZAMKNIĘTA" na tablicy. Warunek jest
@@ -68,16 +113,37 @@
       const raw = store.getItem(KEY);
       if (!raw) return emptyState();
       const parsed = JSON.parse(raw);
+      /* ETAP H — MIGRACJA HASŁA. Zapis sprzed zmiany nie ma `hasloV`, więc
+         przepisujemy jego litery przez klocki (patrz STARE_LITERY). Robimy
+         to PRZED scaleniem, żeby stare klucze nie weszły do stanu: nowy
+         zestaw nie zawiera S, Z ani K, a „O" znaczy dziś inny klocek. */
+      if (parsed && parsed.hasloV !== WERSJA_HASLA) {
+        const stareCL = parsed.checkpointLetters || {};
+        const noweCL = {};
+        Object.keys(STARE_LITERY).forEach((stara) => {
+          if (stareCL[stara]) noweCL[STARE_LITERY[stara]] = true;
+        });
+        parsed.checkpointLetters = noweCL;
+        parsed.lettersReady = (parsed.lettersReady || [])
+          .map((l) => STARE_LITERY[l] || l)
+          .filter((l) => LETTERS.some((d) => d.letter === l));
+        parsed.hasloV = WERSJA_HASLA;
+      }
       const stan = Object.assign(emptyState(), parsed, {
         checkpointLetters: Object.assign(emptyState().checkpointLetters,
           parsed.checkpointLetters || {}),
       });
-      /* Etap A3 — MIGRACJA TRYBU. Zostały dwa tryby: „Czytam" i „Czytam
-         i słucham". Uczeń, który miał zapisane „Słucham", dostaje tryb
-         najbliższy jego wyborowi (z dźwiękiem), a nie ciszę. Postęp
-         pozostaje nietknięty — normalizujemy WYŁĄCZNIE to jedno pole. */
-      if (stan.audioMode === "listen") stan.audioMode = "both";
-      if (stan.audioMode !== "read" && stan.audioMode !== "both") stan.audioMode = "read";
+      /* ETAP P (A14) — TRYB AUDIO NIE DZIEDZICZY SIĘ MIĘDZY SESJAMI.
+         Tu była ta jedna ścieżka, którą „Czytam i słucham" wracało w nowej
+         karcie: `Object.assign` wyżej brał `audioMode` ze snapshotu
+         w localStorage, więc wybór sprzed tygodnia obowiązywał ucznia,
+         który dopiero siadł do lekcji — a przy wspólnym komputerze
+         szkolnym był to wybór KOGOŚ INNEGO. Każda sesja karty zaczyna
+         więc od „Czytam"; jedynym magazynem wyboru jest sessionStorage
+         (niżej), a `persist()` tego pola już nie zapisuje.
+         Migracja „Słucham" → „Czytam i słucham" (Etap A3) dotyczy odtąd
+         wyłącznie zapisu sesyjnego. */
+      stan.audioMode = "read";
       return stan;
     } catch (e) { return emptyState(); }   // uszkodzony wpis nie może wywrócić lekcji
   }
@@ -98,15 +164,26 @@
  } catch (e) { /* prywatny tryb przeglądarki */ }
 
   function persist() {
-    try { store.setItem(KEY, JSON.stringify(state)); } catch (e) { /* quota/prywatny */ }
+    try {
+      /* ETAP P (A14): `audioMode` NIE trafia do pamięci trwałej. Gdyby
+         trafiał, `load()` musiałby go tam co wejście ignorować — a jeden
+         przeoczony `Object.assign` przywróciłby usterkę. Prościej i
+         pewniej: pole po prostu nie istnieje na dysku. */
+      const doZapisu = Object.assign({}, state);
+      delete doZapisu.audioMode;
+      store.setItem(KEY, JSON.stringify(doZapisu));
+    } catch (e) { /* quota/prywatny */ }
   }
 
-  /* Migracja trybu (Etap A3) zapisuje się OD RAZU. Bez tego stary zapis
-     „listen" siedziałby w magazynie aż do pierwszej zmiany ustawienia —
-     działałoby dobrze, ale stan na dysku kłamałby o tym, co widzi uczeń. */
+  /* Migracje zapisują się OD RAZU. Bez tego stary zapis siedziałby
+     w magazynie aż do pierwszej zmiany stanu — działałoby dobrze, ale stan
+     na dysku kłamałby o tym, co widzi uczeń. Dotyczy: hasła (Etap H) oraz
+     usunięcia pola `audioMode` z zapisu (Etap P, A14). */
   try {
     const raw = store.getItem(KEY);
-    if (raw && JSON.parse(raw).audioMode !== state.audioMode) persist();
+    const zapisany = raw ? JSON.parse(raw) : null;
+    if (zapisany && (zapisany.hasloV !== WERSJA_HASLA
+                     || Object.prototype.hasOwnProperty.call(zapisany, "audioMode"))) persist();
   } catch (e) { /* uszkodzony wpis obsłuży load() przy następnym wejściu */ }
 
   /* ── nasłuch zmian ── */
@@ -166,7 +243,7 @@
       więc człon „pięć ✓" jest implikowany przez człon interakcji i warunek
       finału faktycznie staje się POJEDYNCZY. Finał nie robi się łatwiejszy:
       zostają k07, k09, k13, k14 i komplet odwiedzonych klocków, których żadna
-      litera nie pokrywa. Znika natomiast bariera „uczeń zna hasło PSZOK,
+      litera nie pokrywa. Znika natomiast bariera „uczeń zna hasło OBIEG,
       ale gry nie przeszedł" — bo tej pilnowało właśnie wpisywanie.
 
       Wariant `?legacy=1` tej drogi nie używa: tam nadal działa `submitLetter`. */
@@ -210,7 +287,7 @@
 
   /** Warunek finału: 5× ✓ ORAZ przejście obowiązkowej ścieżki.
       W wariancie `?legacy=1` te dwa człony są niezależne — litery wpisuje
-      uczeń, więc sama znajomość hasła PSZOK nie wystarczy. W trybie tablicy
+      uczeń, więc sama znajomość hasła OBIEG nie wystarczy. W trybie tablicy
       (Etap S1.A) litery przyznaje `awardLetter` na zdarzenie gry, więc człon
       liter jest implikowany przez człon interakcji; realną bramą zostają
       k07, k09, k13, k14 i komplet odwiedzonych klocków. Kod jest wspólny —
@@ -233,9 +310,48 @@
     };
   }
 
+  /** ETAP P (A04): czego uczniowi brakuje — NAZWAMI ZADAŃ, nie kodami.
+      Jedna lista bez powtórzeń, w kolejności lekcji: klocek, któremu
+      brakuje i litery, i zaliczenia, jest przecież jednym zadaniem.
+      `powod` mówi, czego zabrakło — terminal go dziś nie pokazuje, ale
+      bez niego nie da się odróżnić „nie zaczął" od „nie skończył". */
+  function zadaniaDoZrobienia() {
+    const m = missingForFinal();
+    const brakiLiter = m.letters.map((L) =>
+      (LETTERS.find((x) => x.letter === L) || {}).block).filter(Boolean);
+    const wszystkie = REQUIRED_BLOCKS.filter((b) =>
+      brakiLiter.indexOf(b) >= 0 || m.interactions.indexOf(b) >= 0 || m.blocks.indexOf(b) >= 0);
+    return wszystkie.map((b) => {
+      const z = ZADANIA[b] || {};
+      return {
+        id: b,
+        nazwa: z.nazwa || b.toUpperCase(),
+        trop: z.trop || null,
+        nr: z.nr || null,
+        powod: brakiLiter.indexOf(b) >= 0 ? "litera"
+             : m.interactions.indexOf(b) >= 0 ? "zadanie" : "obejrzenie",
+      };
+    });
+  }
+
   /** Reset — wyłącznie w trybie podglądu (wymóg promptu). */
   function reset() {
     if (!PREVIEW) return false;
+    Object.assign(state, emptyState());
+    try { store.removeItem(KEY); } catch (e) { /* ignore */ }
+    try { window.sessionStorage.removeItem(KEY_AUDIO); } catch (e) { /* ignore */ }
+    emit();
+    return true;
+  }
+
+  /** ETAP P (A02): „Zacznij od nowa" — świadome wyczyszczenie WSZYSTKIEGO.
+      Różni się od `reset()` tym, że działa w normalnym trybie: skoro postęp
+      przeżywa zamknięcie przeglądarki, uczeń (albo kolejna klasa przy tym
+      samym komputerze) musi mieć jak zacząć od czystej tablicy. Kasujemy
+      litery, zaliczenia, odwiedziny i tryb audio; stany tropów tablicy
+      wynikają z tego stanu, więc znikają razem z nim. Potwierdzenie należy
+      do interfejsu — tutaj jest już wyłącznie wykonanie. */
+  function resetAll() {
     Object.assign(state, emptyState());
     try { store.removeItem(KEY); } catch (e) { /* ignore */ }
     try { window.sessionStorage.removeItem(KEY_AUDIO); } catch (e) { /* ignore */ }
@@ -397,10 +513,11 @@
   }
 
   NS.state = {
-    PREVIEW, LETTERS, REQUIRED_BLOCKS, REQUIRED_INTERACTIONS,
+    PREVIEW, LETTERS, REQUIRED_BLOCKS, REQUIRED_INTERACTIONS, ZADANIA,
     get: snapshot,
     visit, completeInteraction, unlockLetterEntry, submitLetter, awardLetter,
-    setAudioMode, recheckFinal, missingForFinal, reset, closeCase,
+    setAudioMode, recheckFinal, missingForFinal, zadaniaDoZrobienia,
+    reset, resetAll, closeCase,
     isCompleted: (b) => state.completedInteractions.includes(b),
     isVisited:   (b) => state.visitedBlocks.includes(b),
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },

@@ -272,6 +272,8 @@ body {
 .card[hidden] { display: none; }
 .card.is-enter { opacity: 0; transform: translateY(14px); }
 
+.card-imgbox { position: relative; display: block; }
+
 .card-img {
   display: block;
   width: 100%;
@@ -280,6 +282,18 @@ body {
   object-fit: contain;
   border-radius: 12px;
   background: #fff;
+}
+
+/* ETAP T (A06): łatka na dymek ze starym tekstem. Obraz jest kwadratowy
+   i wypełnia kwadratowe pudełko (`object-fit: contain` na 1/1), więc
+   procenty łatki to procenty samej grafiki. Zdejmujemy ją jedną zmianą —
+   usunięciem `zaslonDymek` w k04.js — gdy dojdą nowe plansze. */
+.card[data-dymek="ukryty"] .card-imgbox::after {
+  content: "";
+  position: absolute;
+  top: 0; right: 0; left: 54%; height: 40%;
+  background: #fff;
+  border-radius: 12px;
 }
 
 .card-text {
@@ -541,6 +555,51 @@ body {
   width: 39.45%; height: 10.47%;
 }
 
+/* ══════════════ LITERA NAGRODY NA TABLICY (etap H) ══════════════
+   Hasło lekcji to OBIEG, więc ten klocek daje literę O — ale na grafice
+   `tablica-koncowa.webp` wpalona jest jeszcze stara litera P. Zasłaniamy ją
+   plakietką HTML w tym samym miejscu i w tym samym stylu (złota ramka,
+   granatowe wnętrze, złoty znak).
+
+   ZMIERZONE POŁOŻENIE STAREJ PLAKIETKI w pliku 1200 × 1144:
+     lewy górny róg 536 × 463, prawy dolny 681 × 615,
+     rozmiar 146 × 153 px, środek 609 × 540.
+   Stąd procenty: left 50,75 %, top 47,16 %, szerokość 12,17 %,
+   wysokość 13,37 %. Nakładka jest o ok. 12 % większa od oryginału, żeby
+   przykryć także obwódkę i cień — inaczej spod spodu wystawałby rant.
+
+   Gdy dojdzie nowa grafika z literą O, wystarczy usunąć ten blok razem
+   ze znacznikiem `.board-litera` w index.html. */
+.board--final .board-litera {
+  position: absolute;
+  left: 50.75%; top: 47.16%;
+  width: 13.6%; height: 14.9%;
+  transform: translate(-50%, -50%);
+  display: grid; place-items: center;
+  border-radius: 22%;
+  background:
+    linear-gradient(180deg, #2f5fa8 0%, #14356b 55%, #0e2650 100%);
+  /* Ramka i poświata w `em`, nie w procentach: `em` idzie za stopniem pisma,
+     a ten liczy się z szerokości tablicy — więc plakietka zachowuje
+     proporcje na każdym kadrze. W procentach ramka schodziła poniżej
+     piksela i znikała (zmierzone: 0,8 px przy tablicy 640). */
+  border: 0.085em solid #d8a63c;
+  box-shadow:
+    inset 0 0 0 0.045em #f3d489,
+    inset 0 0.05em 0.14em rgba(255, 255, 255, 0.28),
+    0 0.05em 0.14em rgba(0, 0, 0, 0.45),
+    0 0 0.5em 0.12em rgba(255, 205, 90, 0.35);
+  color: #f6d98a;
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+  font-weight: 800;
+  line-height: 1;
+  /* stopień pisma z szerokości TABLICY, nie okna: litera ma rosnąć razem
+     z grafiką, a nie z ekranem */
+  font-size: calc(var(--board-final, 640px) * 0.085);
+  text-shadow: 0 0.06em 0 rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  user-select: none;
+}
 .board-go:hover  { background: rgba(255, 255, 255, 0.12); }
 .board-go:active { background: rgba(0, 0, 0, 0.14); }
 .board-go:focus-visible { outline: 3px solid #ffd899; outline-offset: 3px; }

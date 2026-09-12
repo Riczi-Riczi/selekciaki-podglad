@@ -4,7 +4,7 @@
 
    Ten plik spina: interfejs postępu śledztwa, nawigację rozdziałów,
    bramki klocków, terminal finałowy, dyplom oraz przeniesiony bez zmian
-   moduł K14 „Spacer po PSZOK-u”.
+   moduł K14 „Spacer po PSZOK”.
 
    Kolejność ładowania (zwykłe skrypty, bez bundlera):
      lesson-state.js → audio-manager.js → modules.js → ten plik.
@@ -263,9 +263,37 @@ document.addEventListener("DOMContentLoaded", () => {
     locked:  document.getElementById("k17-locked"),
     open:    document.getElementById("k17-open"),
     missing: document.getElementById("k17-missing"),
+    zadania: document.getElementById("k17-zadania"),
     play:    document.getElementById("k17-play"),
     film:    document.getElementById("k17-film-wrap"),
   };
+
+  /* ═══ ETAP P (A04): TERMINAL MÓWI NAZWAMI, NIE KODAMI ═══════════════
+     Dotychczasowy komunikat brzmiał „Do odblokowania brakuje — brakujące
+     punkty kontrolne: E; niedokończone zadania: K07, K09; nieodwiedzone
+     klocki: K10". Trzy listy, dwa żargony i ani jednej wskazówki, dokąd
+     wrócić. „K07" nie znaczy nic dla dziesięciolatka, a słowo „klocek"
+     jest nazwą redakcyjną i nie ma prawa stać w interfejsie.
+
+     Teraz to jedna lista nazw zadań i przycisk przy każdej pozycji.
+     Liczebnik odmieniamy — „Zostały Ci 5 zadania" byłoby błędem
+     w lekcji, która uczy języka razem z segregacją. */
+  function odmianaZadan(n) {
+    if (n === 1) return "Zostało Ci 1 zadanie";
+    const ost = n % 10, dwie = n % 100;
+    const kilka = ost >= 2 && ost <= 4 && !(dwie >= 12 && dwie <= 14);
+    return kilka ? `Zostały Ci ${n} zadania` : `Zostało Ci ${n} zadań`;
+  }
+
+  /** Powrót do zadania. W trybie tablicy prowadzi go silnik (zamyka finał,
+      otwiera trop, staje przed właściwą sceną); w wariancie ?legacy=1
+      lekcja jest jednym długim dokumentem, więc wystarczy przewinięcie. */
+  function idzDoZadania(id) {
+    if (NS.board && NS.board.doZadania) { NS.board.doZadania(id); return; }
+    const cel = document.querySelector(`[data-block="${id}"]`);
+    if (!cel) return;
+    cel.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  }
 
   function renderTerminal() {
     if (!term.root) return;
@@ -273,19 +301,39 @@ document.addEventListener("DOMContentLoaded", () => {
     term.root.classList.toggle("is-unlocked", unlocked);
     if (term.locked) term.locked.hidden = unlocked;
     if (term.open)   term.open.hidden   = !unlocked;
-    if (!unlocked && term.missing) {
-      const m = S.missingForFinal();
-      const parts = [];
-      if (m.letters.length) parts.push(`brakujące punkty kontrolne: ${m.letters.join(", ")}`);
-      const pending = m.interactions.filter(b => !m.letters.some(L =>
-        (S.LETTERS.find(x => x.letter === L) || {}).block === b));
-      if (pending.length) parts.push(`niedokończone zadania: ${pending.map(b => b.toUpperCase()).join(", ")}`);
-      const unseen = m.blocks.filter(b => !m.interactions.includes(b));
-      if (unseen.length) parts.push(`nieodwiedzone klocki: ${unseen.map(b => b.toUpperCase()).join(", ")}`);
-      term.missing.textContent = parts.length
-        ? "Do odblokowania brakuje — " + parts.join("; ") + "."
-        : "Dokończ obowiązkową ścieżkę śledztwa.";
+    if (unlocked) {
+      if (term.zadania) term.zadania.innerHTML = "";
+      return;
     }
+    const braki = S.zadaniaDoZrobienia ? S.zadaniaDoZrobienia() : [];
+    if (term.missing) {
+      term.missing.textContent = braki.length
+        ? `${odmianaZadan(braki.length)}: ${braki.map((z) => z.nazwa).join(", ")}. `
+          + "Dokończ je, a potem wróć do rozwiązania sprawy."
+        : "Dokończ ścieżkę śledztwa, a potem wróć do rozwiązania sprawy.";
+    }
+    if (!term.zadania) return;
+    term.zadania.innerHTML = "";
+    braki.forEach((z) => {
+      const li = document.createElement("li");
+      li.className = "terminal__zadanie";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn--ghost terminal__wroc";
+      btn.textContent = z.nazwa;
+      btn.setAttribute("aria-label", z.nr
+        ? `Przejdź do zadania: ${z.nazwa}, trop ${z.nr}`
+        : `Przejdź do zadania: ${z.nazwa}`);
+      btn.addEventListener("click", () => idzDoZadania(z.id));
+      li.appendChild(btn);
+      if (z.nr) {
+        const trop = document.createElement("span");
+        trop.className = "terminal__trop";
+        trop.textContent = "Trop " + z.nr;
+        li.appendChild(trop);
+      }
+      term.zadania.appendChild(li);
+    });
   }
 
   if (term.play) {
@@ -533,13 +581,13 @@ document.addEventListener("DOMContentLoaded", () => {
     NS.util.watch(k14end, {
       once: true,
       onEnter: () => {
-        if (S.completeInteraction("k14")) ui.announce("Spacer po PSZOK-u ukończony.");
+        if (S.completeInteraction("k14")) ui.announce("Spacer po PSZOK ukończony.");
       },
     });
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     9. K14 — SPACER PO PSZOK-u
+     9. K14 — SPACER PO PSZOK
      Implementacja przeniesiona 1:1 z zaakceptowanej lekcji
      (site/edukacja/lekcja-4-5.js). Choreografia, 14 stacji, droga,
      ruch kamery, proporcje, lazy loading i fallback bez zmian.
@@ -555,7 +603,7 @@ document.addEventListener("DOMContentLoaded", () => {
     gsap.registerPlugin(ScrollTrigger);
     ScrollTrigger.config({ ignoreMobileResize: true });
 
-    /* ── [ANIM: SPACER-PSZOK] K14 — SPACER PO PSZOK-u (14 stacji) ──
+    /* ── [ANIM: SPACER-PSZOK] K14 — SPACER PO PSZOK (14 stacji) ──
        Trzy warstwy: .pj__background (tło) → .pj__world (droga, kontenery,
        odpady, dekoracje) → .pj__ui (teksty, licznik, nota, skip). Tylko świat
        dostaje skalę kamery i pełną paralaksę; UI zostaje nieruchome.

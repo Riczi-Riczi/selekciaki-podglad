@@ -40,38 +40,102 @@
   const filmTouched = new Set();
   let thumbsReady = Promise.resolve();   // preload 9 miniatur (patrz „── start ──")
 
-  /* ── Pamięć sesji ────────────────────────────────────────────────
-     Tablica jest wariantem domyślnym, więc odświeżenie strony nie może
-     cofać ucznia na start. W `sessionStorage` (a nie `localStorage`)
-     trzymamy tylko dwie rzeczy: czy intro już leciało i jakie tropy są
-     odblokowane/ukończone. Trwały rejestr postępu między dniami to nadal
-     osobny etap — tutaj świadomie nie dublujemy `lesson-state.js`. */
+  /* ── JEDNA PAMIĘĆ POSTĘPU (Etap P, A02) ──────────────────────────
+     Do tego etapu tablica miała WŁASNĄ listę stanów tropów w
+     `sessionStorage`, obok liter i zaliczeń w `lesson-state.js`. Dwie
+     pamięci o jednej rzeczy rozjeżdżały się dokładnie tam, gdzie boli:
+     uczeń wracał nazajutrz (albo tylko w nowej karcie) z kompletem liter
+     w pamięci trwałej i z tablicą ustawioną od zera — dziewięć tropów
+     zamkniętych, mimo że pięć gier miał już za sobą.
+
+     Teraz stan tablicy nie jest zapisywany NIGDZIE. Jest LICZONY ze stanu
+     lekcji: trop jest ukończony, gdy zaliczone są wszystkie jego zadania
+     i zdobyte wszystkie jego litery. Skutek uboczny jest tu celem: nie ma
+     jak oznaczyć tropu jako ukończonego z pominięciem jego gry (A03).
+
+     W `sessionStorage` zostaje jedna rzecz, która naprawdę należy do
+     sesji: czy intro już leciało. */
   const SS_INTRO = "lk45int_board_intro_v1";
-  const SS_STATES = "lk45int_board_states_v1";
+  const SS_STARE_STANY = "lk45int_board_states_v1";   /* pamięć sprzed Etapu P */
 
   const ss = {
     get(key) { try { return sessionStorage.getItem(key); } catch (e) { return null; } },
     set(key, val) { try { sessionStorage.setItem(key, val); } catch (e) { /* tryb prywatny */ } },
+    del(key) { try { sessionStorage.removeItem(key); } catch (e) { /* tryb prywatny */ } },
   };
 
   const introSeen = () => ss.get(SS_INTRO) === "1";
   const markIntroSeen = () => ss.set(SS_INTRO, "1");
 
-  function saveStates() {
-    const map = {};
-    CFG.chapters.forEach((c) => { if (c.state !== "locked") map[c.id] = c.state; });
-    ss.set(SS_STATES, JSON.stringify(map));
+  /** Litery, które ten trop ma przyznać (metadana `letter` w konfiguracji
+      opisuje tylko jedną, a Trop 4 przyznaje dwie — B i I). Źródłem jest
+      więc mapa litera↔klocek z `lesson-state.js`, nie konfiguracja. */
+  function literyTropu(c) {
+    const S = NS.state;
+    if (!S || !S.LETTERS) return [];
+    return S.LETTERS.filter((l) => c.blocks.indexOf(l.block) >= 0).map((l) => l.letter);
   }
 
-  /** Odtworzenie stanów przed zbudowaniem sceny — polaroidy powstają od razu
-      z właściwą klatką i etykietą, bez migotania „zablokowany → aktywny". */
-  function restoreStates() {
+  /** Czy klocek jest zaliczony: interakcje zdarzeniem, narracja obecnością. */
+  function klocekZaliczony(id, s) {
+    const wymagaZdarzenia = NS.state && NS.state.REQUIRED_INTERACTIONS &&
+      NS.state.REQUIRED_INTERACTIONS.indexOf(id) >= 0;
+    return wymagaZdarzenia
+      ? s.completedInteractions.indexOf(id) >= 0
+      : s.visitedBlocks.indexOf(id) >= 0;
+  }
+
+  function tropUkonczony(c, s) {
+    if (!c.blocks || !c.blocks.length) return false;
+    if (!c.blocks.every((b) => klocekZaliczony(b, s))) return false;
+    return literyTropu(c).every((L) => s.checkpointLetters[L]);
+  }
+
+  /** Przeliczenie `state` wszystkich tropów ze stanu lekcji.
+
+      Odblokowanie ma DWA źródła i to nie jest nadmiar: normalnie otwiera
+      kolejny trop ukończenie poprzedniego, ale uczeń, który zaczął trop
+      i go nie domknął, musi móc do niego wrócić — dlatego wszystko do
+      najdalszego ruszonego tropu włącznie zostaje otwarte. Bez tego drugiego
+      członu wystarczyłby jeden nieprzewinięty klocek narracyjny, żeby
+      zatrzasnąć uczniowi lekcję w połowie. */
+  const wymuszoneTropy = new Set();     /* otwarte skrótem QA (?bdStage=…) */
+
+  function odswiezStany() {
+    const S = NS.state;
+    if (!S || !S.get) return;
+    const s = S.get();
+    let najdalszy = 0;
+    CFG.chapters.forEach((c, i) => {
+      if (c.blocks.some((b) => s.visitedBlocks.indexOf(b) >= 0 ||
+                               s.completedInteractions.indexOf(b) >= 0)) najdalszy = i;
+    });
+    let poprzedniUkonczony = true;
+    CFG.chapters.forEach((c, i) => {
+      const ukonczony = tropUkonczony(c, s);
+      c.state = ukonczony ? "completed"
+        : (i === 0 || poprzedniUkonczony || i <= najdalszy ||
+           wymuszoneTropy.has(c.id)) ? "active" : "locked";
+      poprzedniUkonczony = ukonczony;
+    });
+  }
+
+  /** Jednorazowe przejęcie pamięci sesyjnej sprzed Etapu P. Uczeń, który
+      miał otwartą kartę w chwili wydania, byłby inaczej cofnięty na trop
+      wynikający z samych zaliczeń. Przepisujemy WYŁĄCZNIE obecność
+      w klockach narracyjnych — liter ani gier stąd nie dopisujemy, bo to
+      właśnie ta droga pozwalała domknąć trop bez jego gry (A03). */
+  function przejmijStaraPamiec() {
+    const S = NS.state;
     let map;
-    try { map = JSON.parse(ss.get(SS_STATES) || "{}"); } catch (e) { return; }
-    if (!map || typeof map !== "object") return;
+    try { map = JSON.parse(ss.get(SS_STARE_STANY) || "null"); } catch (e) { map = null; }
+    ss.del(SS_STARE_STANY);
+    if (!map || typeof map !== "object" || !S || !S.visit) return;
     CFG.chapters.forEach((c) => {
-      const s = map[c.id];
-      if (s === "active" || s === "completed") c.state = s;
+      if (map[c.id] !== "completed") return;
+      c.blocks.forEach((b) => {
+        if (NS.state.REQUIRED_INTERACTIONS.indexOf(b) < 0) S.visit(b);
+      });
     });
   }
 
@@ -207,9 +271,37 @@
       <div class="bd-boardbar" id="bd-boardbar">
         <p class="bd-boardbar__title">Tablica śledztwa</p>
         <div class="bd-boardbar__actions">
-          <button type="button" class="bd-btn bd-btn--ghost bd-btn--sm" id="bd-replay">Odtwórz intro ponownie</button>
+          <!-- Etap P (A02): powrót do przerwanego śledztwa. Przycisk pojawia
+               się dopiero, gdy jest co kontynuować, i nazywa trop po imieniu —
+               „Kontynuuj" bez nazwy kazałoby uczniowi zgadywać, dokąd trafi. -->
+          <button type="button" class="bd-btn bd-btn--dalej" id="bd-kontynuuj" hidden
+                  ><span class="bd-btn__etykieta">Kontynuuj:</span><span
+                   class="bd-btn__trop" id="bd-kontynuuj-trop"></span></button>
+          <!-- Kontrolki pomocnicze mają własny kontener, bo na telefonie
+               schodzą pod tablicę: trzy przyciski jeden pod drugim urosły
+               do 109 px i weszły w róg Tropu 3 (pomiar na 320 i 360 px). -->
+          <div class="bd-boardbar__pomoc">
+            <button type="button" class="bd-btn bd-btn--ghost bd-btn--sm" id="bd-replay">Odtwórz intro ponownie</button>
+            <button type="button" class="bd-btn bd-btn--ghost bd-btn--sm bd-btn--cichy" id="bd-odnowa" hidden>Zacznij od nowa</button>
+          </div>
         </div>
-      </div>`;
+      </div>
+
+      <!-- Etap P (A02): potwierdzenie kasowania postępu. Osobne okno, a nie
+           systemowe okienko przeglądarki: tamto bywa blokowane, nie da się go
+           opisać własnymi słowami, a tu trzeba powiedzieć wprost, co znika. -->
+      <dialog class="bd-dialog bd-dialog--potwierdz" id="bd-odnowa-dialog"
+              aria-labelledby="bd-odnowa-tytul">
+        <div class="bd-potwierdz">
+          <h2 class="bd-potwierdz__title" id="bd-odnowa-tytul">Zacząć śledztwo od nowa?</h2>
+          <p class="bd-potwierdz__txt">Znikną wszystkie zdobyte litery, ukończone
+            zadania i&nbsp;otwarte tropy. Tej zmiany nie da się cofnąć.</p>
+          <p class="bd-potwierdz__akcje">
+            <button type="button" class="bd-btn bd-btn--ghost" id="bd-odnowa-nie">Nie, wracam</button>
+            <button type="button" class="bd-btn bd-btn--alarm" id="bd-odnowa-tak">Tak, zacznij od nowa</button>
+          </p>
+        </div>
+      </dialog>`;
     document.body.appendChild(root);
 
     Object.assign(el, {
@@ -226,6 +318,9 @@
       notes: document.getElementById("bd-notes"),
       pols: document.getElementById("bd-pols"),
       boardbar: document.getElementById("bd-boardbar"),
+      kontynuuj: document.getElementById("bd-kontynuuj"),
+      kontynuujTrop: document.getElementById("bd-kontynuuj-trop"),
+      odnowa: document.getElementById("bd-odnowa"),
     });
     applyBoardImage();
   }
@@ -359,6 +454,93 @@
       }
     });
     scheduleThread();
+  }
+
+  /** Etap P (A02): stan tropu jest liczony, więc polaroid musi umieć się
+      przemalować w dowolnej chwili — także wtedy, gdy litera wpadła
+      w otwartym rozdziale, a tablica leży pod nim. Ta funkcja jest jedynym
+      miejscem, które ustawia wygląd polaroidu ze stanu. */
+  function przemalujTropy() {
+    if (!el.pols) return;
+    CFG.chapters.forEach((c, i) => {
+      const btn = document.getElementById("bd-" + c.id);
+      if (!btn || btn.classList.contains("is-open")) return;
+      if (btn.dataset.state !== c.state) btn.dataset.state = c.state;
+      btn.disabled = c.state === "locked";
+      const status = btn.querySelector(".bd-pol__status");
+      if (status && status.textContent !== STATUS[c.state]) status.textContent = STATUS[c.state];
+      const img = btn.querySelector(".bd-pol__img");
+      const chce = c.state === "completed" ? c.frameEnd : c.frameStart;
+      if (img && !img.dataset.retry && img.getAttribute("src") !== chce) img.setAttribute("src", chce);
+      btn.setAttribute("aria-label",
+        `Trop ${i + 1} z 9: ${c.title}. ${c.lead}. ${STATUS[c.state]}.`);
+    });
+  }
+
+  /** Pierwszy nieukończony trop spośród otwartych — to do niego wraca
+      uczeń przyciskiem „Kontynuuj". Gdy wszystko jest ukończone, wraca
+      `null` i przycisk się nie pokazuje. */
+  function aktywnyTrop() {
+    return CFG.chapters.find((c) => c.state === "active") || null;
+  }
+  /** Czy w ogóle jest jakikolwiek postęp (inaczej: czy uczeń już zaczął).
+      Sam otwarty Trop 1 postępem nie jest — przycisk „Kontynuuj" miałby
+      wtedy prowadzić tam, gdzie i tak prowadzi cała tablica. */
+  function jestPostep() {
+    const S = NS.state;
+    if (!S || !S.get) return false;
+    const s = S.get();
+    return s.visitedBlocks.length > 0 || s.completedInteractions.length > 0 ||
+      CFG.chapters.some((c) => c.state === "completed");
+  }
+
+  /** Widok obu kontrolek postępu. Wołane po każdej zmianie stanu lekcji
+      oraz przy wejściu na tablicę. */
+  function odswiezKontynuuj() {
+    if (!el.kontynuuj) return;
+    const c = aktywnyTrop();
+    const postep = jestPostep();
+    const pokaz = !!c && postep;
+    el.kontynuuj.hidden = !pokaz;
+    if (pokaz) {
+      const i = CFG.chapters.indexOf(c);
+      el.kontynuujTrop.textContent = c.title;
+      el.kontynuuj.setAttribute("aria-label",
+        `Kontynuuj śledztwo: trop ${i + 1} z 9, ${c.title}`);
+      el.kontynuuj.dataset.trop = c.id;
+    }
+    if (el.odnowa) el.odnowa.hidden = !postep;
+  }
+
+  /** Etap P (A02): kasowanie postępu. Po wyczyszczeniu stanu przeładowujemy
+      stronę zamiast rozbierać widok ręcznie — otwarty rozdział, przeniesione
+      klocki, ramki gier i obserwatory wróciłyby inaczej w pół drogi.
+      Znacznik intro zdejmujemy razem z resztą: „od nowa" ma znaczyć od nowa. */
+  function zacznijOdNowa() {
+    const S = NS.state;
+    if (S && S.resetAll) S.resetAll();
+    ss.del(SS_INTRO);
+    ss.del(SS_STARE_STANY);
+    try {
+      const u = new URL(location.href);
+      u.searchParams.delete("bdStage");
+      location.replace(u.toString());
+    } catch (e) { location.reload(); }
+  }
+
+  function wireOdnowa() {
+    const dlg = document.getElementById("bd-odnowa-dialog");
+    const tak = document.getElementById("bd-odnowa-tak");
+    const nie = document.getElementById("bd-odnowa-nie");
+    if (!el.odnowa || !dlg || !tak || !nie) return;
+    const zamknij = () => { try { dlg.close(); } catch (e) { dlg.removeAttribute("open"); } };
+    dlg.__bdClose = zamknij;          /* Escape obsługuje wspólny nasłuch w wire() */
+    el.odnowa.addEventListener("click", () => {
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+      nie.focus();                    /* fokus na bezpieczniejszej odpowiedzi */
+    });
+    nie.addEventListener("click", () => { zamknij(); el.odnowa.focus(); });
+    tak.addEventListener("click", () => { zamknij(); zacznijOdNowa(); });
   }
 
   function relayoutScene() {
@@ -640,11 +822,19 @@
     el.freeze.classList.remove("is-on");
     sizeFrame();                      /* wymiary dopiero, gdy warstwa widoczna */
     if (!el.pols.children.length) buildScene();
+    odswiezStany();
+    przemalujTropy();
+    odswiezKontynuuj();
     stempelSprawy();
     camReset(false);
     if (skipReveal || reduceMotion) instantReveal(); else animateReveal();
     focusActive();
-    announce("Tablica śledztwa. Dziewięć tropów. Otwórz pierwszy trop.");
+    /* Etap P (A02): powracający uczeń ma usłyszeć, gdzie jest, a nie
+       „otwórz pierwszy trop" — tablica nie zaczyna się już co wejście. */
+    const wznowienie = jestPostep() && aktywnyTrop();
+    announce(wznowienie
+      ? `Tablica śledztwa. Możesz kontynuować trop ${CFG.chapters.indexOf(wznowienie) + 1} z 9: ${wznowienie.title}.`
+      : "Tablica śledztwa. Dziewięć tropów. Otwórz pierwszy trop.");
   }
 
   function animateReveal() {
@@ -888,21 +1078,21 @@
     ["Po ukończeniu wpisz literę w trzecim polu postępu śledztwa.",
      "Moduł otwarty w osobnej karcie nie przekaże wyniku do lekcji."],
     ["Uwaga: w osobnej karcie gra nie przekaże wyniku lekcji, więc po powrocie "
-     + "literę O trzeba będzie wpisać samodzielnie w polu postępu śledztwa.",
+     + "literę E trzeba będzie wpisać samodzielnie w polu postępu śledztwa.",
      "Uwaga: w osobnej karcie gra nie przekaże wyniku lekcji — po powrocie "
      + "trzeba ją przejść jeszcze raz tutaj."],
-    ["po ukończeniu wróć tutaj i wpisz literę K w piątym polu postępu śledztwa.",
+    ["po ukończeniu wróć tutaj i wpisz literę G w piątym polu postępu śledztwa.",
      "po ukończeniu wróć tutaj i przejdź moduł w tym oknie."],
-    ["Wpisz literę K w polu postępu.",
-     "Litera K trafiła do paska postępu na górze."],
+    ["Wpisz literę G w polu postępu.",
+     "Litera G trafiła do paska postępu na górze."],
     /* K06 (Trop 4) i K04 (Trop 3) — zdania z bloków, których skrót noty
        awaryjnej do samego linku nie obejmuje */
     ["Po odnalezieniu wszystkich pięciu śladów zobaczysz zdobytą literę — wpisz ją "
      + "w drugim polu postępu śledztwa.",
-     "Po odnalezieniu wszystkich pięciu śladów litera S trafi do paska postępu na górze."],
+     "Po odnalezieniu wszystkich pięciu śladów litera B trafi do paska postępu na górze."],
     ["Po dotarciu do zatoru zobaczysz zdobytą literę — wpisz ją w pierwszym polu "
      + "postępu śledztwa.",
-     "Po dotarciu do zatoru litera P trafi do paska postępu na górze."],
+     "Po dotarciu do zatoru litera O trafi do paska postępu na górze."],
   ].map(([a, b]) => [luzno(a), b]);
   /* ── KICKERY ZBĘDNE W TABLICY (Etap S1.A.1) ─────────────────────
      Nadtytuł ma nieść informację, nie etykietować oczywistość: uczeń widzi
@@ -977,7 +1167,7 @@
      Trzy strefy w jednym rzędzie, przyklejone do góry w KAŻDYM tropie:
        lewa   — „← Wróć do tablicy" (id `bd-ch-back` zostaje, trzyma się go
                 `syncBarHeight` i testy wydania),
-       środek — postęp śledztwa P-S-Z-O-K,
+       środek — postęp śledztwa O-B-I-E-G,
        prawa  — przełącznik „Czytam / Czytam i słucham" plus „↻ Od początku".
 
      Co zniknęło: okruszek „Trop X z 9 · tytuł" (numer tropu stoi teraz
@@ -1028,7 +1218,7 @@
   }
 
   /* ── POSTĘP ŚLEDZTWA W BELCE ─────────────────────────────────────
-     Pięć kwadracików P-S-Z-O-K. Uczeń NIC nie wpisuje: literę przyznaje
+     Pięć kwadracików O-B-I-E-G. Uczeń NIC nie wpisuje: literę przyznaje
      zdarzenie gry (`NS.state.awardLetter`), a kwadracik przechodzi kolejno
      przez trzy stany — kreska z kropką, pulsująca litera, ptaszek. Stan
      czytamy wyłącznie z `lesson-state`, więc powracający uczeń zastaje
@@ -1037,7 +1227,7 @@
      Nazwę dla czytnika niesie ukryty tekst w każdym kwadraciku, a nie
      `aria-label` na `<li>`: tekst czytają wszystkie silniki tak samo
      i przeżywa tłumaczenie strony. */
-  const LITERY_BELKI = ["P", "S", "Z", "O", "K"];
+  const LITERY_BELKI = ["O", "B", "I", "E", "G"];
 
   function belkaProgHtml() {
     const slot = (L) => `<li class="bd-prog__slot" data-letter="${L}" tabindex="-1">
@@ -1347,6 +1537,30 @@
     chapterCleanup.push(() => wrap.remove());
   }
 
+  /** ETAP P, punkt 6: ZASADY GRY W ODPRAWIE (Trop 2).
+
+      Uczeń dowiadywał się o działaniu liter dopiero z pierwszej gry — a i to
+      nie wprost. Trzy zdania w odprawie mówią to raz, zanim zacznie: ile
+      zadań niesie litery, że nie trzeba ich przepisywać i że po każdym
+      zadaniu jest przycisk prowadzący dalej.
+
+      Akapit dokłada SILNIK, nie dokument lekcji, i to jest tu istotne:
+      w wariancie ?legacy=1 litery wpisuje uczeń, więc zdanie „litery
+      zapisują się same" byłoby tam po prostu nieprawdą. Węzeł jest
+      dzieckiem przeniesionego bloku, dlatego znika przy zamknięciu
+      rozdziału razem ze sprzątaniem. */
+  function wstawZasadyOdprawy(view) {
+    const blok = view.querySelector("#k03");
+    if (!blok || blok.querySelector(".bd-zasady")) return;
+    const cta = blok.querySelector("a.btn, .btn");
+    const p = h("p", "body-text bd-zasady");
+    p.textContent = "W pięciu zadaniach zdobędziesz litery hasła. "
+      + "Litery zapisują się same. Po każdym zadaniu przycisk pokaże Ci następny krok.";
+    if (cta && cta.parentNode) cta.parentNode.insertBefore(p, cta);
+    else blok.appendChild(p);
+    chapterCleanup.push(() => p.remove());
+  }
+
   /** Belka tropu. `idx` nie jest już używany — numer tropu przeniósł się
       do treści, nad tytuł pierwszej sceny (`wstawEtykieteTropu`) — ale
       zostaje w sygnaturze, bo wołają ją wszystkie dziewięć szablonów.
@@ -1516,7 +1730,7 @@
 
       Poprzednik — materiał Genially — był cross-origin i nigdy nie mówił
       stronie, że uczeń skończył: klocek zaliczał ręczny przycisk „Zakończ
-      sprawdzanie kuchni", a litera S otwierała się już przy ZAŁADOWANIU
+      sprawdzanie kuchni", a litera B otwierała się już przy ZAŁADOWANIU
       ramki. Prototyp emituje `k06:completed` po pięciu śladach, więc
       przycisk zniknął, a jego druga rola — odsłona obowiązkowej sceny K08 —
       przeszła na to zdarzenie. To JEDYNE przejście dalej w tym tropie,
@@ -1531,7 +1745,7 @@
     if (!frame) return;
 
     const gotowe = () =>
-      "Gra ukończona. Litera S trafiła do paska postępu na górze.";
+      "Gra ukończona. Litera B trafiła do paska postępu na górze.";
 
     /* Ładowanie leniwe z parametrem trybu osadzenia (wzorzec K07/K16):
        gra chowa wtedy własne marginesy. Legacy'owa ścieżka w `initFrames`
@@ -1569,19 +1783,19 @@
       const S = NS.state;
       if (!S) return;
       const noweZaliczenie = S.completeInteraction("k06");
-      if (S.awardLetter) S.awardLetter("S");
+      if (S.awardLetter) S.awardLetter("B");
       if (statusEl) statusEl.textContent = gotowe();
       if (noweZaliczenie) {
         announce("Pięć śladów odnalezionych. " +
           "Czas zebrać olej z patelni.");
       }
       /* Scena K08 staje się dostępna NATYCHMIAST, ale strona do niej NIE
-         skacze — o przejściu decyduje uczeń przyciskiem „Litera S gotowa"
+         skacze — o przejściu decyduje uczeń przyciskiem „Litera B gotowa"
          (zdarzenie `k06:continue`, niżej). Ten sam wzorzec, co w Rurociągu. */
       odslonaK08(view, true);
     };
 
-    /* Uczeń nacisnął „LITERA S GOTOWA" — dopiero teraz przewijamy do sceny
+    /* Uczeń nacisnął „LITERA B GOTOWA" — dopiero teraz przewijamy do sceny
        K08, kadrując ją od góry, żeby zdanie wprowadzające i tytuł stały
        w całości pod belką. Nasłuch jest DEFENSYWNY: litera i odsłona idą
        z `k06:completed` niezależnie, więc brak tego zdarzenia niczego nie
@@ -1596,7 +1810,7 @@
        przewinięciem do sceny K08. Było potrzebne, dopóki strona sama
        skakała do następnej sceny w chwili wygranej — klip i narracja
        nowej sceny biły się wtedy o jedyny kanał audio. Teraz o przejściu
-       decyduje uczeń („Litera S gotowa”), więc klip zdąży wybrzmieć
+       decyduje uczeń („Litera B gotowa”), więc klip zdąży wybrzmieć
        z definicji i cały bezpiecznik z zegarem stał się zbędny. */
     /* ── Klipy śladów (Etap A5, patch autora gry) ────────────────────
        Odkrycie śladu odzywa się głosem lektora, ale WYŁĄCZNIE w trybie
@@ -1761,29 +1975,29 @@
     /* Zaliczenie liczy się DOKŁADNIE RAZ, ale odblokowanie pola litery i
        odsłona finału muszą działać przy KAŻDEJ wygranej. Wcześniej strażnik
        `if (!completeInteraction(...)) return;` przerywał przed
-       `unlockLetterEntry("Z")`, więc przy powtórnym przejściu gry (stan
+       `unlockLetterEntry("I")`, więc przy powtórnym przejściu gry (stan
        `completedInteractions` żyje w localStorage, także między sesjami)
-       pole litery Z nigdy się nie otwierało — naprawa N1. */
+       pole litery I nigdy się nie otwierało — naprawa N1. */
     const onDone = () => {
       const S = NS.state;
       if (!S) return;
       const noweZaliczenie = S.completeInteraction("k08");
       /* idempotentne: nie doda duplikatu i nie otworzy litery już wpisanej */
-      if (S.awardLetter) S.awardLetter("Z");
+      if (S.awardLetter) S.awardLetter("I");
       if (statusEl) statusEl.textContent =
-        "Gra ukończona. Litera Z trafiła do paska postępu na górze.";
+        "Gra ukończona. Litera I trafiła do paska postępu na górze.";
       if (noweZaliczenie) {
         announce("Butelka jest pełna. " +
           "Możesz przejść do kolejnego tropu.");
       }
       /* Scena finału staje się dostępna od razu, ale bez skoku — o przejściu
-         decyduje uczeń przyciskiem „Litera Z gotowa" (`k08:continue`). */
+         decyduje uczeń przyciskiem „Litera I gotowa" (`k08:continue`). */
       pokazFinalP04(view, true);
       unlock("p05");                       /* tablica pokazuje kolejny trop
                                               nawet przy wyjściu bez CTA */
     };
 
-    /* „LITERA Z GOTOWA" — dopiero teraz przewijamy do finału tropu,
+    /* „LITERA I GOTOWA" — dopiero teraz przewijamy do finału tropu,
        kadrując go od góry. Nasłuch defensywny, tak jak przy K04 i K06. */
     const onContinue = () => {
       pokazFinalP04(view, true);
@@ -1810,7 +2024,7 @@
       bind(); fitFrame();
       if (NS.state && NS.state.isCompleted && NS.state.isCompleted("k08") && statusEl) {
         statusEl.textContent =
-          "Gra ukończona. Litera Z trafiła do paska postępu na górze.";
+          "Gra ukończona. Litera I trafiła do paska postępu na górze.";
       }
     };
     frame.addEventListener("load", onFrameLoad);
@@ -1838,11 +2052,11 @@
     const k08Gotowe = !!(S && S.isCompleted && S.isCompleted("k08"));
     if (k06Gotowe || k08Gotowe) odslonaK08(view, true);
     if (k08Gotowe) {
-      /* Gra była już wygrana: pole litery Z ma czekać na wpisanie także po
+      /* Gra była już wygrana: pole litery I ma czekać na wpisanie także po
          powrocie do rozdziału (naprawa N1). Wywołanie jest idempotentne —
          przy literze już wpisanej nie zmienia niczego i nie zalicza gry
          ponownie. */
-      if (S.awardLetter) S.awardLetter("Z");
+      if (S.awardLetter) S.awardLetter("I");
       pokazFinalP04(view, true);
       unlock("p05");
     }
@@ -2043,10 +2257,87 @@
   /** TROP 7 „PSZOK — centrum dowodów" (Etap 4A.1 + 4B).
       Korekta 4A.1: metafora zjazdu z autostrady USUNIĘTA w całości (decyzja
       użytkownika). Scena wejścia jest teraz prosta i krótka:
-      zdanie-most → plac PSZOK-u → rozwinięcie skrótu P–S–Z–O–K.
+      zdanie-most → plac PSZOK → rozwinięcie skrótu P–S–Z–O–K.
       Etap 4B: po rozwinięciu skrótu przycisk prowadzi do Spaceru (K14),
       a koniec Spaceru jest końcem dostępnej części tropu — bez panelu.
-      Litery O ta scena nie przyznaje: należy do gry (etap 4C). */
+      Litery E ta scena nie przyznaje: należy do gry (etap 4C). */
+  /* ═══ ETAP P (A03): TROP DOMYKA SIĘ DOPIERO Z LITERĄ ═══════════════
+     Audyt złapał to na Tropie 7: scena „Punkt obsłużony" i przycisk
+     „Sprawdź, co dalej" odsłaniały się razem z grą PSZOK — czyli ZANIM
+     uczeń w nią zagrał. Wystarczyło przewinąć obok, żeby zamknąć trop bez
+     litery E, a tablica pokazywała go jako ukończony. To samo groziło
+     Tropowi 8, gdzie panel domknięcia stał odsłonięty od początku.
+
+     W miejsce domknięcia wchodzi więc panel z nazwą brakującego zadania
+     i przyciskiem, który do niego wraca. Zamiana jest czystą funkcją stanu
+     — po zdobyciu litery panel znika, a domknięcie wraca; przy powrocie do
+     tropu z literą uczeń nie widzi panelu w ogóle. */
+  function panelCzekaHtml(id, nazwa) {
+    return `<section class="bd-chscene bd-chscene--czeka" id="${id}" hidden
+                 aria-label="Zadanie czeka: ${nazwa}">
+          <div class="bd-chscene__in">
+            <div class="bd-czeka">
+              <!-- Bez nadtytułu: „ZADANIE CZEKA" nad zdaniem „Zadanie czeka:…"
+                   to ta sama treść dwa razy pod rząd. Brzmienie tytułu jest
+                   dosłownie takie, jak w zleceniu. -->
+              <h2 class="bd-scene__title bd-czeka__title">Zadanie czeka: ${nazwa}</h2>
+              <p class="bd-scene__text">Ten trop domkniesz dopiero po ukończeniu zadania.
+                Wróć do niego — litera zapisze się sama.</p>
+              <p class="bd-final__cta">
+                <button type="button" class="bd-btn bd-czeka__btn">Wróć do zadania</button>
+              </p>
+            </div>
+          </div>
+        </section>`;
+  }
+
+  /** Podpięcie panelu: jedna funkcja stanu dla pary panel ↔ domknięcie.
+      `litery` to komplet liter tropu, `cel` — scena zadania, do której
+      wraca przycisk. Zwraca funkcję odsłaniającą parę (panel albo
+      domknięcie — zależnie od stanu), bo w Tropie 7 obie wchodzą dopiero
+      razem z grą. */
+  function wirePanelCzeka(view, opcje) {
+    const panel = view.querySelector(opcje.panel);
+    const koniec = view.querySelector(opcje.koniec);
+    if (!panel || !koniec) return () => {};
+    let odsloniete = false;
+
+    const btn = panel.querySelector(".bd-czeka__btn");
+    if (btn) btn.addEventListener("click", () => {
+      const cel = view.querySelector(opcje.cel);
+      if (!cel || cel.hidden) return;
+      scrollToHeading(cel, view);
+      const ramka = cel.querySelector("iframe");
+      if (ramka) { try { ramka.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+    });
+
+    const maLitery = () => {
+      const S = NS.state;
+      if (!S || !S.get) return true;       /* bez stanu nie zamykamy drogi dalej */
+      const cl = S.get().checkpointLetters;
+      return opcje.litery.every((L) => cl[L]);
+    };
+
+    const render = (odRazu) => {
+      if (!odsloniete) return;
+      const gotowe = maLitery();
+      panel.hidden = gotowe;
+      koniec.hidden = !gotowe;
+      setSceneActive(panel, !gotowe);
+      setSceneActive(koniec, gotowe);
+      syncBarHeight(view);
+      if (gotowe && !odRazu) nudgeWatchers();
+    };
+
+    const S = NS.state;
+    if (S && S.onChange) chapterCleanup.push(S.onChange(() => render(false)));
+
+    return (odRazu) => {
+      if (!odsloniete) { odsloniete = true; }
+      render(odRazu !== false);
+    };
+  }
+
   function p07Html(c, idx) {
     return `<div class="bd-parallax-bg" id="bd-parallax-bg" aria-hidden="true"></div>
       <div class="bd-page">
@@ -2079,7 +2370,7 @@
                 <img class="pszok__plac" id="pszok-plac"
                      width="1200" height="614" fetchpriority="high"
                      src="../assets/images/lekcja45/pszok-plac.webp"
-                     alt="Plac PSZOK-u: ogrodzony teren z osobnymi kontenerami na różne rodzaje odpadów"
+                     alt="Plac PSZOK: ogrodzony teren z osobnymi kontenerami na różne rodzaje odpadów"
                      draggable="false">
               </figure>
               <div class="pw-skrot" id="bd-slot-k13"></div>
@@ -2087,17 +2378,17 @@
           </div>
         </section>
 
-        <!-- Etap 4B: K14 „Spacer po PSZOK-u" — scena przyjeżdża z dokumentu
+        <!-- Etap 4B: K14 „Spacer po PSZOK" — scena przyjeżdża z dokumentu
              lekcji razem ze swoim kontrolerem. Odsłania się po zaliczeniu
              skrótu (k13). Wartownik końca spaceru jedzie RAZEM z blokiem. -->
         <section class="bd-chscene bd-chscene--k14" id="bd-scene-k14" hidden
-                 aria-label="Spacer po PSZOK-u">
+                 aria-label="Spacer po PSZOK">
           <div class="bd-chscene__in">
             <div id="bd-slot-k14"></div>
           </div>
         </section>
 
-        <!-- Etap 4C: K15 „Obsłuż PSZOK" — gra przyznaje literę O.
+        <!-- Etap 4C: K15 „Obsłuż PSZOK" — gra przyznaje literę E.
              Odsłania się po przejściu Spaceru; ramka ładuje się leniwie. -->
         <section class="bd-chscene bd-chscene--k15" id="bd-scene-k15" hidden
                  aria-label="Obsłuż PSZOK — gra">
@@ -2112,8 +2403,10 @@
           </div>
         </section>
 
-        <!-- Domknięcie Tropu 7 (etap 4C). Przycisk wraca na tablicę i NIE
-             kończy tropu: P08 nie jest zintegrowane, więc ma zostać zamknięte. -->
+        ${panelCzekaHtml("bd-scene-czeka-p07", "Obsłuż PSZOK")}
+
+        <!-- Domknięcie Tropu 7 (etap 4C). Od Etapu P odsłania je wyłącznie
+             litera E — do tego czasu w tym miejscu stoi panel wyżej. -->
         <section class="bd-chscene bd-chscene--p07koniec" id="bd-scene-p07-koniec" hidden
                  aria-label="Domknięcie tropu PSZOK">
           <div class="bd-chscene__in">
@@ -2143,11 +2436,11 @@
 
       Ikony przystanków to istniejące rendery (żadnych nowych rastrów):
       butelka PET i bluza z polaru z materiałów K16, żółty kontener
-      i hałda tworzyw ze Spaceru po PSZOK-u — ten sam kontener, obok
+      i hałda tworzyw ze Spaceru po PSZOK — ten sam kontener, obok
       którego uczeń przeszedł w Tropie 7.
 
       Blok K16 (gra) NIE jedzie do tego rozdziału: zostaje w ukrytym
-      dokumencie do etapu 5B. Litery K ta scena nie przyznaje. */
+      dokumencie do etapu 5B. Litery G ta scena nie przyznaje. */
   function p08Html(c, idx) {
     const IMG16 = "../assets/images/lekcja45/16-drugie-zycie-materialow/webp/";
     const IMG14 = "../assets/images/lekcja45/14-spacer-pszok/";
@@ -2190,7 +2483,7 @@
                 <p class="bd-scene__kicker">SPRAWA SUROWCÓW</p>
                 <h2 class="bd-scene__title ob-tytul__h">Gdy odpad zamienia się
                   w&nbsp;surowiec</h2>
-                <p class="bd-scene__text ob-most">Oddałeś odpady w&nbsp;PSZOK-u.
+                <p class="bd-scene__text ob-most">Oddałeś odpady w&nbsp;PSZOK.
                   Teraz zobacz, dokąd jadą dalej.</p>
               </div>
 
@@ -2230,10 +2523,12 @@
           </div>
         </section>
 
-        <!-- Kontrolowany koniec dostępnej części tropu: przycisk wraca na
-             tablicę i NIE kończy tropu — P09 nie jest zintegrowane, a litera
-             K należy do gry z etapu 5B. -->
-        <section class="bd-chscene bd-chscene--p08koniec" id="bd-scene-p08-koniec"
+        ${panelCzekaHtml("bd-scene-czeka-p08", "Drugie życie materiałów")}
+
+        <!-- Domknięcie Tropu 8. Do Etapu P stało odsłonięte od wejścia, więc
+             dawało się przewinąć obok gry i zamknąć trop bez litery G —
+             teraz odsłania je wyłącznie ta litera (A03). -->
+        <section class="bd-chscene bd-chscene--p08koniec" id="bd-scene-p08-koniec" hidden
                  aria-label="Domknięcie tropu o surowcach">
           <div class="bd-chscene__in">
             <div class="bd-final">
@@ -2242,7 +2537,7 @@
                 <p class="bd-scene__text">Wiesz już, że odpad oddany osobno wraca
                   jako materiał, a materiał — jako nowa rzecz.
                   Wracaj na tablicę: ostatni krok śledztwa jeszcze przed tobą.</p>
-                <!-- Zdanie o haśle zależy od tego, czy litera K jest już
+                <!-- Zdanie o haśle zależy od tego, czy litera G jest już
                      wpisana — treść ustawia silnik (patrz zdanieOHasle),
                      bo uczeń może dojść do panelu przed wpisaniem litery. -->
                 <p class="bd-scene__text bd-p08__haslo" id="bd-p08-haslo"></p>
@@ -2265,13 +2560,13 @@
       2. ODTAJNIENIE — kadr nagrania. Filmu jeszcze nie ma, więc stoi
          plansza zastępcza z przyciskiem; architektura pod plik MP4 jest
          gotowa (patrz wireP09).
-      3. WERDYKT — hasło P-S-Z-O-K zapala się literą po literze przy
+      3. WERDYKT — hasło O-B-I-E-G zapala się literą po literze przy
          scrollu; przy ograniczonym ruchu od razu w całości.
       4. DYPLOM (K18) — mechanizm bez zmian, przebudowana wyłącznie szata:
          tło i imię to dwie warstwy, więc w 6B wystarczy podmienić tło.
       5. DOMKNIĘCIE — powrót na tablicę, gdzie czeka stempel. */
   function p09Html(c, idx) {
-    const litery = ["P", "S", "Z", "O", "K"].map((L, i) => `
+    const litery = ["O", "B", "I", "E", "G"].map((L, i) => `
                 <li class="bd-werdykt__litera" data-litera="${L}" data-nr="${i}">
                   <span class="bd-werdykt__znak">${L}</span>
                 </li>`).join("");
@@ -2306,9 +2601,27 @@
                  aria-label="Werdykt">
           <div class="bd-chscene__in">
             <p class="bd-scene__kicker">WERDYKT</p>
-            <ol class="bd-werdykt" id="bd-werdykt" aria-label="Hasło śledztwa: P S Z O K">
+            <ol class="bd-werdykt" id="bd-werdykt" aria-label="Hasło śledztwa: O B I E G">
               ${litery}
             </ol>
+            <!-- Etap H: objaśnienie hasła. Wchodzi DOPIERO po zapaleniu
+                 piątej litery (patrz wireP09), żeby nie odbierać uwagi
+                 samemu odsłanianiu. Tekst od użytkownika, wstawiony
+                 dosłownie; ostatni akapit jest puentą i dlatego ma własną
+                 klasę, a nie mocniejszy nagłówek. -->
+            <div class="bd-werdykt__opis" id="bd-werdykt-opis" hidden>
+              <p>Obieg oznacza, że wykorzystujemy rzeczy i&nbsp;materiały kolejny raz,
+                zamiast je marnować.</p>
+              <p>Rower jest już dla Ciebie za mały? Może jeździć na nim inne dziecko.
+                Zapisany zeszyt nie nadaje się do dalszego używania? Oddaj go
+                do&nbsp;pojemnika na papier — jego materiał może posłużyć do zrobienia
+                nowego papieru.</p>
+              <p>Tak samo zużyty olej może się jeszcze przydać. Zebrany w&nbsp;odpowiedniej
+                butelce i&nbsp;oddany do&nbsp;Olejomatu może zostać przetworzony na paliwo.</p>
+              <p class="bd-werdykt__puenta">Używaj dłużej. Przekazuj dalej. Segreguj,
+                żeby materiały można było wykorzystać ponownie. Tak pomagasz utrzymać
+                je w&nbsp;obiegu!</p>
+            </div>
             <p class="bd-scene__text bd-werdykt__zdanie">Znasz drogę odpadów od zlewu
               po nową rzecz. Taka wiedza zasługuje na dokument.</p>
           </div>
@@ -2863,7 +3176,8 @@
       const naAnalizie = stage.classList.contains("is-analiza");
       if (!naAnalizie && p >= 0.70) {
         stage.classList.add("is-analiza");
-        announce("Skala w liczbach: 42 miliony ton rocznie, czyli około 41 kubatur stadionu.");
+        announce("Skala w liczbach: szacunkowo 42 miliony ton rocznie, "
+          + "czyli około 41 kubatur stadionu.");
       } else if (naAnalizie && p < 0.64) {
         stage.classList.remove("is-analiza");
       }
@@ -3097,7 +3411,7 @@
       uwolnijKadr(false);
     }
 
-    /* ── SPACER PO PSZOK-u (Etap 4B) ──
+    /* ── SPACER PO PSZOK (Etap 4B) ──
        Blok przyjeżdża z dokumentu lekcji RAZEM ze swoim kontrolerem.
        Treść, stacje i etykiety bez zmian — zmienia się wyłącznie to,
        skąd kontroler czyta postęp (kontener rozdziału zamiast okna). */
@@ -3138,7 +3452,7 @@
       scenaK14.hidden = false;
       /* po odsłonięciu sekcja ma wreszcie realną wysokość — przeliczamy fazy */
       requestAnimationFrame(() => nudgeWatchers());
-      if (!odRazu) announce("Odsłonięto spacer po PSZOK-u. Przewijaj, żeby przejść przez wszystkie strefy.");
+      if (!odRazu) announce("Odsłonięto spacer po PSZOK. Przewijaj, żeby przejść przez wszystkie strefy.");
     };
 
     if (blok) {
@@ -3170,10 +3484,19 @@
     /* ── GRA „OBSŁUŻ PSZOK" (Etap 4C) ──
        Blok #k15 przyjeżdża z dokumentu lekcji razem ze swoją obsługą
        (modules.js): leniwe ładowanie ramki, wyciszenie narracji i nasłuch
-       `pszok:completed`, który przyznaje literę O. Tu tylko odsłona sceny,
+       `pszok:completed`, który przyznaje literę E. Tu tylko odsłona sceny,
        przewinięcie do panelu i zatrzymanie gry przy wyjściu z tropu. */
     const scenaK15 = view.querySelector("#bd-scene-k15");
     const koniec = view.querySelector("#bd-scene-p07-koniec");
+    /* Etap P (A03): domknięcie i panel „Zadanie czeka" to jedna para —
+       odsłania je ta sama chwila co grę, a o tym, KTÓRE z nich widać,
+       rozstrzyga litera E. */
+    const odslonDomkniecieP07 = wirePanelCzeka(view, {
+      panel: "#bd-scene-czeka-p07",
+      koniec: "#bd-scene-p07-koniec",
+      cel: "#bd-scene-k15",
+      litery: ["E"],
+    });
     let graWpieta = false;
 
     const odslonGre = (odRazu) => {
@@ -3222,10 +3545,10 @@
         scenaK15.hidden = false;
         if (!odRazu) announce("Odsłonięto grę: Obsłuż PSZOK.");
       }
-      if (koniec && koniec.hidden) koniec.hidden = false;
+      odslonDomkniecieP07(odRazu);
     };
 
-    /* ── PO WYGRANEJ W PSZOK-u (Etap S1.A.1 pkt 7) ─────────────────
+    /* ── PO WYGRANEJ W PSZOK (Etap S1.A.1 pkt 7) ─────────────────
        Ten sam błąd, co przy K06 i K08: zaliczenie natychmiast spychało
        ucznia w dół, więc nie zobaczył ani tablicy wyników gry, ani litery O
        pulsującej w belce. Rozdzielamy dwa zdarzenia:
@@ -3237,7 +3560,10 @@
        Celem przewinięcia jest zdanie „Każda strefa to inna droga odzysku"
        (`#k15-po`), a nie panel domknięcia niżej — to ono jest odpowiedzią
        na to, co uczeń przed chwilą zrobił. Samej gry NIE ruszamy. */
-    const odslonPoGrze = () => { if (koniec) koniec.hidden = false; };
+    /* Etap P: sama wygrana niczego już nie odsłania na siłę — literę E
+       przyznaje `pszok:completed` PRZED tym zdarzeniem, więc para
+       panel/domknięcie przełącza się stanem. Zostaje tylko przeliczenie. */
+    const odslonPoGrze = () => odslonDomkniecieP07(false);
     const przewinPoPowrocie = () => {
       odslonPoGrze();
       const cel = view.querySelector("#k15-po") || koniec;
@@ -3423,11 +3749,11 @@
     /* ── GRA „DRUGIE ŻYCIE MATERIAŁÓW" (K16, etap 5B) ──
        Blok przyjeżdża z dokumentu lekcji razem z ramką, statusem, notą
        awaryjną i nagraniem sceny. Tu: leniwe ładowanie, wyciszenie
-       narracji, zaliczenie i litera K oraz sprzątanie przy wyjściu. */
+       narracji, zaliczenie i litera G oraz sprzątanie przy wyjściu. */
     const slotK16 = view.querySelector("#bd-slot-k16");
     if (slotK16) moveBlockInto("k16", slotK16);
 
-    /* Etap S1.A: panel postępu nie wjeżdża już do tropu — literę K pokazuje
+    /* Etap S1.A: panel postępu nie wjeżdża już do tropu — literę G pokazuje
        kwadracik w belce górnej, a uczeń niczego nie przepisuje. */
     const blokK16 = view.querySelector("#k16");
 
@@ -3465,12 +3791,23 @@
     const zdanieOHasle = () => {
       if (!zdanieEl) return;
       const S = NS.state;
-      const jest = !!(S && S.get && S.get().checkpointLetters.K);
+      const jest = !!(S && S.get && S.get().checkpointLetters.G);
       zdanieEl.textContent = jest
         ? "Hasło z pięciu liter jest kompletne."
         : "Została ostatnia litera — a hasło z pięciu liter będzie kompletne.";
     };
     zdanieOHasle();
+
+    /* Etap P (A03): domknięcie Tropu 8 czeka na literę G. Do tego czasu
+       w jego miejscu stoi panel z nazwą zadania — wcześniej panel „Obieg
+       zamknięty" stał odsłonięty od wejścia i pozwalał przewinąć obok gry. */
+    const odslonDomkniecieP08 = wirePanelCzeka(view, {
+      panel: "#bd-scene-czeka-p08",
+      koniec: "#bd-scene-p08-koniec",
+      cel: "#bd-scene-k16",
+      litery: ["G"],
+    });
+    odslonDomkniecieP08(true);
 
     if (ramka) {
       const ustawStatus = (t) => { if (statusK16) statusK16.textContent = t; };
@@ -3509,10 +3846,10 @@
         const S = NS.state;
         if (!S) return;
         const noweZaliczenie = S.completeInteraction("k16");
-        /* idempotentne — przy KAŻDEJ wygranej, tak jak litera Z po naprawie
+        /* idempotentne — przy KAŻDEJ wygranej, tak jak litera I po naprawie
            N1 i litera O w etapie 4C */
-        if (S.awardLetter) S.awardLetter("K");
-        ustawStatus("Moduł ukończony. Litera K trafiła do paska postępu na górze.");
+        if (S.awardLetter) S.awardLetter("G");
+        ustawStatus("Moduł ukończony. Litera G trafiła do paska postępu na górze.");
         if (poGrze) poGrze.hidden = false;
         zdanieOHasle();
         if (!noweZaliczenie) return;         /* ogłoszenie i przewinięcie raz */
@@ -3545,7 +3882,7 @@
          Mierzymy tak samo jak modules.js: start od kadru rozdziału, potem
          dwie iteracje, bo układ modułu zależy od wysokości okna. */
       /* Awaria ładowania nie może zablokować tropu: uczeń dostaje jasną
-         informację, że po przejściu modułu w osobnej karcie literę K
+         informację, że po przejściu modułu w osobnej karcie literę G
          wpisuje sam. Nota z odnośnikiem stoi pod ramką w dokumencie.
          Deklaracja PRZED `poZaladowaniu`, bo ono wywołuje ją przy pustej
          ramce — również w wywołaniu natychmiastowym, gdy `src` już stoi. */
@@ -3558,7 +3895,7 @@
           wrapK16.classList.add("is-error");
         }
         ustawStatus("Nie udało się wczytać modułu. Otwórz go w nowej karcie — "
-          + "po ukończeniu wróć tutaj i wpisz literę K samodzielnie.");
+          + "po ukończeniu wróć tutaj i wpisz literę G samodzielnie.");
       };
 
       const H_MIN = 520, H_MAX = 2000;
@@ -3603,7 +3940,7 @@
         setTimeout(dopasujWysokosc, 600);   /* po dociągnięciu grafik modułu */
         const S = NS.state;
         if (S && S.isCompleted && S.isCompleted("k16")) {
-          ustawStatus("Moduł ukończony. Litera K trafiła do paska postępu na górze.");
+          ustawStatus("Moduł ukończony. Litera G trafiła do paska postępu na górze.");
         } else ustawStatus("Moduł gotowy.");
       };
       ramka.addEventListener("load", poZaladowaniu);
@@ -3628,7 +3965,7 @@
       const S = NS.state;
       if (S && S.get) {
         if (S.get().completedInteractions.indexOf("k16") >= 0) {
-          if (S.awardLetter) S.awardLetter("K");
+          if (S.awardLetter) S.awardLetter("G");
           if (poGrze) poGrze.hidden = false;
         }
         if (S.onChange) {
@@ -3794,9 +4131,14 @@
     /* ── WERDYKT: hasło zapala się literą po literze przy scrollu ── */
     const werdykt = view.querySelector("#bd-werdykt");
     const znaki = Array.from(view.querySelectorAll(".bd-werdykt__litera"));
+    /* Etap H: objaśnienie hasła wchodzi razem z piątą literą — ani wcześniej
+       (odbierałoby uwagę odsłanianiu), ani na osobne kliknięcie. */
+    const opis = view.querySelector("#bd-werdykt-opis");
+    const pokazOpis = (ile) => { if (opis) opis.hidden = ile < znaki.length; };
     if (werdykt && znaki.length) {
       if (reduceMotion) {
         znaki.forEach((el) => el.classList.add("is-on"));
+        pokazOpis(znaki.length);
       } else {
         let rafW = 0;
         const zapalaj = () => {
@@ -3809,6 +4151,7 @@
           const p = (wys * 0.85 - r.top) / (wys * 0.35);
           const ile = Math.max(0, Math.min(znaki.length, Math.floor(p * znaki.length)));
           znaki.forEach((el, i) => el.classList.toggle("is-on", i < ile));
+          pokazOpis(ile);
         };
         const naScroll = () => { if (!rafW) rafW = requestAnimationFrame(zapalaj); };
         view.addEventListener("scroll", naScroll, { passive: true });
@@ -3818,6 +4161,7 @@
           window.removeEventListener("resize", naScroll);
           if (rafW) cancelAnimationFrame(rafW);
           znaki.forEach((el) => el.classList.remove("is-on"));
+          if (opis) opis.hidden = true;
         });
         zapalaj();
       }
@@ -4334,6 +4678,22 @@
   /** Jeden wrapper treści diagramu (nagłówek + licznik bramki + oba układy +
       źródło), przenoszony w całości między sekcją przepływu a fazą przypiętą.
       Obrazy OBU układów są za data-src — aktywny układ ładuje tylko swoje. */
+  /* ETAP T (A08): ocena pod etykietą karty. Znak jest DODATKIEM do słowa —
+     zdanie samo mówi „Dobrze", „Szkodzi", „Nie tak" albo „Różnie", więc
+     znaczenie nie zależy od koloru ani od symbolu (i przechodzi też wtedy,
+     gdy czcionka nie ma danego glifu). Symbol ma `aria-hidden`, bo czytnik
+     wymawiałby „znak zaznaczenia" przed każdym zdaniem. */
+  const ZNAKI = { tak: "✓", nie: "✗", rozne: "○" };
+  function ocenaHtml(k) {
+    if (!k.ocena) return "";
+    return `<p class="mdo-ocena mdo-ocena--${k.znak || "rozne"}"
+              ><span class="mdo-ocena__znak" aria-hidden="true">${ZNAKI[k.znak] || ZNAKI.rozne}</span
+              ><span class="mdo-ocena__txt">${k.ocena}</span></p>`;
+  }
+  /* Opis alternatywny karty niesie etykietę Z OCENĄ: obraz pokazuje sposób,
+     a ocena jest tym, po co uczeń kartę odwraca. Widoczny akapit stoi obok
+     obrazu, więc czytnik dostaje ocenę raz z alt i raz z tekstu — dlatego
+     w alt zostaje SAMA etykieta, a ocenę niesie akapit (patrz `ocenaHtml`). */
   function diagramHtml(d) {
     const kartyProm = d.cards.map((k, i) => `
       <div class="mdo-card" tabindex="0" role="button" data-card="${k.id}"
@@ -4345,6 +4705,7 @@
           </span>
           <span class="mdo-card__face mdo-card__face--back">
             <img data-src="${d.img}karty/${k.id}.webp" alt="${k.alt}">
+            ${ocenaHtml(k)}
           </span>
         </span>
       </div>`).join("");
@@ -4356,15 +4717,21 @@
     const kartyDlg = d.cards.map((k) => `
         <figure class="mdo-fig" data-card="${k.id}" hidden>
           <img data-src="${d.img}karty/${k.id}.webp" alt="${k.alt}">
+          <figcaption>${ocenaHtml(k)}</figcaption>
         </figure>`).join("");
     return `<div class="mdo-tresc" id="bd-diagram-tresc"
         data-audio-src="../assets/audio/lekcja45/03-punkt-kontrolny/03-jak-ludzie-pozbywaja-03.mp3"
         data-audio-title="Jak ludzie pozbywają się zużytego oleju?">
         <p class="bd-scene__kicker">DANE ZE ŚLEDZTWA</p>
         <h2 class="bd-scene__title mdo-tresc__title">Jak ludzie pozbywają się zużytego oleju?</h2>
+        <!-- ETAP T (A08): wstęp mówi wprost, że to opis ZWYCZAJÓW, a nie
+             wzorzec do naśladowania, i zaprasza do oceny. Nazwa firmy zeszła
+             do notki pod diagramem — dla dziesięciolatka nie niesie treści,
+             a w pierwszym zdaniu odciągała uwagę od pytania. -->
         <p class="bd-scene__text mdo-tresc__intro">Wyobraź sobie tort podzielony na części.
-          Każda część pokazuje jeden ze sposobów postępowania ze zużytym olejem, wskazanych
-          w badaniu firmy EMKA. Im większa część, tym częściej wskazywano dany sposób.</p>
+          Tak odpowiadali ludzie na pytanie, co robią ze&nbsp;zużytym olejem. Im większa
+          część, tym częściej wskazywano dany sposób. Odkryj karty i&nbsp;sprawdź, które
+          sposoby trzeba zmienić.</p>
         <!-- instrukcja i stan postępu wizualnie ROZDZIELONE (Etap 1F);
              aria-live tylko na liczniku — bez powtarzania całej instrukcji
              przy każdym odkryciu -->
@@ -4402,7 +4769,11 @@
             </div>
           </div>
         </div>
-        <p class="bd-scene__src">Źródło danych: badanie firmy EMKA.</p>
+        <!-- ETAP T (A08): puenta diagramu. Odsłania się razem z bramką 7/7,
+             czyli wtedy, gdy uczeń zna już wszystkie siedem ocen. -->
+        <p class="bd-scene__text mdo-puenta" id="bd-diagram-puenta" hidden>Częsty sposób
+          nie zawsze jest dobry. Najlepsza droga oleju to butelka i&nbsp;Olejomat.</p>
+        <p class="bd-scene__src">Badanie przeprowadziła firma EMKA (2025).</p>
       </div>`;
   }
 
@@ -4485,7 +4856,7 @@
       </div>`;
   }
 
-  /** Scena gry: przenosi istniejący #k04 (Genially + litera P) oraz panel
+  /** Scena gry: przenosi istniejący #k04 (gra Rurociąg + litera O) oraz panel
       postępu, żeby uczeń miał gdzie wpisać literę. Zero duplikatów: to te same
       węzły DOM, wracające na miejsce przy zamknięciu rozdziału. */
   /* sceny odsłaniane po grze. KUCHNI tu nie ma: od Etapu 1E wchodzi do
@@ -4595,7 +4966,7 @@
     if (!frame) return;
 
     const gotowe = () =>
-      "Gra ukończona. Litera P trafiła do paska postępu na górze.";
+      "Gra ukończona. Litera O trafiła do paska postępu na górze.";
 
     const laduj = () => {
       if (!frame.dataset.src || frame.src) return;
@@ -4678,12 +5049,12 @@
       if (!S) return;
       const noweZaliczenie = S.completeInteraction("k04");
       if (S.visit) S.visit("k04");
-      if (S.awardLetter) S.awardLetter("P");
+      if (S.awardLetter) S.awardLetter("O");
       if (statusEl) statusEl.textContent = gotowe();
       if (noweZaliczenie) {
         announce("Zator odnaleziony. Zobacz teraz, co zatkało rurę.");
       }
-      /* Etap S2: odsłona BEZ przewijania — dokładnie jak w K06, K08 i PSZOK-u.
+      /* Etap S2: odsłona BEZ przewijania — dokładnie jak w K06, K08 i PSZOK.
          Wcześniej strona zjeżdżała w dół już na `k04:completed` i uczeń nie
          zdążył zobaczyć tablicy „Misja wykonana" we własnej grze. O przejściu
          decyduje teraz on sam: przyciskiem w grze albo tym pod ramką. */
@@ -4730,7 +5101,7 @@
          przewinięciu (`scrollToHeading` sam ogniskuje scenę), inaczej scena by
          go odebrała; 1400 ms przepuszcza jeszcze animację zdobycia. */
       if (view.__bdFokusLitery) {
-        setTimeout(() => { if (view.__bdFokusLitery) view.__bdFokusLitery("P"); }, 1400);
+        setTimeout(() => { if (view.__bdFokusLitery) view.__bdFokusLitery("O"); }, 1400);
       }
     };
 
@@ -4787,7 +5158,7 @@
        tropu od razu — bez tego straciłby scenę dowodu i diagram, bo przycisk,
        który je odsłaniał, już nie istnieje. */
     if (NS.state && NS.state.isCompleted && NS.state.isCompleted("k04")) {
-      if (NS.state.awardLetter) NS.state.awardLetter("P");
+      if (NS.state.awardLetter) NS.state.awardLetter("O");
       odslonDowod(view, true);
       pokazPrzyciskDalej();          /* także dla powracającego (S2) */
     }
@@ -4913,7 +5284,10 @@
         tresc.classList.add("is-complete");        /* koniec pulsowania */
         const hintB = view.querySelector("#bd-diagram-hint");
         if (hintB) hintB.textContent = "Wszystkie sposoby odkryte — możesz przejść dalej.";
-        announce("Wszystkie sposoby odkryte. Odblokowano dalszą część śledztwa.");
+        const puenta = view.querySelector("#bd-diagram-puenta");
+        if (puenta) puenta.hidden = false;          /* Etap T (A08) */
+        announce("Wszystkie sposoby odkryte. Częsty sposób nie zawsze jest dobry. "
+          + "Najlepsza droga oleju to butelka i Olejomat.");
         /* dopiero TERAZ dalsza treść trafia do przebiegu dokumentu */
         if (kuchnia) { kuchnia.hidden = false; setSceneActive(kuchnia, true); }
         syncBarHeight(view);
@@ -5512,6 +5886,7 @@
     } else if (c.video && slotB) {
       moveBlockInto(c.blocks[0], slotA);
       c.blocks.slice(1).forEach((b) => moveBlockInto(b, slotB));
+      wstawZasadyOdprawy(view);        /* Etap P pkt 6 — zasady liter */
     } else {
       c.blocks.forEach((b) => moveBlockInto(b, slotA));
     }
@@ -5906,33 +6281,40 @@
     openedChapter = null;
   }
 
-  function restorePolaroid(c, completed) {
-    const btn = document.getElementById("bd-" + c.id);
-    if (!btn) return;
-    btn.classList.remove("is-open");
-    if (completed) {
-      c.state = "completed";
-      btn.dataset.state = "completed";
-      btn.querySelector(".bd-pol__img").src = c.frameEnd;
-      btn.querySelector(".bd-pol__status").textContent = STATUS.completed;
-      const i = CFG.chapters.indexOf(c);
-      btn.setAttribute("aria-label", `Trop ${i + 1} z 9: ${c.title}. ${c.lead}. ${STATUS.completed}.`);
-      saveStates();
-    }
+  /** Etap P (A02): domknięcie tropu ZAPISUJE SIĘ W STANIE LEKCJI, a nie
+      w osobnej liście tablicy. Dopisujemy obecność w klockach narracyjnych
+      tego tropu — uczeń doszedł do jego ostatniej sceny, więc przewinął je
+      wszystkie. Interakcji i liter NIE dopisujemy: to one są bramą (A03),
+      a przycisk „Sprawdź, co dalej" i tak pojawia się dopiero z literą. */
+  function zapiszDomkniecieTropu(c) {
+    const S = NS.state;
+    if (!S || !S.visit) return;
+    c.blocks.forEach((b) => {
+      if (S.REQUIRED_INTERACTIONS.indexOf(b) < 0) S.visit(b);
+    });
   }
 
-  function unlock(id) {
+  function restorePolaroid(c, completed) {
+    const btn = document.getElementById("bd-" + c.id);
+    if (btn) btn.classList.remove("is-open");
+    if (completed) zapiszDomkniecieTropu(c);
+    odswiezStany();
+    przemalujTropy();
+    odswiezKontynuuj();
+  }
+
+  /** Otwarcie tropu poza normalną koleją. W zwykłym przebiegu stan wynika
+      już z postępu, więc te wywołania niczego nie rozstrzygają — poza
+      skrótami QA (`?bdStage=…`), gdzie stanu lekcji nie ma wcale i trop
+      musi zostać otwarty na żądanie (`wymus`). */
+  function unlock(id, wymus) {
     const c = CFG.chapters.find((x) => x.id === id);
-    if (!c || c.state === "completed") return;
+    if (!c) return;
+    if (wymus) wymuszoneTropy.add(id);
+    if (c.state === "completed") return;
     c.state = "active";
-    saveStates();                      /* także gdy scena nie jest jeszcze zbudowana */
-    const btn = document.getElementById("bd-" + id);
-    if (!btn) return;
-    btn.dataset.state = "active";
-    btn.disabled = false;
-    btn.querySelector(".bd-pol__status").textContent = STATUS.active;
-    const i = CFG.chapters.indexOf(c);
-    btn.setAttribute("aria-label", `Trop ${i + 1} z 9: ${c.title}. ${c.lead}. ${STATUS.active}.`);
+    przemalujTropy();
+    odswiezKontynuuj();
   }
 
   /* Etap S1.A: „Odtwórz animację" zniknęło z belki, a razem z przyciskiem
@@ -5998,6 +6380,14 @@
     document.getElementById("bd-skip-intro").addEventListener("click", () => showBoard(true));
     document.getElementById("bd-skip").addEventListener("click", () => enterBoard(true));
     document.getElementById("bd-replay").addEventListener("click", playIntro);
+
+    /* Etap P (A02): jeden klik wraca do przerwanego tropu — bez szukania
+       właściwego polaroidu wzrokiem. Droga jest ta sama co przy kliknięciu
+       w polaroid, więc animacja wejścia i narracja zachowują się tak samo. */
+    if (el.kontynuuj) el.kontynuuj.addEventListener("click", () => {
+      const c = aktywnyTrop();
+      if (c) openChapter(c.id);
+    });
 
     const pause = document.getElementById("bd-pause");
     pause.addEventListener("click", () => {
@@ -6070,9 +6460,25 @@
   }
 
   /* ── start ───────────────────────────────────────────────────── */
-  restoreStates();                      /* przed build(): polaroidy od razu z właściwą klatką */
+  /* Kolejność ma znaczenie: najpierw przejmujemy pamięć sesyjną sprzed
+     Etapu P, potem liczymy stany — polaroidy powstają od razu z właściwą
+     klatką i etykietą, bez migotania „zablokowany → aktywny". */
+  przejmijStaraPamiec();
+  odswiezStany();
   build();
   wire();
+  wireOdnowa();
+  odswiezKontynuuj();
+  /* Etap P (A02): stan tablicy JEST stanem lekcji, więc każda jego zmiana
+     — litera z gry, zaliczony spacer, „Zacznij od nowa" — od razu przelicza
+     tropy. Jeden nasłuch na cały silnik, założony raz. */
+  if (NS.state && NS.state.onChange) {
+    NS.state.onChange(() => {
+      odswiezStany();
+      przemalujTropy();
+      odswiezKontynuuj();
+    });
+  }
   thumbsReady = preloadThumbnails();    /* start od razu — jeszcze na ekranie startowym */
   document.body.classList.add("bd-on");
   /* strona była schowana blokadą z <head>, żeby stara lekcja nie mignęła */
@@ -6118,7 +6524,7 @@
       showBoard(true);
       if (stageParam === "p01" || stageParam === "p02") {
         const c = CFG.chapters[stageParam === "p01" ? 0 : 1];
-        if (stageParam === "p02") unlock("p02");
+        if (stageParam === "p02") unlock("p02", true);
         openedChapter = c;
         const p = c[layoutKey()];
         camApply(p.x, p.y, CAM.zoom);
@@ -6128,32 +6534,32 @@
         /* QA: skrót prosto do treści P04 (nagłówek kuchni, gra, panel postępu,
            zakończenie) bez przechodzenia P01–P03. Działa wyłącznie z parametrem
            w adresie — nie zmienia normalnego przebiegu ani stanu produkcyjnego. */
-        unlock("p04");
+        unlock("p04", true);
         jump(CFG.chapters.find((x) => x.id === "p04"));
       } else if (stageParam === "p05content") {
         /* QA: skrót prosto do treści P05 (układanka K07) — analogicznie. */
-        unlock("p05");
+        unlock("p05", true);
         jump(CFG.chapters.find((x) => x.id === "p05"));
       } else if (stageParam === "p06content") {
         /* QA: skrót prosto do treści P06 (scena stadionu K11) — analogicznie. */
-        unlock("p06");
+        unlock("p06", true);
         jump(CFG.chapters.find((x) => x.id === "p06"));
       } else if (stageParam === "p07content") {
         /* QA: skrót prosto do treści P07 (metafora zjazdu i skrót PSZOK). */
-        unlock("p07");
+        unlock("p07", true);
         jump(CFG.chapters.find((x) => x.id === "p07"));
       } else if (stageParam === "p09content") {
         /* QA: skrót prosto do treści P09 (terminal, werdykt, dyplom). */
-        unlock("p09");
+        unlock("p09", true);
         jump(CFG.chapters.find((x) => x.id === "p09"));
       } else if (stageParam === "p08content") {
         /* QA: skrót prosto do treści P08 (kadr wejścia z obiegiem). */
-        unlock("p08");
+        unlock("p08", true);
         jump(CFG.chapters.find((x) => x.id === "p08"));
       } else if (stageParam === "p03" || stageParam === "p03content") {
         /* QA: skrót do P03 bez przechodzenia P01–P02. NIE zastępuje
            prawidłowego odblokowania w rzeczywistym przebiegu lekcji. */
-        unlock("p03");
+        unlock("p03", true);
         const c = CFG.chapters[2];
         if (stageParam === "p03") {
           openedChapter = c;
@@ -6163,7 +6569,7 @@
           jump(c);
         }
       } else if (stageParam === "p02content" || stageParam === "film" || stageParam === "brief") {
-        unlock("p02");
+        unlock("p02", true);
         jump(CFG.chapters[1]);
         if (stageParam === "film") setTimeout(() => {
           const play = document.querySelector(".bd-play");
@@ -6181,6 +6587,102 @@
     if (document.readyState === "complete") setTimeout(go, 80);
     else window.addEventListener("load", () => setTimeout(go, 80), { once: true });
   }
+
+  /* ═══ ETAP P (A04): DROGA POWROTNA DO ZADANIA ══════════════════════
+     Terminal wypisuje brakujące zadania z nazwy i daje przy każdym
+     przycisk. Przycisk musi zrobić dokładnie to, czego uczeń oczekuje:
+     zamknąć finał, otworzyć właściwy trop i postawić go przed właściwą
+     sceną. Mapa scen jest tutaj, bo tylko silnik wie, jak zbudowana jest
+     strona tropu; nazwy zadań są w `lesson-state.js`, bo potrzebuje ich
+     także stara odmiana lekcji. */
+  const SCENA_ZADANIA = {
+    k01: null, k02: null, k03: "#bd-scene-brief",
+    k04: "#bd-scene-open", k05: "#bd-scene-proof",
+    k06: "#bd-scene-open", k08: "#bd-scene-k08g",
+    k07: "#bd-scene-k07", k09: "#bd-scene-k09", k10: "#bd-scene-k10",
+    k11: "#bd-scene-k11", k12: "#bd-scene-k12",
+    k13: "#bd-scene-pszok", k14: "#bd-scene-k14", k15: "#bd-scene-k15",
+    k16: "#bd-scene-k16",
+  };
+
+  /** Strona tropu powstaje z opóźnieniem (animacja polaroidu rozwiązuje
+      obietnicę PRZED zbudowaniem strony), więc na nią czekamy — zamiast
+      zgadywać czasem. */
+  function poczekajNaStrone(id, ms) {
+    const koniec = Date.now() + (ms || 6000);
+    return new Promise((res) => {
+      const sprawdz = () => {
+        const v = chapterView();
+        if (v && v.dataset.trop === id) { res(v); return; }
+        if (Date.now() > koniec) { res(null); return; }
+        setTimeout(sprawdz, 90);
+      };
+      sprawdz();
+    });
+  }
+
+  function przewinDoZadania(view, blockId) {
+    const sel = SCENA_ZADANIA[blockId];
+    if (!view || !sel) return;
+    /* Trop 5 to slajdy: scena poza bieżącym slajdem ma `display:none`,
+       więc przewijanie nic by nie dało — trzeba przeskoczyć slajd.
+       Gdy docelowy slajd jest jeszcze zamknięty (uczeń nie przeszedł
+       poprzedniego zadania), stajemy na ostatnim dostępnym. */
+    if (view.__bdSlajdy) {
+      const cel = view.querySelector(sel);
+      if (cel && !cel.hidden) { view.__bdSlajdy.pokazScene(sel); return; }
+      const kolejnosc = P05_SLAJDY.slice(0, Math.max(P05_SLAJDY.indexOf(sel), 0) + 1).reverse();
+      const zastepczy = kolejnosc.find((s) => {
+        const n = view.querySelector(s);
+        return n && !n.hidden;
+      });
+      if (zastepczy) view.__bdSlajdy.pokazScene(zastepczy);
+      return;
+    }
+    const cel = view.querySelector(sel);
+    if (cel && !cel.hidden) requestAnimationFrame(() => scrollToHeading(cel, view));
+  }
+
+  async function doZadania(blockId) {
+    const S = NS.state;
+    const z = S && S.ZADANIA ? S.ZADANIA[blockId] : null;
+    const c = z && CFG.chapters.find((x) => x.id === z.trop);
+    if (!c) return false;
+
+    if (openedChapter && openedChapter.id === c.id) {
+      przewinDoZadania(chapterView(), blockId);
+      return true;
+    }
+    if (openedChapter) {
+      stopAllMedia();
+      restorePolaroid(openedChapter, false);
+      const p = openedChapter[layoutKey()];
+      el.scene.style.transition = "none";
+      camApply(p.x, p.y, CAM.zoom);
+      await closeChapterFade();
+      openedChapter = null;
+      camReset(false);
+    }
+    /* Trop z brakującym zadaniem jest z definicji już ruszony, więc otwarty.
+       Wymuszenie jest tu wyłącznie bezpiecznikiem na wypadek stanu, którego
+       nie przewidzieliśmy — przycisk terminala nie może kończyć się niczym. */
+    unlock(c.id, true);
+    await openChapter(c.id);
+    const view = await poczekajNaStrone(c.id);
+    if (!view) return true;
+    /* Przewijamy TRZY RAZY i to nie jest ostrożnościowy nadmiar: strona
+       rozdziału po zbudowaniu sama ustawia kadr (`focusChapterHead`),
+       a potem rośnie — odsłaniają się sceny zaliczonych kroków i
+       doczytują ramki gier. Pojedyncze przewinięcie zaraz po wstawieniu
+       strony zostawało 14 600 px nad celem (pomiar). Kolejne przebiegi
+       trafiają w układ już ustabilizowany; każdy jest bezstratny. */
+    [1100, 2000, 3200].forEach((ms) => setTimeout(() => {
+      if (view.isConnected) przewinDoZadania(view, blockId);
+    }, ms));
+    return true;
+  }
+
+  NS.board = { doZadania, aktywnyTrop: () => aktywnyTrop(), odswiez: odswiezStany };
 
   window.BOARD_DEV = {
     state: () => ({

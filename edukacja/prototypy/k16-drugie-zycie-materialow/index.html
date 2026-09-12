@@ -111,8 +111,11 @@ if (new URLSearchParams(location.search).get("embed") === "board") {
     <button type="button" class="k16-btn k16-btn--next" id="k16-next" hidden>
       Następna runda →
     </button>
+    <!-- Etap P (A05): przycisk nie każe niczego zapisywać — literę przyznaje
+         lekcja na zdarzenie `k16:completed`. Nazwa jest taka sama jak
+         w pozostałych grach lekcji. -->
     <button type="button" class="k16-btn k16-btn--save" id="k16-save" hidden>
-      Zapisz literę K
+      Kontynuuj lekcję
     </button>
   </div>
 
@@ -125,6 +128,6 @@ if (new URLSearchParams(location.search).get("embed") === "board") {
 
 </main>
 
-<script src="k16.js?v=7"></script>
+<script src="k16.js?v=8"></script>
 </body>
 </html>

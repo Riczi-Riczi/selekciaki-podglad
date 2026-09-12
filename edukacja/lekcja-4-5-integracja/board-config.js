@@ -52,7 +52,7 @@
        `game` opisuje scenę gry: strona daje tylko okno uruchamiające, całe
        audio i mechanika zostają w Genially. `diagram` to osobny moduł EMKA,
        następujący PO grze — nie przyznaje litery i nie jest osobnym klockiem. */
-    { id: "p03", blocks: ["k04", "k05"], letter: "P",
+    { id: "p03", blocks: ["k04", "k05"], letter: "O",
       title: "Tropy prowadzą pod ziemię", lead: "Gra i dowód nr 1: zlew",
       /* Etap A6: gra „Rurociąg" zastąpiła materiał Genially i sama zgłasza
          ukończenie (`k04:completed`), więc `cta` — ręczne potwierdzenie
@@ -97,14 +97,27 @@
            czytelne, przy ~780 (okno 1024) spadłyby do ~144 px — za mało dla
            klas 4–5, więc tam przełączamy na kompakt. */
         progKompakt: 860,
+        /* ETAP T (A08): każda karta niesie OCENĘ sposobu. Bez niej diagram
+           pokazywał siedem praktyk obok siebie — w tym trzy szkodliwe — i nie
+           mówił, które są złe; uczeń mógł wyjść z przekonaniem, że skoro
+           „tak robią ludzie", to tak można. `znak` wybiera symbol i barwę
+           (tak / nie / rozne), ale ROZSTRZYGA TREŚĆ: każde zdanie zaczyna się
+           od słowa oceniającego, więc sens nie zależy od koloru ani ikony. */
         cards: [
-          { id: "olej-do-olejomatu",  wycinek: 7, x: 23.24, y: 10.65, rgb: "245,230,216", barwa: "kremowy",      label: "Korzysta z Olejomatów",                alt: "Korzysta z Olejomatów", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-korzysta-z-olejomatu.mp3" },
-          { id: "olej-do-zlewu",      wycinek: 1, x: 80.51, y: 11.64, rgb: "252,216,176", barwa: "pomarańczowy", label: "Wylewa olej do zlewu lub toalety",     alt: "Wylewa olej do zlewu lub toalety", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-karty-zlew-toaleta.mp3" },
-          { id: "olej-papierem",      wycinek: 6, x: 4.91,  y: 40.69, rgb: "219,216,227", barwa: "lawendowy",    label: "Wyciera papierem i wrzuca do papieru", alt: "Wyciera papierem i wrzuca do papieru", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-wyciera-papierem.mp3" },
-          { id: "olej-do-zmieszanych",wycinek: 2, x: 92.44, y: 44.08, rgb: "209,216,198", barwa: "oliwkowy",     label: "Wyrzuca do odpadów zmieszanych",       alt: "Wyrzuca do odpadów zmieszanych", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-karty-odpady-zmieszane.mp3" },
-          { id: "inne-sposoby",       wycinek: 5, x: 8.67,  y: 76.16, rgb: "248,227,187", barwa: "żółty",        label: "Inne sposoby",                         alt: "Inne sposoby", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-inne-sposoby.mp3" },
-          { id: "olej-do-pszok",      wycinek: 4, x: 29.24, y: 91.4,  rgb: "198,201,209", barwa: "błękitny",     label: "Oddaje olej do PSZOK",                 alt: "Oddaje olej do PSZOK", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-olej-PSZOK.mp3" },
-          { id: "nie-wiem",           wycinek: 3, x: 86.87, y: 83.99, rgb: "201,205,194", barwa: "szałwiowy",    label: "Nie wiem",                             alt: "Nie wiem", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-nie-wiem.mp3" },
+          { id: "olej-do-olejomatu",  wycinek: 7, x: 23.24, y: 10.65, rgb: "245,230,216", barwa: "kremowy",      label: "Korzysta z Olejomatów",                alt: "Korzysta z Olejomatów", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-korzysta-z-olejomatu.mp3",
+            znak: "tak",   ocena: "Dobrze! Olej trafia do przetworzenia." },
+          { id: "olej-do-zlewu",      wycinek: 1, x: 80.51, y: 11.64, rgb: "252,216,176", barwa: "pomarańczowy", label: "Wylewa olej do zlewu lub toalety",     alt: "Wylewa olej do zlewu lub toalety", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-karty-zlew-toaleta.mp3",
+            znak: "nie",   ocena: "Szkodzi: tłuszcz zatyka rury i trafia do rzek." },
+          { id: "olej-papierem",      wycinek: 6, x: 4.91,  y: 40.69, rgb: "219,216,227", barwa: "lawendowy",    label: "Wyciera papierem i wrzuca do papieru", alt: "Wyciera papierem i wrzuca do papieru", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-wyciera-papierem.mp3",
+            znak: "nie",   ocena: "Szkodzi: zatłuszczony papier psuje recykling. Taki papier to odpady zmieszane." },
+          { id: "olej-do-zmieszanych",wycinek: 2, x: 92.44, y: 44.08, rgb: "209,216,198", barwa: "oliwkowy",     label: "Wyrzuca do odpadów zmieszanych",       alt: "Wyrzuca do odpadów zmieszanych", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-karty-odpady-zmieszane.mp3",
+            znak: "nie",   ocena: "Nie tak: olej w zmieszanych jest stracony, a mógł stać się paliwem." },
+          { id: "inne-sposoby",       wycinek: 5, x: 8.67,  y: 76.16, rgb: "248,227,187", barwa: "żółty",        label: "Inne sposoby",                         alt: "Inne sposoby", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-inne-sposoby.mp3",
+            znak: "rozne", ocena: "Różnie. Liczy się jedno: olej ma trafić do zbiórki, nie do zlewu." },
+          { id: "olej-do-pszok",      wycinek: 4, x: 29.24, y: 91.4,  rgb: "198,201,209", barwa: "błękitny",     label: "Oddaje olej do PSZOK",                 alt: "Oddaje olej do PSZOK", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-olej-PSZOK.mp3",
+            znak: "rozne", ocena: "W niektórych gminach tak. W SELEKT olej ma własną drogę: Olejomat." },
+          { id: "nie-wiem",           wycinek: 3, x: 86.87, y: 83.99, rgb: "201,205,194", barwa: "szałwiowy",    label: "Nie wiem",                             alt: "Nie wiem", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-nie-wiem.mp3",
+            znak: "rozne", ocena: "Ty już wiesz: do butelki i do Olejomatu." },
         ],
       },
       desktop: { x: 70.8, y: 20.2, w: 8.5, rot: 1.0, pin: { x: 68.5, y: 12.1, w: 1.6, img: PIN.zielona } },
@@ -120,7 +133,7 @@
        tropu (po przeszukaniu kuchni) — narracyjnie: znaleziona butelka →
        zebranie oleju → pełna butelka. Litery: S po K06, Z po K08; obie są
        stanem GLOBALNYM lesson-state (pole `letter` to wyłącznie metadana). */
-    { id: "p04", blocks: ["k06", "k08"], letter: "S",
+    { id: "p04", blocks: ["k06", "k08"], letter: "B",
       title: "Ślad prowadzi do kuchni", lead: "Przeszukanie kuchni",
       /* Etap A5: gra „Latarka w kuchni" zastąpiła materiał Genially i sama
          zgłasza ukończenie (`k06:completed`), więc `cta` — ręczne
@@ -132,7 +145,7 @@
       state: "locked" },
 
     /* Etap 2C: K08 przeniesione do P04 — w tym tropie zostają K07 oraz
-       przyszłe K09/K10. Litera Z jest zdobywana w P04 (metadana bez użycia
+       przyszłe K09/K10. Litera I jest zdobywana w P04 (metadana bez użycia
        w silniku usunięta, żeby nie sugerowała drugiego miejsca zdobycia). */
     { id: "p05", blocks: ["k07", "k09", "k10"], letter: null,
       title: "Sprawa oleju — Olejomat", lead: "Droga butelki i dalsze losy oleju",
@@ -146,13 +159,13 @@
       mobile:  { x: 70.7, y: 43.4, w: 17.8, rot: -1.0, pin: { x: 70.6, y: 36.2, w: 3.4, img: PIN.zielona } },
       state: "locked" },
 
-    { id: "p07", blocks: ["k13", "k14", "k15"], letter: "O",
+    { id: "p07", blocks: ["k13", "k14", "k15"], letter: "E",
       title: "PSZOK — centrum dowodów", lead: "Spacer po strefach i obsługa punktu",
       desktop: { x: 24.5, y: 73.7, w: 8.9, rot: 2.0, pin: { x: 24.8, y: 65.2, w: 1.6, img: PIN.zielona } },
       mobile:  { x: 24.6, y: 64.3, w: 18.2, rot: 2.5, pin: { x: 24.9, y: 56.3, w: 3.4, img: PIN.zolta } },
       state: "locked" },
 
-    { id: "p08", blocks: ["k16"], letter: "K",
+    { id: "p08", blocks: ["k16"], letter: "G",
       title: "Co dalej z odpadami?", lead: "Drugie życie odpadów",
       desktop: { x: 51.1, y: 75.6, w: 8.85, rot: -1.5, pin: { x: 51.1, y: 67.1, w: 1.6, img: PIN.zolta } },
       mobile:  { x: 77.8, y: 79.0, w: 17.8, rot: -2.0, pin: { x: 77.6, y: 71.8, w: 3.4, img: PIN.zielona } },

@@ -7,10 +7,10 @@
 
    KONTRAKT INTEGRACYJNY (patrz README):
      • po piątym śladzie: `k06:completed` na `window`, bubbles, DOKŁADNIE RAZ
-       detail: { letter: "S", foundTraces: 5, totalTraces: 5 }
+       detail: { letter: "B", foundTraces: 5, totalTraces: 5 }
      • przy każdym odkryciu: `k06:trace` na `window`, detail: { id, label }
        — punkt wpięcia przyszłych klipów głosowych; gra sama nic nie odtwarza
-     • gra NIE przyznaje litery i niczego nie zapisuje — literę S zapisuje
+     • gra NIE przyznaje litery i niczego nie zapisuje — literę B zapisuje
        strona lekcji (lesson-state.js: unlockLetterEntry)
 
    Zero zależności. Jedna pętla requestAnimationFrame.
@@ -44,7 +44,9 @@ const TRACES = [
     x: 57.5, y: 52.9, r: 4.2,
     revealR: 6.0,
     label: "Lejek przy zlewie",
-    text: "Lejek znaczy jedno: olej przelewa się do butelki, nie do zlewu.",
+    /* ETAP T (A07): lejek nie jest dowodem rozstrzygającym — mówi o zwyczaju
+       domowników, a nie o tym, co zrobił chłopiec z nagrania. */
+    text: "Lejek pomaga przelać olej do butelki. To wskazówka, że domownicy zbierają olej — ale sam lejek nie mówi jeszcze, co zrobił chłopiec.",
   },
   {
     id: 3,
@@ -126,7 +128,7 @@ const CONFIG = {
   },
 };
 
-const REWARD_LETTER = "S";
+const REWARD_LETTER = "B";
 
 /* ══════════════ 3. STAN ══════════════ */
 
@@ -718,13 +720,14 @@ function bindControls() {
   el.cardClose.addEventListener("click", () => { hideCard(); grabFocus(); });
   el.door.addEventListener("click", () => openDoor("przycisk"));
 
-  /* „LITERA S GOTOWA" mówi lekcji, że uczeń chce iść dalej — dokładnie ten
+  /* „Kontynuuj lekcję" mówi lekcji, że uczeń chce iść dalej — dokładnie ten
      sam kontrakt, co `k04:continue` w Rurociągu (Etap S1.A.1). Zdarzenie
      leci na `window` z `bubbles`, DOKŁADNIE RAZ; lekcja przewija wtedy do
      kolejnej sceny. Sama litera idzie osobno, z `k06:completed` — brak
-     tego zdarzenia niczego nie psuje. */
+     tego zdarzenia niczego nie psuje. Etap P (A05): przycisk nazywa się
+     tak samo we wszystkich grach, a komunikat nie każe nic zapisywać. */
   el.btnFinal.addEventListener("click", () => {
-    announce("Litera S gotowa. Wracasz do e-lekcji.");
+    announce("Litera B zapisana w pasku postępu. Wracasz do e-lekcji.");
     el.btnFinal.disabled = true;
     if (state.continueSent) return;
     state.continueSent = true;

@@ -81,7 +81,7 @@
     if (!S.PREVIEW) return;
     document.querySelectorAll("[data-simulate]").forEach(btn => {
       const block  = btn.dataset.simulate;              // np. "k04"
-      const letter = btn.dataset.simulateLetter || "";  // np. "P"
+      const letter = btn.dataset.simulateLetter || "";  // np. "O"
       btn.hidden = false;
       btn.addEventListener("click", () => {
         S.completeInteraction(block);
@@ -126,15 +126,15 @@
   const FRAMES = {
     /* K04 (Etap A6): gra „Rurociąg" w miejsce ostatniego materiału Genially.
        Emituje wyłącznie na `window` z `bubbles: true`, więc nasłuch na obu
-       celach daje JEDNO wywołanie. Litera P przychodzi teraz po dojściu do
+       celach daje JEDNO wywołanie. Litera O przychodzi teraz po dojściu do
        zatoru, a nie — jak w wariancie Genially — przy załadowaniu ramki. */
-    k04: { event:"k04:completed", letter:"P",  title:"Agent w kanalizacji", root:"#game" },
+    k04: { event:"k04:completed", letter:"O",  title:"Agent w kanalizacji", root:"#game" },
     /* K06 (Etap A5): gra „Latarka w kuchni" w miejsce materiału Genially.
        Emituje wyłącznie na `window` z `bubbles: true`, więc nasłuch na
        contentWindow i contentDocument daje JEDNO wywołanie (kontrakt
-       w README gry). Litera S przychodzi teraz po ukończeniu, a nie —
+       w README gry). Litera B przychodzi teraz po ukończeniu, a nie —
        jak w wariancie Genially — przy samym załadowaniu ramki. */
-    k06: { event:"k06:completed", letter:"S",  title:"Przeszukanie kuchni", root:"#game" },
+    k06: { event:"k06:completed", letter:"B",  title:"Przeszukanie kuchni", root:"#game" },
     /* K07 niesie dodatkowo klipy głosowe kart (Etap A4): `clipEvent` mówi,
        na co nasłuchiwać, `clips` mapuje numer kroku na nagranie. Numeracja
        plików = prawidłowa kolejność drogi butelki, ale karty na ekranie są
@@ -149,8 +149,8 @@
         5: "../assets/audio/lekcja45/05-sprawa-oleju/karty-drogi/05-zakrecenie-butelki.mp3",
         6: "../assets/audio/lekcja45/05-sprawa-oleju/karty-drogi/06-oddanie-butelki-do-olejomatu.mp3",
       } },
-    k08: { event:"k08:completed", letter:"Z",  title:"Złap zużyty olej" },
-    k16: { event:"k16:completed", letter:"K",  title:"Drugie życie materiałów" },
+    k08: { event:"k08:completed", letter:"I",  title:"Złap zużyty olej" },
+    k16: { event:"k16:completed", letter:"G",  title:"Drugie życie materiałów" },
   };
 
   /* ═══════════════════════════════════════════════════════════
@@ -158,13 +158,13 @@
 
      Gra nie emituje zdarzeń DOM jak K07/K08/K16 — komunikuje się przez
      `postMessage`. Jej kontrakt (README gry):
-       { type:'pszok:completed', letter:'O', score, stats, laterCount }
+       { type:'pszok:completed', letter:'E', score, stats, laterCount }
          — dokładnie raz na cykl życia strony, tylko w ramce, tylko
            w trybie podstawowym (scenariusz diagnostyczny go nie wysyła);
        { type:'pszok:return-to-lesson' } — przycisk „WRÓĆ DO LEKCJI".
 
      Literę przyznaje LEKCJA — gra nie dotyka `localStorage`. Wzorzec
-     zaliczenia jest ten sam co przy literze Z po naprawie N1:
+     zaliczenia jest ten sam co przy literze I po naprawie N1:
      `unlockLetterEntry` wołane przy KAŻDEJ wygranej (jest idempotentne),
      a `completeInteraction` rozstrzyga, czy to pierwsze zaliczenie.
      ═══════════════════════════════════════════════════════════ */
@@ -200,7 +200,7 @@
     frame.addEventListener("error", () => {
       wrap.classList.remove("is-loading");
       wrap.classList.add("is-error");
-      setStatus("Nie udało się wczytać gry. Otwórz ją w nowej karcie — literę O wpiszesz po powrocie.");
+      setStatus("Nie udało się wczytać gry. Otwórz ją w nowej karcie — literę E wpiszesz po powrocie.");
     });
 
     /* aktywna gra wycisza narrację (wzorzec K08); wyjście z kadru zdejmuje
@@ -266,17 +266,17 @@
 
       if (d.type === "pszok:completed") {
         const noweZaliczenie = S.completeInteraction("k15");
-        przyznajLitere("O");                      /* przy KAŻDEJ wygranej */
+        przyznajLitere("E");                      /* przy KAŻDEJ wygranej */
         if (poGrze) poGrze.hidden = false;
         setStatus(wTablicy()
-          ? "Gra ukończona. Litera O trafiła do paska postępu na górze."
-          : "Gra ukończona. Wpisz literę O w polu postępu śledztwa.");
+          ? "Gra ukończona. Litera E trafiła do paska postępu na górze."
+          : "Gra ukończona. Wpisz literę E w polu postępu śledztwa.");
         if (!noweZaliczenie) return;              /* ogłoszenie i przewinięcie raz */
         /* W tablicy zdobycie litery ogłasza belka — tu zostaje sam fakt
            ukończenia gry, żeby czytnik nie mówił tego samego dwa razy. */
         NS.ui && NS.ui.announce(wTablicy()
           ? "Obsłuż PSZOK: ukończone."
-          : "Obsłuż PSZOK: ukończone. Pole litery O czeka na wpisanie.");
+          : "Obsłuż PSZOK: ukończone. Pole litery E czeka na wpisanie.");
         if (!wTablicy()) NS.ui && NS.ui.flashProgress();
         wrap.dispatchEvent(new CustomEvent("k15:pierwsza-wygrana", { bubbles: true }));
         return;

@@ -444,7 +444,7 @@
       feedback.innerHTML = '<b>' + round.inputName + ' → ' + round.outputName + '.</b> ' + round.why;
 
       if (solved >= ROUNDS.length) {
-        feedback.innerHTML += '<br>Materiały dopasowane. Ostatni trop to litera K.';
+        feedback.innerHTML += '<br>Materiały dopasowane. Zostaje ostatnia litera hasła: G.';
         btnSave.hidden = false;
         btnSave.focus();
       } else {
@@ -461,10 +461,13 @@
 
   btnSave.addEventListener('click', () => {
     btnSave.disabled = true;
-    btnSave.textContent = 'Litera K przekazana ✓';
+    btnSave.textContent = 'Kontynuuj lekcję ✓';
+    /* Etap P (A05): komunikat mówi, co się właśnie stało — literę zapisała
+       lekcja, uczeń nie ma jej nigdzie przepisywać. */
+    feedback.innerHTML += '<br>Litera G została zapisana w pasku postępu u góry.';
     /* Kontrakt integracyjny: prototyp NIE zapisuje do localStorage. */
     document.dispatchEvent(new CustomEvent('k16:completed', {
-      detail: { letter: 'K', completedRounds: solved, totalRounds: ROUNDS.length }
+      detail: { letter: 'G', completedRounds: solved, totalRounds: ROUNDS.length }
     }));
   });
 
