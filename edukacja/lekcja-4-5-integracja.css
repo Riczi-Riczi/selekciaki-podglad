@@ -234,6 +234,9 @@ main{ padding-top:var(--hud-h); }
 .scene--hero .lead{ max-width:22ch; }
 h2.lead,h3.lead{ font-weight:800; }
 .body-text{ font-size:clamp(16px,1.5vw,19px); line-height:1.6; max-width:56ch; }
+/* Etap N: zdanie przejścia do gry PSZOK. W tablicy styl daje mu klasa
+   `.bd-przejscie` z arkusza tablicy; tu — wariant starej lekcji. */
+.k15__przejscie{ font-size:clamp(16px,1.5vw,19px); line-height:1.6; max-width:56ch; margin-bottom:18px; }
 .body-text + .body-text{ margin-top:12px; }
 .note{ font-size:14px; line-height:1.5; opacity:.72; max-width:60ch; margin-top:14px; }
 .scene__grid{ display:grid; gap:clamp(20px,4vw,48px); grid-template-columns:1fr; align-items:center; }

@@ -1825,7 +1825,9 @@
        diagramu w Tropie 3). */
     const KLIPY_SLADOW = {
       1: "../assets/audio/lekcja45/04-slad-do-kuchni/slady/01-olejomat.mp3",
-      2: "../assets/audio/lekcja45/04-slad-do-kuchni/slady/02-lejek.mp3",
+      /* Etap N: nagranie podmienione pod tą samą nazwą — znacznik wersji
+         każe przeglądarce i paczce wziąć nowy plik zamiast starego z cache. */
+      2: "../assets/audio/lekcja45/04-slad-do-kuchni/slady/02-lejek.mp3?v=20260913",
       3: "../assets/audio/lekcja45/04-slad-do-kuchni/slady/03-kosze.mp3",
       4: "../assets/audio/lekcja45/04-slad-do-kuchni/slady/04-plakat.mp3",
       5: "../assets/audio/lekcja45/04-slad-do-kuchni/slady/05-baterie.mp3",
@@ -2240,11 +2242,15 @@
              gaśnie las — okablowanie tropu przenosi ten blok do sceny K12.
              Element zostaje tu jako źródło treści (jedna treść, nie kopia). -->
         <template id="bd-p06-koniec-tresc">
-          <div class="k12__panel" aria-live="polite">
-            <h2 class="k12__panel-tytul" data-wiersz>Skala policzona, ślady odczytane</h2>
+          <!-- Etap N: nagranie panelu rusza silnik sceny lasu (modules.js),
+               kiedy panel wchodzi w kadr — stąd data-audio-manual. -->
+          <div class="k12__panel" aria-live="polite"
+               data-audio-src="../assets/audio/lekcja45/06-skala-problemu/06-skala-policzona-09.mp3"
+               data-audio-title="Skala policzona, ślady odczytane" data-audio-manual>
+            <h2 class="k12__panel-tytul" data-wiersz>Skala policzona, ślady odczytane.</h2>
             <p class="k12__panel-tekst" data-wiersz>Ponad 41 stadionów zużytego oleju rocznie
-              i&nbsp;las pełen rzeczy, które miały swoje miejsce gdzie indziej.
-              Gdzie dokładnie? Sprawdzimy w&nbsp;kolejnej części śledztwa.</p>
+              i&nbsp;lasy pełne odpadów, które nigdy nie powinny tam trafić. A&nbsp;gdzie
+              jest ich właściwe miejsce? Sprawdzimy to w&nbsp;kolejnej części śledztwa.</p>
             <p class="k12__panel-cta" data-wiersz>
               <button type="button" class="bd-btn" id="bd-p06-wroc">Wróć na tablicę śledztwa</button>
             </p>
@@ -2272,9 +2278,15 @@
      i przyciskiem, który do niego wraca. Zamiana jest czystą funkcją stanu
      — po zdobyciu litery panel znika, a domknięcie wraca; przy powrocie do
      tropu z literą uczeń nie widzi panelu w ogóle. */
-  function panelCzekaHtml(id, nazwa) {
+  /* Etap N: `glos` (opcjonalny) = { src, tytul } — nagranie panelu. Rusza
+     z obserwatora widoczności, bo panel jest zwykłą sceną w przepływie
+     i odsłania się wyłącznie wtedy, gdy litery brakuje. */
+  function panelCzekaHtml(id, nazwa, glos) {
+    const audio = glos && glos.src
+      ? ` data-audio-src="${glos.src}" data-audio-title="${glos.tytul || ("Zadanie czeka: " + nazwa)}"`
+      : "";
     return `<section class="bd-chscene bd-chscene--czeka" id="${id}" hidden
-                 aria-label="Zadanie czeka: ${nazwa}">
+                 aria-label="Zadanie czeka: ${nazwa}"${audio}>
           <div class="bd-chscene__in">
             <div class="bd-czeka">
               <!-- Bez nadtytułu: „ZADANIE CZEKA" nad zdaniem „Zadanie czeka:…"
@@ -2353,8 +2365,12 @@
                      „Co kryje się za skrótem?" + litery — wszystko naraz
              faza 3: piąta litera odpina kadr, żeby rozwinięcie i definicja
                      miały tyle miejsca, ile potrzebują (patrz uwolnijKadr) -->
+        <!-- Etap N: narracja sceny wejścia — pierwsza scena Tropu 7, więc
+             rusza z wejścia w trop (startPierwszejNarracji). -->
         <section class="bd-chscene bd-chscene--pszok" id="bd-scene-pszok"
-                 aria-label="PSZOK — centrum dowodów">
+                 aria-label="PSZOK — centrum dowodów"
+                 data-audio-src="../assets/audio/lekcja45/07-pszok/07-nie-do-lasu-01.mp3"
+                 data-audio-title="Nie do lasu, nie do pojemnika">
           <div class="bd-k13tlo" aria-hidden="true"></div>
           <div class="pw-runway" id="pw-runway">
             <div class="pw-stage" id="pw-stage">
@@ -2393,7 +2409,8 @@
         <section class="bd-chscene bd-chscene--k15" id="bd-scene-k15" hidden
                  aria-label="Obsłuż PSZOK — gra">
           <div class="bd-chscene__in">
-            <p class="bd-przejscie">Znasz strefy. Teraz obsłuż punkt sam.</p>
+            <!-- Etap N: zdanie przejścia jest teraz częścią bloku #k15 (to samo
+                 brzmienie w ?legacy=1), więc silnik go już nie dubluje. -->
             <div class="bd-page__main" id="bd-slot-k15"></div>
             <!-- Poprawka 5B.1: panel postępu śledztwa. W trybie tablicy jest
                  dzieckiem body i ma ukrytą widoczność, więc bez przeniesienia
@@ -2411,7 +2428,9 @@
                  aria-label="Domknięcie tropu PSZOK">
           <div class="bd-chscene__in">
             <div class="bd-final">
-              <div class="bd-final__txt">
+              <div class="bd-final__txt"
+                   data-audio-src="../assets/audio/lekcja45/07-pszok/07-PUNKT-OBSLUZONY-26.mp3"
+                   data-audio-title="Punkt obsłużony" data-audio-manual>
                 <h2 class="bd-scene__title bd-final__title">Punkt obsłużony</h2>
                 <p class="bd-scene__text">Wiesz już, czym jest PSZOK, jak dzieli odpady
                   na strefy i&nbsp;jak wygląda praca w&nbsp;takim punkcie.
@@ -2475,8 +2494,15 @@
       <div class="bd-page">
         ${barHtml(c, idx)}
 
+        <!-- Etap N (A.3): narracja tytułu i wstępu obiegu. To PIERWSZA scena
+             tropu z nagraniem, więc wejście w Trop 8 uruchamia ją, a nie
+             wprowadzenie do gry K16 — dotąd, bez nagrania na tej scenie,
+             „pierwszą narracją tropu" było właśnie wprowadzenie do gry
+             i odzywało się, zanim uczeń dojechał do maszyny. -->
         <section class="bd-chscene bd-chscene--obieg" id="bd-scene-obieg"
-                 aria-label="Gdy odpad zamienia się w surowiec">
+                 aria-label="Gdy odpad zamienia się w surowiec"
+                 data-audio-src="../assets/audio/lekcja45/08-drugie-zycie/08-GDY-ODPAD-01.mp3"
+                 data-audio-title="Gdy odpad zamienia się w surowiec">
           <div class="ob-runway" id="ob-runway">
             <div class="ob-stage" id="ob-stage">
               <div class="ob-tytul" id="ob-tytul">
@@ -2497,7 +2523,11 @@
                 </ol>
               </div>
 
-              <p class="bd-scene__text ob-domkniecie" id="ob-domkniecie">Materiał
+              <!-- Etap N: zdanie wschodzi pod domkniętą pętlą w przypiętym
+                   kadrze, więc nagranie rusza z postępu (wireP08). -->
+              <p class="bd-scene__text ob-domkniecie" id="ob-domkniecie"
+                 data-audio-src="../assets/audio/lekcja45/08-drugie-zycie/08-MATERIAL-NIE-ZNIKA-02.mp3"
+                 data-audio-title="Materiał nie znika" data-audio-manual>Materiał
                 nie znika — zmienia postać. Butelka nie musi zostać butelką:
                 może wrócić jako coś, czego znów będziesz używać.</p>
             </div>
@@ -2523,7 +2553,9 @@
           </div>
         </section>
 
-        ${panelCzekaHtml("bd-scene-czeka-p08", "Drugie życie materiałów")}
+        ${panelCzekaHtml("bd-scene-czeka-p08", "Drugie życie materiałów", {
+          src: "../assets/audio/lekcja45/08-drugie-zycie/08-ZADANIE-CZEKA-03.mp3",
+          tytul: "Zadanie czeka: Drugie życie" })}
 
         <!-- Domknięcie Tropu 8. Do Etapu P stało odsłonięte od wejścia, więc
              dawało się przewinąć obok gry i zamknąć trop bez litery G —
@@ -2532,7 +2564,9 @@
                  aria-label="Domknięcie tropu o surowcach">
           <div class="bd-chscene__in">
             <div class="bd-final">
-              <div class="bd-final__txt">
+              <div class="bd-final__txt"
+                   data-audio-src="../assets/audio/lekcja45/08-drugie-zycie/08-OBIEG-ZMAKNIETY-04.mp3"
+                   data-audio-title="Obieg zamknięty">
                 <h2 class="bd-scene__title bd-final__title">Obieg zamknięty</h2>
                 <p class="bd-scene__text">Wiesz już, że odpad oddany osobno wraca
                   jako materiał, a materiał — jako nowa rzecz.
@@ -3235,6 +3269,13 @@
           const next = autoNext(c);
           if (next) travelTo(next); else finishChapter(c);
         });
+        /* Etap N: przy ograniczonym ruchu panel stoi od razu (bez faz lasu),
+           więc jego nagranie rusza, gdy panel wejdzie w kadr. W trybie
+           animowanym głos panelu prowadzi silnik sceny (modules.js). */
+        const panelK12 = blokK12.querySelector(".k12__panel");
+        if (reduceMotion && panelK12 && NS.util) NS.util.watch(panelK12, {
+          ratio: 0.5, dwell: 600,
+          onEnter: () => { if (NS.audio && NS.audio.zagrajRaz) NS.audio.zagrajRaz(panelK12); } });
       }
       /* Korekta 3C.3.3: las dostaje pierwszą klatkę tak samo jak stadion —
          w chwili wejścia do tropu, a nie dopiero gdy scena wjedzie w pole
@@ -3497,6 +3538,38 @@
       cel: "#bd-scene-k15",
       litery: ["E"],
     });
+
+    /* ETAP N — GŁOS DOMKNIĘCIA NIE PRZERYWA TEKSTU PO GRZE.
+       Na szerokim ekranie zdanie „Każda strefa to inna droga odzysku"
+       i domknięcie „Punkt obsłużony" stoją po wygranej w JEDNYM kadrze.
+       Obserwator widoczności odpalał więc domknięcie sekundę po tekście po
+       grze i jego nagranie (16 s) urywało się na pierwszym zdaniu
+       (zmierzone na 1440 px). Domknięcie ma `data-audio-manual`: mówi, gdy
+       jest w kadrze, ale jeśli tekst po grze jeszcze gra — czeka na jego
+       koniec. Uczeń, który przewinie dalej, nie czeka (wyjście z kadru). */
+    const glosDomkniecia = view.querySelector("#bd-scene-p07-koniec .bd-final__txt");
+    const GLOS_PO_GRZE = "../assets/audio/lekcja45/07-pszok/07-KAZDA-STREFA-25.mp3";
+    if (glosDomkniecia && NS.util && NS.util.watch) {
+      let czekaNaPoGrze = 0;
+      const mow = () => {
+        const A = NS.audio;
+        if (!A || !A.zagrajRaz) return;
+        clearInterval(czekaNaPoGrze);
+        if (A.graSciezka && A.graSciezka(GLOS_PO_GRZE)) {
+          czekaNaPoGrze = setInterval(() => {
+            if (!glosDomkniecia.isConnected) { clearInterval(czekaNaPoGrze); return; }
+            if (A.graSciezka(GLOS_PO_GRZE)) return;
+            clearInterval(czekaNaPoGrze);
+            A.zagrajRaz(glosDomkniecia);
+          }, 300);
+          return;
+        }
+        A.zagrajRaz(glosDomkniecia);
+      };
+      NS.util.watch(glosDomkniecia, { ratio: 0.55, dwell: 500,
+        onEnter: mow, onLeave: () => clearInterval(czekaNaPoGrze) });
+      chapterCleanup.push(() => clearInterval(czekaNaPoGrze));
+    }
     let graWpieta = false;
 
     const odslonGre = (odRazu) => {
@@ -3688,6 +3761,11 @@
     const runway = view.querySelector("#ob-runway");
     const kadr = view.querySelector("#ob-stage");
     const stopy = Array.from(view.querySelectorAll(".ob-stop"));
+    /* Etap N: zdanie pod kołem mówi, kiedy wschodzi (patrz `fazy`). */
+    const zdaniePodKolem = view.querySelector("#ob-domkniecie");
+    const mowZdanie = () => {
+      if (zdaniePodKolem && NS.audio && NS.audio.zagrajRaz) NS.audio.zagrajRaz(zdaniePodKolem);
+    };
 
     /* Kolejka ikon: idą PO KOLEI i następna rusza dopiero po dojechaniu
        poprzedniej, więc nie odbierają pasma kotwicy sceny (wzorzec ze
@@ -3710,6 +3788,9 @@
       view.querySelectorAll(".ob-stop img[data-src]").forEach((im) => {
         if (!im.getAttribute("src")) im.setAttribute("src", im.dataset.src);
       });
+      /* bez przenikania zdanie stoi od razu — mówi, gdy wejdzie w kadr */
+      if (zdaniePodKolem && NS.util) NS.util.watch(zdaniePodKolem, {
+        ratio: 0.6, dwell: 600, onEnter: mowZdanie });
     } else if (runway && kadr) {
       const przytnij = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
       /* Przystanek n odsłania się na tym progu postępu. Ostatni ma zapas
@@ -3734,6 +3815,8 @@
         kadr.style.setProperty("--ob-x", x.toFixed(3));
         kadr.classList.toggle("is-obieg", k > 0.5);
         stopy.forEach((s, i) => s.classList.toggle("is-widoczny", p >= PROGI[i]));
+        /* głos zdania, gdy jest już czytelne (połowa wejścia) */
+        if (x > 0.5) mowZdanie();
       };
       const naScroll = () => { if (!rafF) rafF = requestAnimationFrame(fazy); };
       view.addEventListener("scroll", naScroll, { passive: true });
@@ -4241,10 +4324,21 @@
       im.setAttribute("src", im.dataset.src);
     };
 
+    /* Etap N — klipy stref. Strefa „w kadrze" to strefa aktywna, ale tylko
+       wtedy, gdy spacer naprawdę zajmuje ekran: postęp liczony z prostokąta
+       daje 0 również dla sekcji, która leży jeszcze daleko pod kadrem,
+       więc bez tego warunku strefa 1 zgłaszałaby się w chwili odsłonięcia
+       spaceru, zanim uczeń do niego dojechał. */
+    const zglosStrefe = (i) => { if (NS.strefyPszok) NS.strefyPszok.aktywna(i); };
+    chapterCleanup.push(() => { if (NS.strefyPszok) NS.strefyPszok.reset(); });
+
     /* reduced motion: żadnego mapowania — statyczna lista wszystkich stacji */
     if (reduceMotion) {
       sekcja.classList.add("bd-pj--statyczny");
       stacje.forEach((s, i) => { podstaw(i); s.classList.add("is-widoczna"); });
+      /* lista w przepływie: strefę w kadrze wskazuje obserwator widoczności */
+      if (NS.util) stacje.forEach((s, i) => NS.util.watch(s, {
+        ratio: 0.6, dwell: 0, onEnter: () => { if (s.isConnected) zglosStrefe(i); } }));
       return;
     }
 
@@ -4257,6 +4351,9 @@
       const p = Math.max(0, Math.min(0.9999, -r.top / droga));
       const i = Math.min(N - 1, Math.floor(p * N));
       const q = p * N - i;                       /* postęp WEWNĄTRZ stacji */
+      const vh = view.clientHeight;
+      const wKadrze = r.top <= vh * 0.35 && r.bottom >= vh * 0.65;
+      zglosStrefe(wKadrze ? i : -1);
 
       if (i !== ostatnia) {
         ostatnia = i;
@@ -4720,7 +4817,7 @@
           <figcaption>${ocenaHtml(k)}</figcaption>
         </figure>`).join("");
     return `<div class="mdo-tresc" id="bd-diagram-tresc"
-        data-audio-src="../assets/audio/lekcja45/03-punkt-kontrolny/03-jak-ludzie-pozbywaja-03.mp3"
+        data-audio-src="../assets/audio/lekcja45/03-punkt-kontrolny/03-jak-ludzie-pozbywaja-03.mp3?v=20260913"
         data-audio-title="Jak ludzie pozbywają się zużytego oleju?">
         <p class="bd-scene__kicker">DANE ZE ŚLEDZTWA</p>
         <h2 class="bd-scene__title mdo-tresc__title">Jak ludzie pozbywają się zużytego oleju?</h2>

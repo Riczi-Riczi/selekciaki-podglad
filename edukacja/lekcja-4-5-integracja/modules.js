@@ -1014,6 +1014,10 @@
      Nie przyznaje litery — wizualnie oddzielone od kodu śledztwa.
      ═══════════════════════════════════════════════════════════ */
   const K13_WORDS = ["Punkt","Selektywnego","Zbierania","Odpadów","Komunalnych"];
+  /* Etap N: jeden klip na odsłonięcie każdej litery, w kolejności P–S–Z–O–K. */
+  const AUDIO07 = "../assets/audio/lekcja45/07-pszok/";
+  const K13_KLIPY = ["07-punkt-03.mp3", "07-selektywnego-04.mp3", "07-zbierania-05.mp3",
+                     "07-odpadow-06.mp3", "07-komunalnych-07.mp3"].map((f) => AUDIO07 + f);
 
   function initK13() {
     const root = document.getElementById("k13-expand");
@@ -1037,20 +1041,113 @@
         hint.textContent = next < btns.length
           ? `Rozwiń literę ${btns[next].dataset.letter}.`
           : "";
-        if (next === btns.length) {
+        const ostatnia = next === btns.length;
+        if (ostatnia) {
           reveal.hidden = false;
           root.classList.add("is-complete");
           S.completeInteraction("k13");
           NS.ui && NS.ui.announce(
             "PSZOK to Punkt Selektywnego Zbierania Odpadów Komunalnych.");
-          /* jedno nagranie po rozwinięciu całości — nie pięć osobnych */
-          const scene = root.closest("[data-audio-src]");
-          if (scene && NS.audio.autoOn()) { NS.audio.loadScene(scene); NS.audio.play(true); }
         }
+        /* ETAP N — klip litery, a po ostatniej: definicja PSZOK. Definicja
+           czeka, aż klip „Komunalnych" wybrzmi do końca; gdyby uczeń przerwał
+           go czymś innym, definicja nie wchodzi w cudze nagranie. Obie rzeczy
+           milczą w „Czytam" — bramkę trybu trzyma menedżer audio. Dawne
+           „jedno nagranie po rozwinięciu całości" grało tu narrację całej
+           sceny, czyli tytuł skrótu drugi raz. */
+        if (!NS.audio || !NS.audio.playClip) return;
+        const definicja = ostatnia && NS.audio.zagrajRaz
+          ? () => NS.audio.zagrajRaz(reveal) : null;
+        NS.audio.playClip(K13_KLIPY[i], "Litera " + btn.dataset.letter + ": " + K13_WORDS[i],
+          definicja);
       });
     });
     hint.textContent = "Rozwiń literę P.";
   }
+
+  /* ═══════════════════════════════════════════════════════════
+     ETAP N — KLIPY STREF SPACERU PO PSZOK (K14)
+     Spacer ma trzy układy: scenę z kamerą (?legacy=1 na szerokim ekranie),
+     zwykłą listę (?legacy=1 na telefonie) i pionowy układ tablicy. Każdy
+     z nich wie, która strefa jest w kadrze, więc tylko to zgłasza — a klip
+     wybiera jedna wspólna obsługa, żeby zasady były wszędzie te same:
+       • gra wyłącznie w „Czytam i słucham" (bramka w `playClip`),
+       • rusza po krótkim postoju na strefie — szybkie przewinięcie przez
+         kilka stref nie odpala serii urwanych klipów,
+       • nowa strefa przerywa poprzednią (jeden kanał audio),
+       • wejście w pierwszą strefę uruchamia WSTĘP do spaceru (raz na sesję),
+         a klip strefy 1 czeka, aż wstęp skończy mówić.
+     Wstęp startuje stąd, a nie z obserwatora widoczności (host ma
+     `data-audio-manual`): obserwator i zgłoszenie strefy 1 przychodziły
+     niemal w tej samej chwili i to, które było drugie, przerywało pierwsze.
+     ═══════════════════════════════════════════════════════════ */
+  const STREFY_KLIPY = [
+    "07-ODPADY-ZIELONE-10.mp3", "07-GRUZ-11.mp3", "07-OPONY-12.mp3", "07-PAPIER-13.mp3",
+    "07-SZKLO-14.mp3", "07-METALE-I-TWORZYWA-15.mp3", "07-WIELKOGABARYTOWE-16.mp3",
+    "07-ODZIEZ-17.mp3", "07-STYROPIAN-18.mp3", "07-LEKI-19.mp3", "07-BATERIE-20.mp3",
+    "07-CHEMIKALIA-21.mp3", "07-ELEKTROODPADY-22.mp3", "07-DRUGIE-ZYCIE-23.mp3",
+  ].map((f) => AUDIO07 + f);
+  const STREFY_POSTOJ_MS = 450;
+  const SPACER_WSTEP = AUDIO07 + "07-SPACER-po-PSZOK-09.mp3";
+
+  NS.strefyPszok = (() => {
+    let biezaca = -1, zegar = 0, czekaNaWstep = false, czekaj = 0;
+    const tytul = (i) => {
+      const st = document.querySelectorAll("#rail-pszok .pj-station")[i];
+      const t = st && st.querySelector(".pj-station__title");
+      return "Strefa " + (i + 1) + ": " + (t ? t.textContent.trim() : "");
+    };
+    /* Spacer musi REALNIE być w kadrze. Zgłoszenie może przyjść z układu,
+       który akurat nie jest widoczny: przy starcie strony scena z kamerą
+       (?legacy=1) liczy postęp, zanim silnik tablicy zdąży ją wyłączyć,
+       a w tablicy blok spaceru leży wtedy w ukrytym dokumencie. Zmierzone:
+       wejście w Trop 8 odtwarzało wstęp spaceru i klip strefy 1. Ukryty
+       blok ma zerową geometrię albo leży poza kadrem — wtedy milczymy. */
+    const spacerWKadrze = () => {
+      const s = document.getElementById("rail-pszok");
+      if (!s) return false;
+      const r = s.getBoundingClientRect();
+      if (!r.width || !r.height) return false;
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      return r.top < vh * 0.9 && r.bottom > vh * 0.1;
+    };
+    const zagraj = (i) => {
+      if (i !== biezaca || !NS.audio || !NS.audio.playClip) return;
+      /* Odrzucone zgłoszenie NIE może zostać zapamiętane jako bieżąca strefa.
+         Scena z kamerą (?legacy=1) zgłasza strefę 1 już przy wczytaniu strony,
+         daleko przed spacerem; gdy to zgłoszenie zostawało „bieżące", prawdziwe
+         wejście w strefę 1 było dla obsługi tym samym i nic nie grało
+         (zmierzone na 1440 px: brak wstępu i klipu strefy 1). */
+      if (!spacerWKadrze()) { biezaca = -1; return; }
+      /* wejście do spaceru: najpierw wstęp (raz na sesję) */
+      if (i === 0 && NS.audio.zagrajRaz) NS.audio.zagrajRaz(document.getElementById("k14"));
+      /* strefa 1 nie wchodzi w słowo wstępowi do spaceru */
+      if (i === 0 && NS.audio.graSciezka && NS.audio.graSciezka(SPACER_WSTEP)) {
+        if (czekaNaWstep) return;
+        czekaNaWstep = true;
+        czekaj = setInterval(() => {
+          if (NS.audio.graSciezka(SPACER_WSTEP)) return;
+          clearInterval(czekaj);
+          czekaNaWstep = false;
+          zagraj(i);                          /* nadal strefa 1? zagra; inaczej nic */
+        }, 300);
+        return;
+      }
+      NS.audio.playClip(STREFY_KLIPY[i], tytul(i));
+    };
+    return {
+      /** Układ spaceru zgłasza strefę w kadrze (0–13) albo -1: poza spacerem. */
+      aktywna(i) {
+        if (i === biezaca) return;
+        biezaca = i;
+        clearTimeout(zegar);
+        if (i < 0 || !STREFY_KLIPY[i]) return;
+        zegar = setTimeout(() => zagraj(i), STREFY_POSTOJ_MS);
+      },
+      /** Wyjście z tropu: następne wejście w strefę zagra od nowa. */
+      reset() { biezaca = -1; clearTimeout(zegar); clearInterval(czekaj); czekaNaWstep = false; },
+    };
+  })();
 
   /* ═══════════════════════════════════════════════════════════
      6. SEKWENCJE KLATKOWE (K05, K10, K11) i PRZEMIANA (K12)
@@ -1691,7 +1788,24 @@
         }
       }
 
-      const wybierz = (i) => { zastosujSlad(i, true); k12.classList.add("is-rozwinieta"); };
+      /* ETAP N — klip śladu po kliknięciu. Tylko w „Czytam i słucham"
+         (bramka w `playClip`); kolejny ślad przerywa poprzedni klip. */
+      const AUDIO06 = "../assets/audio/lekcja45/06-skala-problemu/";
+      const KLIPY_SLADOW = ["06-odpady-01-fotel-03.mp3", "06-odpady-02-gruz-04.mp3",
+        "06-odpady-03-beczka-05.mp3", "06-odpady-04-puszki-po-farbie-06.mp3",
+        "06-odpady-05-worki-07.mp3"].map((f) => AUDIO06 + f);
+      const wybierz = (i) => {
+        zastosujSlad(i, true);
+        k12.classList.add("is-rozwinieta");
+        if (NS.audio && NS.audio.playClip && OBIEKTY[i]) {
+          NS.audio.playClip(KLIPY_SLADOW[i], "Ślad: " + OBIEKTY[i].nazwa);
+        }
+      };
+      /* ETAP N — nagrania finału (ciężarówki) i panelu zamknięcia tropu.
+         Obie sceny stoją w przypiętym kadrze, więc głos rusza z POSTĘPU
+         (patrz `fazy`), dokładnie wtedy, gdy uczeń je widzi. `zagrajRaz`
+         pilnuje trybu, blokad i jednorazowości w sesji. */
+      const zagrajScene = (el) => { if (el && NS.audio && NS.audio.zagrajRaz) NS.audio.zagrajRaz(el); };
       piny.forEach((el, i) => { el.addEventListener("click", () => wybierz(i)); });
       Array.from(k12.querySelectorAll(".k12__lista button")).forEach((btn, i) => {
         btn.addEventListener("click", () => wybierz(i));
@@ -1759,6 +1873,9 @@
             przejazd(p, FAZA.tir2, FAZA.postoj, FAZA.wyjazd + 0.02, 0.30).toFixed(4));
           tiry.classList.toggle("is-on", p > FAZA.tir1);
         }
+        /* głos finału razem z wjazdem pierwszej ciężarówki — ale nie po
+           panelu: uczeń, który wrócił z dołu, nie ma słuchać tego od tyłu */
+        if (p > FAZA.tir1 && p < FAZA.panel) zagrajScene(finalEl);
 
         /* ── zakończenie tropu: las gaśnie, panel wchodzi wierszami ── */
         const zanik = clamp((p - FAZA.zanik) / 0.06, 0, 1);
@@ -1770,11 +1887,18 @@
           Array.from(pan.querySelectorAll("[data-wiersz]")).forEach((el, i) => {
             el.classList.toggle("is-on", p > FAZA.panel + i * 0.022);
           });
+          if (p > FAZA.panel) zagrajScene(pan);
         }
       };
 
       if (reduceMotion) {
         pokazWszystko();
+        /* bez przewijania faz: finał i panel mówią, gdy wejdą w kadr */
+        if (finalEl && NS.util) NS.util.watch(finalEl, { ratio: 0.5, dwell: 600,
+          onEnter: () => zagrajScene(finalEl) });
+        const panK12 = panel();
+        if (panK12 && NS.util) NS.util.watch(panK12, { ratio: 0.5, dwell: 600,
+          onEnter: () => zagrajScene(panK12) });
       } else {
         frameSequence({
           id: "k12-scene", dir: IMG + "las-seq/", prefix: "las-", count: 64, pad: 3,

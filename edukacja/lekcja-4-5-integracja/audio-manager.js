@@ -124,7 +124,10 @@
     if (audio) return audio;
     audio = new Audio();
     audio.preload = "none";
-    audio.addEventListener("ended",  () => { setStatus("Nagranie zakończone."); syncPlayBtn(); });
+    audio.addEventListener("ended",  () => {
+      setStatus("Nagranie zakończone."); syncPlayBtn();
+      if (odlozona) setTimeout(zagrajOdlozona, 250);   /* Etap N: kolejka scen w jednym kadrze */
+    });
     audio.addEventListener("play",   () => { setStatus("Odtwarzanie…"); syncPlayBtn(); });
     /* `pause` przychodzi zdarzeniem, czyli PO tym, jak `suspend()` ustawi
        swój komunikat — bez tego warunku „Narracja wstrzymana, trwa film"
@@ -216,6 +219,8 @@
       currentScene = null;
       oczekujaceZrodlo = null;
       klipTytul = null;
+      odlozona = null;          /* Etap N: kolejka scen należy do opuszczanego tropu */
+      wKadrze.clear();
       setTitle("", true);
     }
     setStatus(zapomnijScene ? "" : "Wyłączone.");
@@ -226,8 +231,13 @@
       w odprawie). Gra niezależnie od wybranego trybu, bo uczeń sam o nie
       poprosił — ale jedzie tym samym, jedynym kanałem, więc każdy kolejny
       klik przerywa poprzedni i nigdy nie słychać dwóch nagrań naraz. */
-  function playClip(src, tytul) {
-    if (!src) return;
+  /* Etap N: `poKoncu` (opcjonalne) woła się, gdy TEN klip dograł do końca.
+     Przerwany klip (inne nagranie przejęło kanał, pauza, zmiana trybu) go nie
+     woła — dzięki temu definicja PSZOK po literze K nie wchodzi w środek
+     cudzego nagrania. Numer klipu odróżnia „ten sam plik zagrany drugi raz". */
+  let klipNr = 0;
+  function playClip(src, tytul, poKoncu) {
+    if (!src) return false;
     /* BRAMKA TRYBU W JEDNYM MIEJSCU (Etap S2). „Czytam" znaczy CISZA —
        także dla klipów, które są odpowiedzią na kliknięcie ucznia. Do tej
        pory każdy klient `playClip` pilnował tego sam i jeden z nich tego nie
@@ -235,20 +245,52 @@
        stoi tu, więc żadne przyszłe wywołanie nie ominie go przez przeoczenie.
        Bramka jest PRZED `ensureAudio()`, czyli po plik nie leci ani jedno
        żądanie sieciowe. */
-    if (S.get().audioMode !== "both") return;
-    if (unavailable.has(srcOf(src))) return;
+    if (S.get().audioMode !== "both") return false;
+    if (unavailable.has(srcOf(src))) return false;
     const a = ensureAudio();
     const nowe = przypnijZrodlo(src);
     if (!nowe) { try { a.currentTime = 0; } catch (e) { /* przed metadanymi */ } }
     klipTytul = tytul || "";
     setTitle(klipTytul, true);
     clearTimeout(dwellTimer);
+    const nr = ++klipNr;
     const p = a.play();
     if (p && p.catch) p.catch(() => {
       setStatus("Kliknij „Odtwórz”, aby uruchomić nagranie.");
       syncPlayBtn();
     });
     a.addEventListener("ended", przywrocTytulSceny, { once: true });
+    if (typeof poKoncu === "function") {
+      const naKoniec = () => {
+        if (nr !== klipNr || srcOf(a.src) !== srcOf(src)) return;
+        try { poKoncu(); } catch (e) { console.warn(e); }
+      };
+      a.addEventListener("ended", naKoniec, { once: true });
+    }
+    return true;
+  }
+
+  /** Etap N — narracja sceny sterowanej POSTĘPEM, nie widocznością.
+      Sceny przypięte do scrolla (ciężarówki w lesie, panel „Skala policzona",
+      zdanie pod kołem obiegu) stoją w kadrze od początku, więc obserwator
+      widoczności odezwałby się za wcześnie. Silnik woła to dokładnie w chwili,
+      gdy scena się odsłania. Reguły jak w obserwatorze: tylko „Czytam
+      i słucham", nie w trakcie filmu ani gry i RAZ na sesję dla danego
+      nagrania — powrót do tropu nie restartuje głosu. „Od początku" w belce
+      działa, bo scena zostaje bieżąca. */
+  function zagrajRaz(scene) {
+    if (!scene || !scene.dataset || !scene.dataset.audioSrc) return false;
+    if (!autoOn() || suspended) return false;
+    const klucz = srcOf(scene.dataset.audioSrc);
+    if (autoStartowane.has(klucz)) return false;
+    autoStartowane.add(klucz);
+    loadScene(scene);
+    play(true);
+    return true;
+  }
+  /** Czy bieżące nagranie kanału pochodzi z tej ścieżki i właśnie gra. */
+  function graSciezka(src) {
+    return !!(audio && !audio.paused && !audio.ended && src && srcOf(audio.src) === srcOf(src));
   }
   function przywrocTytulSceny() {
     if (klipTytul === null) return;
@@ -263,10 +305,14 @@
       gry jest częścią tej samej sceny co gra i musi mieć prawo wybrzmieć.
       Ten sam błąd co z atrapą filmu w etapie A1 — element uciszał narrację,
       którą sam zapowiada. Gra nadal ucisza narrację CUDZYCH scen. */
+  /* Etap N: element, który poprosił o MIĘKKĄ ciszę (ramka gry w kadrze).
+     Scena zawierająca tę ramkę ma prawo zacząć swój wstęp — patrz `onEnter`. */
+  let zrodloZawieszenia = null;
   function suspend(reason, zrodlo, twarda) {
     if (zrodlo && currentScene && audio && !audio.paused &&
         (currentScene === zrodlo || currentScene.contains(zrodlo))) return;
     suspended = true;
+    zrodloZawieszenia = twarda ? null : (zrodlo || null);
     if (twarda) { blokadaTwarda = true; scenaBlokady = currentScene; }
     clearTimeout(dwellTimer);
     pendingScene = null;
@@ -283,6 +329,7 @@
     if (twarda) blokadaTwarda = false;
     if (!suspended) return;
     suspended = false;
+    zrodloZawieszenia = null;
     /* komunikat o filmie nie może zostać na ekranie po jego zamknięciu */
     if (currentScene && currentScene.dataset.audioSrc &&
         !unavailable.has(srcOf(currentScene.dataset.audioSrc))) {
@@ -294,6 +341,36 @@
   const obserwowane = new WeakSet();
   /* ścieżki nagrań, które w tej sesji zagrały już SAME (bez prośby ucznia) */
   const autoStartowane = new Set();
+
+  /* ETAP N — DWIE SCENY W JEDNYM KADRZE CZEKAJĄ NA SIEBIE.
+     Krótkie sceny (zdanie po grze, domknięcie, panel) mieszczą się w kadrze
+     po dwie. Obserwator odpalał wtedy drugą pół sekundy po pierwszej i jej
+     nagranie ucinało poprzednie na pierwszym zdaniu — zmierzone w starej
+     lekcji na 1440 px: wprowadzenie do gry K16 urywało „Każda strefa to inna
+     droga odzysku". Reguła: jeśli nagranie bieżącej sceny GRA, a ta scena
+     jest nadal w kadrze, nowa scena czeka na koniec nagrania. Gdy uczeń
+     przewinie dalej i bieżąca scena wyjdzie z kadru, czekająca rusza od razu
+     — tak jak dotąd. Wysokie sceny (sekwencje, runwaye) nie mogą być w kadrze
+     po dwie naraz, więc dla nich nic się nie zmienia. */
+  const wKadrze = new Set();
+  let odlozona = null;
+  function zagrajOdlozona() {
+    const s = odlozona;
+    odlozona = null;
+    if (!s || !s.isConnected || !wKadrze.has(s)) return;
+    /* ta sama reguła co w `onEnter`: miękka cisza z ramki gry LEŻĄCEJ w tej
+       scenie nie blokuje jej wstępu (np. wprowadzenie do K16 czekało na koniec
+       poprzedniego nagrania, a w tym czasie ramka gry weszła w kadr) */
+    if (suspended && !blokadaTwarda && zrodloZawieszenia && s.contains(zrodloZawieszenia)) {
+      suspended = false; zrodloZawieszenia = null;
+    }
+    if (!autoOn() || suspended || blokadaTwarda) return;
+    const klucz = s.dataset.audioSrc ? srcOf(s.dataset.audioSrc) : null;
+    if (!klucz || autoStartowane.has(klucz)) return;
+    autoStartowane.add(klucz);
+    loadScene(s);
+    play(true);
+  }
 
   /** Doczytanie scen zbudowanych PO starcie strony (Etap A2).
       Rozdziały tablicy powstają dopiero przy wejściu w trop, więc ich
@@ -323,6 +400,28 @@
         if (isNew && blokadaTwarda && scene !== scenaBlokady) {
           blokadaTwarda = false; scenaBlokady = null; suspended = false;
         }
+        /* Etap N — WYŚCIG WSTĘPU Z RAMKĄ GRY. Scena gry (K15, K16) jest wyższa
+           od kadru, a ramka zajmuje większość jej wysokości, więc obserwator
+           ramki (45% kadru) potrafi zgłosić się PRZED obserwatorem sceny
+           (55%). Wtedy miękka cisza zapadała, zanim wstęp zdążył ruszyć,
+           i uczeń nie słyszał polecenia do gry. Cisza, o którą prosi ramka
+           LEŻĄCA W TEJ SCENIE, nie blokuje więc jej wstępu — tak jak reguła
+           w `suspend` nie pozwala tej ramce przerwać wstępu, który już gra.
+           Twarda blokada (gest w grze) obowiązuje bez zmian. */
+        if (isNew && suspended && !blokadaTwarda && zrodloZawieszenia &&
+            scene.contains(zrodloZawieszenia)) {
+          suspended = false; zrodloZawieszenia = null;
+        }
+        wKadrze.add(scene);
+        /* dwie sceny w jednym kadrze: nowa czeka na koniec bieżącej (patrz wyżej) */
+        const kluczNowej = scene.dataset.audioSrc ? srcOf(scene.dataset.audioSrc) : null;
+        if (isNew && kluczNowej && !autoStartowane.has(kluczNowej) && autoOn() && !suspended &&
+            klipTytul === null && currentScene && wKadrze.has(currentScene) &&
+            audio && !audio.paused && !audio.ended &&
+            currentScene.dataset.audioSrc && srcOf(audio.src) === srcOf(currentScene.dataset.audioSrc)) {
+          odlozona = scene;
+          return;
+        }
         loadScene(scene);
         /* Auto-start tylko w trybie słuchania i tylko dla sceny, która
            jeszcze sama nie zagrała w tej sesji.
@@ -342,6 +441,12 @@
           if (kluczSceny) autoStartowane.add(kluczSceny);
           play(true);
         }
+      },
+      onLeave: () => {
+        wKadrze.delete(scene);
+        if (odlozona === scene) { odlozona = null; return; }
+        /* bieżąca scena wyszła z kadru — czekająca nie ma już na co czekać */
+        if (scene === currentScene && odlozona) zagrajOdlozona();
       },
     });
   }
@@ -426,7 +531,7 @@
 
   NS.audio = {
     init, play, pause, stop, suspend, resumeAllowed,
-    loadScene, playClip, scanScenes, setMode,
+    loadScene, playClip, scanScenes, setMode, zagrajRaz, graSciezka,
     /* Silnik startuje narrację pierwszej sceny tropu sam (Etap S2 pkt 11).
        Zgłasza to tutaj, żeby obserwator nie policzył tej sceny drugi raz
        przy powrocie do rozdziału. */

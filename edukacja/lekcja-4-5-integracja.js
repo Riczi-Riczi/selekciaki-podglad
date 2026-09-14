@@ -15,6 +15,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const NS = window.LK45I || {};
   const S  = NS.state;
   if (!S) { console.warn("LK45I: brak modułu stanu"); return; }
+  /* Etap N: czy uczeń ogląda starą lekcję (?legacy=1). Tablica ustawia
+     `bd-booting` na <html> od pierwszej klatki, a `bd-on` na <body> po starcie
+     silnika — w obu stanach elementy tej strony nie są tym, co widać. */
+  const wStarejLekcji = () => !(document.documentElement.classList.contains("bd-booting") ||
+    (document.body && document.body.classList.contains("bd-on")));
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const hasGsap = typeof gsap !== "undefined" && typeof ScrollTrigger !== "undefined";
@@ -1040,7 +1045,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const p = t - i;
 
         if (P > 0) primeJourneyAssets();
-        if (i !== lastIdx) { lastIdx = i; if (assetsPrimed) ensureLoaded(i); }
+        if (i !== lastIdx) {
+          lastIdx = i;
+          if (assetsPrimed) ensureLoaded(i);
+          /* Etap N: klip strefy — wspólna obsługa z modules.js. Tylko
+             w starej lekcji: przy starcie tablicy (bd-booting) ta scena
+             jeszcze liczy postęp, choć uczeń jej nie widzi. */
+          if (NS.strefyPszok && wStarejLekcji()) NS.strefyPszok.aktywna(i);
+        }
 
         const cam = camScaleAt(p);
         const ctrl = routeCtrlAt(i, p);
@@ -1092,6 +1104,21 @@ document.addEventListener("DOMContentLoaded", () => {
         st.forEach((s, i) => imgsOf(i).forEach(unshelve));
       });
 
+      /* Etap N: w układzie LISTY (telefon albo ograniczony ruch) nie ma
+         `render`, który wie o strefie w kadrze — pytamy więc obserwator
+         widoczności o każdą stację. Scena z kamerą (szeroki ekran) zgłasza
+         strefę sama, a tablica ma własny układ — obie ścieżki są tu pomijane. */
+      const ukladListy = () => window.matchMedia('(max-width: 900px), (prefers-reduced-motion: reduce)').matches;
+      if (NS.util && NS.util.watch) {
+        st.forEach((s, i) => NS.util.watch(s.el, {
+          ratio: 0.6, dwell: 0,
+          onEnter: () => {
+            if (!wStarejLekcji() || !ukladListy()) return;
+            if (NS.strefyPszok) NS.strefyPszok.aktywna(i);
+          },
+        }));
+      }
+
       mm.add('(min-width: 901px) and (prefers-reduced-motion: no-preference)', () => {
         document.body.classList.add('js-pj');
 
@@ -1126,6 +1153,12 @@ document.addEventListener("DOMContentLoaded", () => {
             onToggle: self => {
               document.body.classList.toggle('pj-live', self.isActive);
               if (self.isActive) startParallax(); else stopParallax();
+              /* Etap N: wejście w scenę spaceru i wyjście z niej zerują
+                 pamięć strefy — pierwsza klatka po wejściu zgłasza strefę
+                 od nowa (w obie strony przewijania), nawet jeśli ta sama
+                 strefa była już liczona, zanim spacer wjechał w kadr */
+              lastIdx = -1;
+              if (!self.isActive && NS.strefyPszok && wStarejLekcji()) NS.strefyPszok.aktywna(-1);
             },
             onUpdate: self => render(self.progress)
           }, wspolne));

@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Eko-detektyw: Tajemnica zakorkowanego miasta — struktura integracyjna K01–K18 | SELEKT</title>
 <meta name="description" content="Równoległa strona integracyjna e-lekcji dla klas 4–5. Pełna kolejność klocków K01–K18 do przeglądu kompozycji przed podmianą produkcyjną.">
-<link rel="stylesheet" href="lekcja-4-5-integracja.css?v=86">
+<link rel="stylesheet" href="lekcja-4-5-integracja.css?v=87">
 
 <!-- Tablica śledztwa jest wariantem DOMYŚLNYM. Skrypt startowy stoi na końcu
      <body>, więc bez tej blokady stara lekcja zdążyłaby mignąć przed jej
@@ -536,14 +536,11 @@
 </section>
 
 <!-- ═══════════ K11 — SKALA PROBLEMU: STADION ═══════════ -->
-<!-- Nagranie narracji K11 NIE ISTNIEJE (Etap 3A) — katalogu
-     06-skala-problemu brak w assets/audio/lekcja45/. Atrybutu
-     data-audio-src celowo tu nie ma: wskazywałby plik, którego pobranie
-     kończy się 404 (wzorzec K09/K10, raporty 51 §10 i 55 §3.5).
-     Planowana ścieżka (do podpięcia, gdy nagranie powstanie):
-     assets/audio/lekcja45/06-skala-problemu/06-skala-stadion-01.mp3
-     (data-audio-title: „Skala problemu: stadion") -->
-<section class="scene seq" id="k11-seq" data-tone="deep" data-block="k11" aria-labelledby="k11-title">
+<!-- Etap N: narracja sceny stadionu. W tablicy to pierwsza scena Tropu 6,
+     więc rusza z wejścia w trop; w ?legacy=1 — z obserwatora widoczności. -->
+<section class="scene seq" id="k11-seq" data-tone="deep" data-block="k11" aria-labelledby="k11-title"
+         data-audio-src="../assets/audio/lekcja45/06-skala-problemu/06-ile-to-naprawde-01.mp3"
+         data-audio-title="Ile to naprawdę jest?">
   <!-- Korekta 3C.1.1: miniatury fazy analitycznej to JEDEN plik WebP
        (`k11-stadion-mini.webp`, 16,7 KB) użyty 41 razy jako tło CSS —
        jedno żądanie sieciowe na całą siatkę. Plik zawiera DWA stany
@@ -647,14 +644,12 @@
 </section>
 
 <!-- ═══════════ K12 — LAS: ODPADY ZOSTAWIAJĄ ŚLADY ═══════════ -->
-<!-- Nagranie narracji K12 NIE ISTNIEJE (Etap 3B) — katalogu
-     06-skala-problemu brak w assets/audio/lekcja45/. Atrybutu
-     data-audio-src celowo tu nie ma: wskazywałby plik, którego pobranie
-     kończy się 404 (wzorzec K09/K10/K11).
-     Planowana ścieżka (do podpięcia, gdy nagranie powstanie):
-     assets/audio/lekcja45/06-skala-problemu/06-las-przed-po-02.mp3
-     (data-audio-title: „Odpady zostawiają ślady") -->
-<section class="scene k12" id="k12-scene" data-tone="deep" data-block="k12" aria-labelledby="k12-title">
+<!-- Etap N: narracja wejścia w las. Klipy pięciu śladów, przejazd ciężarówek
+     i panel zamknięcia tropu gra silnik sceny (modules.js), bo zależą od
+     kliknięć i od postępu przewijania, a nie od samej widoczności. -->
+<section class="scene k12" id="k12-scene" data-tone="deep" data-block="k12" aria-labelledby="k12-title"
+         data-audio-src="../assets/audio/lekcja45/06-skala-problemu/06-odpady-zostawiaja-slady-02.mp3"
+         data-audio-title="Odpady zostawiają ślady">
   <div class="k12__stage">
     <div style="width:100%;max-width:1100px">
       <p class="kicker">Klocek 12 • przejście</p>
@@ -758,7 +753,11 @@
            Ciężarówki jadą tutaj, pod wielkim tytułem — nie po dioramie —
            więc nie mają fizycznej możliwości pojawić się przed czasem.
            Każda linia wchodzi osobno, sterowana postępem przewijania. -->
-      <div class="k12__final" id="k12-final" hidden>
+      <!-- Etap N: nagranie finału lasu. `data-audio-manual` — rusza je silnik
+           sceny w chwili wjazdu ciężarówek, nie obserwator widoczności. -->
+      <div class="k12__final" id="k12-final" hidden
+           data-audio-src="../assets/audio/lekcja45/06-skala-problemu/06-ciezarowki-odpadow-z-lasu-08.mp3"
+           data-audio-title="Ponad 2 ciężarówki dziennie" data-audio-manual>
         <p class="k12__fakt" id="k12-fakt">
           <span class="k12__fakt-naglowek">Ponad 2 ciężarówki dziennie</span></p>
         <div class="k12__tiry" id="k12-tiry" aria-hidden="true">
@@ -804,14 +803,11 @@
 <div class="trail" data-tone="sage" aria-hidden="true"><span class="trail__label">Rozdział: PSZOK</span></div>
 
 <!-- ═══════════ K13 — CO TO JEST PSZOK? ═══════════ -->
-<!-- Nagranie narracji K13 NIE ISTNIEJE (Etap 4A) — katalogu
-     07-pszok brak w assets/audio/lekcja45/. Atrybutu data-audio-src
-     celowo tu nie ma: wskazywałby plik, którego pobranie kończy się 404
-     (wzorzec z K09–K12, raport 51 §10). Planowana ścieżka (do podpięcia,
-     gdy nagranie powstanie):
-     assets/audio/lekcja45/07-pszok/07-co-to-pszok-01.mp3
-     (data-audio-title: „Co to jest PSZOK?") -->
-<section class="scene" id="k13" data-tone="sage" data-block="k13" aria-labelledby="k13-title">
+<!-- Etap N: narracja tytułu skrótu. Klipy liter P, S, Z, O, K i definicję
+     po rozwinięciu gra obsługa skrótu (modules.js, initK13). -->
+<section class="scene" id="k13" data-tone="sage" data-block="k13" aria-labelledby="k13-title"
+         data-audio-src="../assets/audio/lekcja45/07-pszok/07-co-kryje-sie-02.mp3"
+         data-audio-title="Co kryje się za skrótem?">
   <p class="kicker">Klocek 13</p>
   <h2 class="lead" id="k13-title" style="margin-inline:auto;text-align:center">Co kryje się za skrótem?</h2>
 
@@ -830,7 +826,9 @@
         <span class="k13__big">K</span><span class="k13__word"></span></button>
     </div>
     <p class="k13__hint" role="status" aria-live="polite"></p>
-    <div class="k13__reveal" hidden>
+    <div class="k13__reveal" hidden
+         data-audio-src="../assets/audio/lekcja45/07-pszok/07-PSZOK-to-punkt-08.mp3"
+         data-audio-title="PSZOK to punkt selektywnego zbierania odpadów" data-audio-manual>
       <!-- Etap 4A: ten sam obiekt co w scenie wejścia — jeden plik na obie
            sceny. Master PNG (1,1 MB, 72% płótna to pusta biel) zastąpiony
            przyciętym WebP-em 125 KB z zachowaną przezroczystością. -->
@@ -855,14 +853,12 @@
      Host niżej dodaje tylko identyfikator klocka dla centralnego stanu;
      samego modułu nie modyfikujemy.
      ═══════════════════════════════════════════════════════════ -->
-<!-- Nagranie narracji K14 NIE ISTNIEJE (Etap 4B) — katalogu
-     07-pszok brak w assets/audio/lekcja45/. Atrybutu data-audio-src
-     celowo tu nie ma: wskazywałby plik, którego pobranie kończy się 404
-     (wzorzec z K09–K13, raport 51 §10). Planowana ścieżka (do podpięcia,
-     gdy nagranie powstanie):
-     assets/audio/lekcja45/07-pszok/07-spacer-pszok-02.mp3
-     (data-audio-title: „Spacer po PSZOK") -->
-<div class="k14-host" id="k14" data-block="k14">
+<!-- Etap N: narracja wejścia do spaceru siedzi na HOŚCIE, nie w module
+     (modułu nie modyfikujemy). Wstęp i klipy czternastu stref gra wspólna
+     obsługa stref (modules.js, `NS.strefyPszok`) — stąd `data-audio-manual`. -->
+<div class="k14-host" id="k14" data-block="k14"
+     data-audio-src="../assets/audio/lekcja45/07-pszok/07-SPACER-po-PSZOK-09.mp3"
+     data-audio-title="Spacer po PSZOK" data-audio-manual>
   <section class="act act--three pszok-journey" id="rail-pszok" data-bg="sage"
            aria-labelledby="pj-title">
     <div class="pj__head">
@@ -939,7 +935,7 @@
             </noscript>
           </div>
           <div class="pj-station__text">
-            <h4 class="pj-station__title">Odpady zielone i bioodpady</h4>
+            <h4 class="pj-station__title">Odpady zielone</h4>
             <p class="pj-station__desc">Gałęzie, trawa, liście i resztki roślinne trafiają
             do oznaczonej strefy. Zebrane osobno mogą zostać właściwie zagospodarowane.</p>
           </div>
@@ -980,20 +976,21 @@
                  alt="Otwarty szary kontener">
             <img class="pj-station__waste" loading="lazy" width="1600" height="1001"
                  data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-03-zuzyte-opony.webp"
-                 alt="Stos zużytych opon samochodowych">
+                 alt="Stos starych, zniszczonych opon samochodowych">
             <noscript>
               <img class="pj-station__container" loading="lazy" width="1600" height="840"
                    src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-otwarty-szary.webp"
                    alt="Otwarty szary kontener">
               <img class="pj-station__waste" loading="lazy" width="1600" height="1001"
                    src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-03-zuzyte-opony.webp"
-                   alt="Stos zużytych opon samochodowych">
+                   alt="Stos starych, zniszczonych opon samochodowych">
             </noscript>
           </div>
           <div class="pj-station__text">
             <h4 class="pj-station__title">Zużyte opony</h4>
-            <p class="pj-station__desc">Opony są trwałe i zbudowane z kilku materiałów.
-            Zbiera się je osobno, aby przekazać je do właściwego procesu.</p>
+            <p class="pj-station__desc">Tu wrzucamy tylko stare, zniszczone opony, np. od
+            samochodów osobowych czy rowerów. Zbieramy je osobno, bo twarda guma wymaga
+            specjalnego recyklingu.</p>
           </div>
         </article>
 
@@ -1005,18 +1002,18 @@
                  alt="Niebieski kontener z klapami">
             <img class="pj-station__waste" loading="lazy" width="1600" height="1252"
                  data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-04-papier-karton-tektura.webp"
-                 alt="Kartony, tektura falista i gazety">
+                 alt="Gazety, tektura falista i złożone kartony">
             <noscript>
               <img class="pj-station__container" loading="lazy" width="1600" height="946"
                    src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-niebieski.webp"
                    alt="Niebieski kontener z klapami">
               <img class="pj-station__waste" loading="lazy" width="1600" height="1252"
                    src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-04-papier-karton-tektura.webp"
-                   alt="Kartony, tektura falista i gazety">
+                   alt="Gazety, tektura falista i złożone kartony">
             </noscript>
           </div>
           <div class="pj-station__text">
-            <h4 class="pj-station__title">Papier, karton i tektura</h4>
+            <h4 class="pj-station__title">Papier, tektura i karton</h4>
             <p class="pj-station__desc">Papier zwykle segregujemy w domu. Większe ilości
             kartonu i tektury mogą mieć także osobną strefę w PSZOK — zgodnie
             z lokalnymi zasadami.</p>
@@ -1043,8 +1040,9 @@
           </div>
           <div class="pj-station__text">
             <h4 class="pj-station__title">Szkło</h4>
-            <p class="pj-station__desc">Butelki i słoiki powinny pozostać oddzielone
-            od ceramiki, luster i innych rodzajów szkła. Sprawdź oznaczenie strefy.</p>
+            <p class="pj-station__desc">Wrzucamy tu wyłącznie szklane opakowania, czyli słoiki,
+            butelki i szklane pojemniczki po kosmetykach. Pamiętaj, żeby nie wrzucać tu
+            ceramiki, luster ani rozbitych szklanek!</p>
           </div>
         </article>
 
@@ -1056,18 +1054,18 @@
                  alt="Żółty kontener z klapami">
             <img class="pj-station__waste" loading="lazy" width="1600" height="984"
                  data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-06-tworzywa-folie-metale-kolorowe.webp"
-                 alt="Butelki i opakowania z tworzyw, folie oraz puszki">
+                 alt="Puszki, metalowe pokrywki i opakowania z tworzyw sztucznych: butelki i folie">
             <noscript>
               <img class="pj-station__container" loading="lazy" width="1600" height="946"
                    src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-klapowy-zolty.webp"
                    alt="Żółty kontener z klapami">
               <img class="pj-station__waste" loading="lazy" width="1600" height="984"
                    src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-06-tworzywa-folie-metale-kolorowe.webp"
-                   alt="Butelki i opakowania z tworzyw, folie oraz puszki">
+                   alt="Puszki, metalowe pokrywki i opakowania z tworzyw sztucznych: butelki i folie">
             </noscript>
           </div>
           <div class="pj-station__text">
-            <h4 class="pj-station__title">Tworzywa, folie i metale kolorowe</h4>
+            <h4 class="pj-station__title">Metale i tworzywa sztuczne</h4>
             <p class="pj-station__desc">Folie, opakowania z tworzyw i drobne metale
             kolorowe trafiają do wskazanej strefy. Nie łączymy ich z przypadkowymi
             odpadami.</p>
@@ -1082,20 +1080,20 @@
                  alt="Zielony kontener zamknięty, z drzwiami">
             <img class="pj-station__waste" loading="lazy" width="1600" height="1141"
                  data-src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-07-odpady-wielkogabarytowe.webp"
-                 alt="Fotel, szafka, materac i inne duże meble">
+                 alt="Fotel, szafka, krzesła, materac i duże drewniane płyty">
             <noscript>
               <img class="pj-station__container" loading="lazy" width="1600" height="898"
                    src="../assets/images/lekcja45/14-spacer-pszok/kontenery/webp/kontener-zamkniety-drzwi-zielony.webp"
                    alt="Zielony kontener zamknięty, z drzwiami">
               <img class="pj-station__waste" loading="lazy" width="1600" height="1141"
                    src="../assets/images/lekcja45/14-spacer-pszok/odpady/webp/frakcja-07-odpady-wielkogabarytowe.webp"
-                   alt="Fotel, szafka, materac i inne duże meble">
+                   alt="Fotel, szafka, krzesła, materac i duże drewniane płyty">
             </noscript>
           </div>
           <div class="pj-station__text">
             <h4 class="pj-station__title">Odpady wielkogabarytowe</h4>
-            <p class="pj-station__desc">Meble, materace i duże płyty są za duże
-            do pojemnika przy domu. Dlatego trafiają do strefy gabarytów.</p>
+            <p class="pj-station__desc">Meble, materace i duże płyty nie pomieszczą się
+            w przydomowym pojemniku. Dlatego trafiają do strefy gabarytów.</p>
           </div>
         </article>
 
@@ -1301,11 +1299,19 @@
 <div id="k14-end" aria-hidden="true"></div>
 
 <!-- ═══════════ K15 — GRA 4: OBSŁUŻ PSZOK ═══════════ -->
-<section class="scene" id="k15" data-tone="sage" data-block="k15" aria-labelledby="k15-title">
+<!-- Etap N: nagranie wstępu do gry siedzi na całej scenie. Obserwator ramki
+     ucisza narrację CUDZYCH scen, a tej — zawierającej ramkę — pozwala
+     wybrzmieć (reguła `suspend` w menedżerze audio). Zdanie przejścia jest
+     częścią bloku, więc to samo brzmienie ma tablica i ?legacy=1. -->
+<section class="scene" id="k15" data-tone="sage" data-block="k15" aria-labelledby="k15-title"
+         data-audio-src="../assets/audio/lekcja45/07-pszok/07-OBSLUZ-PSZOK-24.mp3"
+         data-audio-title="Obsłuż PSZOK">
+  <p class="k15__przejscie bd-przejscie">Znasz już strefy w&nbsp;PSZOK. Czas na sprawdzenie
+    Twojej wiedzy.</p>
   <p class="kicker">Klocek 15 • punkt kontrolny</p>
   <h2 class="lead" id="k15-title">Obsłuż PSZOK</h2>
   <p class="body-text"><strong>Cel:</strong> dopasuj odpady przywiezione samochodem do właściwych
-    stref PSZOK.</p>
+    stref w&nbsp;PSZOK.</p>
   <p class="body-text">Rozładuj kolejne transporty. Odpad przeznaczony na dalszą planszę zostaje
     na przyczepie — pojedzie z&nbsp;Tobą dalej.</p>
 
@@ -1346,26 +1352,25 @@
 
   <!-- Uświadomienie PO grze (decyzja użytkownika, etap 4C): krótko,
        bez liczb i bez morału. -->
-  <div class="k15__po" id="k15-po" hidden>
+  <div class="k15__po" id="k15-po" hidden
+       data-audio-src="../assets/audio/lekcja45/07-pszok/07-KAZDA-STREFA-25.mp3"
+       data-audio-title="Każda strefa to inna droga odzysku">
     <p class="k15__po-tytul">Każda strefa to inna droga odzysku.</p>
-    <p class="body-text" style="margin-inline:auto">Zmieszane odpady trudno rozdzielić —
-      jedna pomyłka psuje cały pojemnik.</p>
-    <p class="body-text" style="margin-inline:auto">Dlatego PSZOK dzieli je już przy wjeździe,
-      zanim odda dalej.</p>
+    <p class="body-text" style="margin-inline:auto">Zmieszane odpady trudno byłoby tu
+      rozdzielić — jedna pomyłka psuje cały pojemnik.</p>
+    <p class="body-text" style="margin-inline:auto">Dlatego do PSZOK przywozimy tylko odpady
+      opisane w&nbsp;regulaminie PSZOK.</p>
   </div>
 </section>
 
 <div class="trail" data-tone="warm" aria-hidden="true"><span class="trail__label">Rozdział: drugie życie</span></div>
 
 <!-- ═══════════ K16 — DRUGIE ŻYCIE MATERIAŁÓW (prototyp) ═══════════ -->
-<!-- Nagranie narracji K16 ISTNIEJE (etap 5B):
-     assets/audio/lekcja45/16-drugie-zycie-materialow/01-wprowadzenie.mp3.
-     Powstało jako wprowadzenie do gry, więc siedzi na tej samej scenie,
-     w której gra stoi. Zero autostartu — narracja rusza tylko w trybie
-     „Słucham", a start gry ją wycisza.
-     Etap A2: to jedyne nagranie spoza konwencji tropowej — zostaje pod
-     obecną ścieżką, bo działa. Docelowo, razem z resztą materiału Tropu 8,
-     przeniesiemy je do `08-drugie-zycie/08-drugie-zycie-01.mp3`. -->
+<!-- Nagranie wprowadzenia do gry K16 (etap 5B) siedzi na scenie gry.
+     Rusza wyłącznie w „Czytam i słucham" i dopiero, gdy scena gry jest
+     w kadrze; gest w grze je wycisza. Etap N: zostaje pod ścieżką
+     16-drugie-zycie-materialow/ (decyzja użytkownika) — pozostałe nagrania
+     Tropu 8 leżą w 08-drugie-zycie/ i są podpięte przez silnik tablicy. -->
 <section class="scene" id="k16" data-tone="warm" data-block="k16" aria-labelledby="k16-title"
          data-audio-src="../assets/audio/lekcja45/16-drugie-zycie-materialow/01-wprowadzenie.mp3"
          data-audio-title="Drugie życie odpadów">
@@ -1519,11 +1524,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
 <script src="lekcja-4-5-integracja/lesson-state.js?v=14"></script>
-<script src="lekcja-4-5-integracja/audio-manager.js?v=17"></script>
-<script src="lekcja-4-5-integracja/modules.js?v=49"></script>
-<script src="lekcja-4-5-integracja.js?v=54"></script>
+<script src="lekcja-4-5-integracja/audio-manager.js?v=18"></script>
+<script src="lekcja-4-5-integracja/modules.js?v=50"></script>
+<script src="lekcja-4-5-integracja.js?v=55"></script>
 <!-- Nowe otwarcie lekcji (intro → tablica → 9 polaroidów) w trybie podglądu.
      Bez ?boardPreview=1 ten skrypt kończy się natychmiast i niczego nie ładuje. -->
-<script src="lekcja-4-5-integracja/board-boot.js?v=138"></script>
+<script src="lekcja-4-5-integracja/board-boot.js?v=139"></script>
 </body>
 </html>

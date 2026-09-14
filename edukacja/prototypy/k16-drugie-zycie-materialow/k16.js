@@ -124,10 +124,35 @@
   }
   /* Etap S2. Przeglądarka może ODMÓWIĆ odtworzenia, dopóki w TYM dokumencie
      nie było gestu — a gra żyje w ramce lekcji, więc kliknięcie na stronie
-     nadrzędnej się nie liczy. Do tej pory odmowa była połykana przez puste
-     `catch`, przycisk dalej głosił „Dźwięk: włączony", a uczeń słyszał ciszę
-     i miał prawo uznać, że przełącznik nie działa. Teraz: odmowę widać na
-     przycisku, a pierwszy gest w grze odblokowuje dźwięk. */
+     nadrzędnej się nie liczy. Odmowę widać na przycisku, a pierwszy gest
+     w grze odblokowuje dźwięk.
+
+     ETAP N (A.2) — DLACZEGO DŹWIĘK „CZASAMI SIĘ NIE URUCHAMIAŁ". Cztery
+     osobne przyczyny, każda odtworzona pomiarem:
+     1. Odblokowanie grało efekt `poprawna` wyciszony i zatrzymywało go, gdy
+        obietnica `play()` się spełniła. Pierwszym gestem ucznia jest zwykle
+        kliknięcie karty — a przy dobrej odpowiedzi ten sam element dostawał
+        w tej samej chwili prawdziwe `sfxPlay('poprawna')`. Obietnica
+        odblokowania spełniała się CHWILĘ PÓŹNIEJ i zatrzymywała już
+        prawdziwy dźwięk: pierwsza poprawna odpowiedź była cicha.
+     2. Odblokowanie słuchało `pointerdown` i `touchstart`. Na ekranie
+        dotykowym żadne z nich nie daje przeglądarce aktywacji (daje ją
+        dopiero `touchend`/`click`), więc na tablecie `play()` było
+        odrzucane — a flaga „odblokowane" stawała NA SAMYM POCZĄTKU i drugiej
+        próby nie było. Do tego odblokowywany był tylko JEDEN z pięciu
+        elementów; Safari na iPadzie wymaga gestu dla każdego z osobna,
+        więc efekty z opóźnieniem (wjazd, pętla, wyjazd) milczały.
+     3. Każde odrzucenie `play()` było brane za blokadę przeglądarki. Tak
+        kończy się też zwykłe przerwanie (`AbortError`): `pause()` z nowej
+        rundy albo z wygaszania pętli. Przycisk przechodził wtedy na
+        „Dźwięk: dotknij, aby włączyć", choć nic nie było zablokowane.
+     4. Dotknięcie przycisku w stanie „dotknij, aby włączyć" WYŁĄCZAŁO
+        dźwięk (przełącznik odwracał stan), czyli robiło odwrotność tego,
+        co obiecywał napis.
+     Poprawka: odblokowanie na zdarzeniach dających aktywację, dla wszystkich
+     elementów, ponawiane aż się uda, i nigdy nie zatrzymuje elementu, który
+     w międzyczasie dostał prawdziwe odtworzenie. Blokadą jest wyłącznie
+     `NotAllowedError`. Przycisk w stanie blokady odblokowuje, nie wyłącza. */
   let dzwiekOdblokowany = false;
   let odmowa = false;
   const btnSound = document.getElementById('k16-sound');
@@ -140,30 +165,50 @@
       : 'Dźwięk: włączony';
   }
 
-  /* „Ciche” odblokowanie: krótkie play()+pause() na wyciszonym elemencie
-     w chwili pierwszego gestu. Bez tego pierwszy efekt rundy bywa gubiony,
-     bo przeglądarka odrzuca odtworzenie tuż przed zarejestrowaniem gestu. */
+  const toBlokada = (err) => !!(err && err.name === 'NotAllowedError');
+
+  /* „Ciche” odblokowanie: play()+pause() na wyciszonym elemencie w chwili
+     gestu. Znacznik `__odblokowanie` należy do TEJ próby — prawdziwe
+     `sfxPlay` go zdejmuje, więc spóźniona obietnica nie ma już prawa
+     zatrzymać elementu (przyczyna 1). */
   function odblokujDzwiek() {
-    if (dzwiekOdblokowany) return;
-    dzwiekOdblokowany = true;
-    try {
-      const a = sfxGet('poprawna');
-      const glos = a.volume;
-      a.volume = 0;
-      const p = a.play();
-      const koniec = () => { try { a.pause(); a.currentTime = 0; a.volume = glos; } catch (e) {} };
-      if (p && p.then) p.then(() => { koniec(); if (odmowa) { odmowa = false; odswiezPrzycisk(); } })
-        .catch(() => { a.volume = glos; });
-      else koniec();
-    } catch (e) { /* brak audio nie może zatrzymać gry */ }
+    if (dzwiekOdblokowany || !soundOn) return;
+    Object.keys(SFX_DEF).forEach((name) => {
+      try {
+        const a = sfxGet(name);
+        if (!a.paused) return;                 /* już gra naprawdę */
+        a.__odblokowanie = true;
+        a.muted = true;
+        const p = a.play();
+        const koniec = () => {
+          if (!a.__odblokowanie) return;       /* element przejęło prawdziwe odtworzenie */
+          a.__odblokowanie = false;
+          try { a.pause(); a.currentTime = 0; } catch (e) {}
+          a.muted = false;
+        };
+        if (p && p.then) {
+          p.then(() => {
+            dzwiekOdblokowany = true;
+            koniec();
+            if (odmowa) { odmowa = false; odswiezPrzycisk(); }
+          }).catch(() => {
+            /* odmowa: flaga zostaje zdjęta, więc następny gest spróbuje znowu */
+            if (a.__odblokowanie) { a.__odblokowanie = false; a.muted = false; }
+          });
+        } else { dzwiekOdblokowany = true; koniec(); }
+      } catch (e) { /* brak audio nie może zatrzymać gry */ }
+    });
   }
-  ['pointerdown', 'keydown', 'touchstart'].forEach((t) =>
-    document.addEventListener(t, odblokujDzwiek, { once: false, passive: true }));
+  /* zdarzenia, które przeglądarka uznaje za aktywację (przyczyna 2) */
+  ['pointerup', 'touchend', 'click', 'keydown'].forEach((t) =>
+    document.addEventListener(t, odblokujDzwiek, { passive: true, capture: true }));
 
   function sfxPlay(name) {
     if (!soundOn) return;
     try {
       const a = sfxGet(name);
+      a.__odblokowanie = false;               /* odblokowanie nie zatrzyma tego odtworzenia */
+      a.muted = false;
       if (name === 'loop') { clearTimeout(fadeTimer); a.volume = SFX_DEF.loop[1]; }
       /* reset od zera: szybkie ponowne kliknięcie restartuje efekt,
          a jedna instancja Audio wyklucza równoległe kopie */
@@ -171,7 +216,11 @@
       const p = a.play();
       if (p && p.catch) {
         p.then(() => { if (odmowa) { odmowa = false; odswiezPrzycisk(); } })
-         .catch(() => { odmowa = true; odswiezPrzycisk(); });
+         .catch((err) => {
+           /* przerwanie przez pause() to NIE blokada (przyczyna 3) */
+           if (!toBlokada(err)) return;
+           odmowa = true; odswiezPrzycisk();
+         });
       }
     } catch (e) { /* nigdy nie blokujemy gry */ }
   }
@@ -197,14 +246,35 @@
   }
 
   if (btnSound) {
+    /* ETAP N (przyczyna 4): stan „dotknij, aby włączyć" zapamiętujemy w chwili
+       WCIŚNIĘCIA. Odblokowanie rusza już na `pointerup`, a jego udane `play()`
+       zdejmuje blokadę PRZED zdarzeniem `click` — sprawdzany dopiero w `click`
+       stan mówił więc „nic nie jest zablokowane" i przełącznik wyłączał dźwięk
+       (zmierzone: napis „dotknij, aby włączyć" → dotknięcie → „wyłączony"). */
+    let odmowaPrzyWcisnieciu = false;
+    const zapamietaj = () => { odmowaPrzyWcisnieciu = soundOn && odmowa; };
+    btnSound.addEventListener('pointerdown', zapamietaj);
+    btnSound.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') zapamietaj(); });
     btnSound.addEventListener('click', () => {
+      /* w stanie „dotknij, aby włączyć" dźwięk JEST włączony, tylko przeglądarka
+         czeka na gest — dotknięcie ma odblokować, a nie przełączyć na „wyłączony" */
+      const bylaOdmowa = odmowaPrzyWcisnieciu || (soundOn && odmowa);
+      odmowaPrzyWcisnieciu = false;
+      if (bylaOdmowa) {
+        odmowa = false;
+        dzwiekOdblokowany = false;
+        odblokujDzwiek();
+        odswiezPrzycisk();
+        return;
+      }
       soundOn = !soundOn;
       /* włączenie jest gestem — wykorzystujemy go do odblokowania audio,
          żeby pierwszy efekt po włączeniu nie przepadł na odmowie */
-      if (soundOn) { odmowa = false; odblokujDzwiek(); }
+      if (soundOn) { odmowa = false; dzwiekOdblokowany = false; odblokujDzwiek(); }
       odswiezPrzycisk();
-      /* wyłączenie ucisza natychmiast; włączenie NICZEGO nie odtwarza —
-         dźwięki wracają dopiero przy następnej interakcji */
+      /* wyłączenie ucisza natychmiast — także pętlę maszyny i wygaszanie
+         w toku; włączenie NICZEGO nie odtwarza, dźwięki wracają dopiero
+         przy następnej akcji w grze */
       if (!soundOn) sfxStopAll();
     });
   }
