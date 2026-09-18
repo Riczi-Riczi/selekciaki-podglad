@@ -537,12 +537,32 @@ function finish() {
   hideDwellRing();
   emitCompleted();
 
+  /* Etap K (uwaga 8): ekran zwycięzcy wchodził sam po 1,4 s i ucinał
+     czytanie karty ostatniego śladu. Teraz karta zostaje, dopóki uczeń jej
+     nie zamknie („Zobacz wynik", Escape) — dopiero wtedy wchodzi finał
+     z literą B. Litera idzie do lekcji od razu (emitCompleted wyżej),
+     kontrakt bez zmian. Bez karty (nie powinno się zdarzyć) — jak dawniej. */
+  if (!el.card.hidden) {
+    state.finalPending = true;
+    el.cardClose.textContent = "Zobacz wynik";
+    return;
+  }
   const wait = reducedMotion() ? 300 : 1400;
-  setTimeout(() => {
-    hideCard();
-    el.screenFinal.classList.remove("is-hidden");
-    try { el.btnFinal.focus(); } catch (e) { /* fokus jest miły, nie krytyczny */ }
-  }, wait);
+  setTimeout(showFinal, wait);
+}
+
+function showFinal() {
+  state.finalPending = false;
+  hideCard();
+  el.screenFinal.classList.remove("is-hidden");
+  try { el.btnFinal.focus(); } catch (e) { /* fokus jest miły, nie krytyczny */ }
+}
+
+/* zamknięcie karty: przy ostatnim śladzie prowadzi do finału */
+function closeCardByStudent() {
+  if (state.finalPending) { showFinal(); return; }
+  hideCard();
+  grabFocus();
 }
 
 /* Emisja DOKŁADNIE RAZ na cykl życia strony. Strona lekcji nasłuchuje
@@ -717,7 +737,7 @@ function bindControls() {
   bindParentBridge();
 
   el.btnStart.addEventListener("click", startSearch);
-  el.cardClose.addEventListener("click", () => { hideCard(); grabFocus(); });
+  el.cardClose.addEventListener("click", closeCardByStudent);
   el.door.addEventListener("click", () => openDoor("przycisk"));
 
   /* „Kontynuuj lekcję" mówi lekcji, że uczeń chce iść dalej — dokładnie ten
@@ -735,6 +755,14 @@ function bindControls() {
       window.dispatchEvent(new CustomEvent("k06:continue", { bubbles: true }));
     } catch (e) { /* zdarzenie jest opcjonalne dla samego prototypu */ }
   });
+
+  /* Etap K (uwaga 9): „Zagraj jeszcze raz" — także dla ucznia, który wraca
+     z już zdobytą literą. Przeładowanie dokumentu gry: stan zaczyna się od
+     zera, a lekcja podpina się pod ramkę na nowo przy jej zdarzeniu `load`.
+     Powtórna wygrana wysyła te same zdarzenia co pierwsza; lekcja zalicza
+     klocek i literę tylko raz (completeInteraction / awardLetter). */
+  const btnReplay = document.getElementById("btnReplay");
+  if (btnReplay) btnReplay.addEventListener("click", () => { location.reload(); });
 
   /* DRUGI TOR: pięć śladów jako przyciski (Tab / Enter) */
   el.traceList.addEventListener("click", (e) => {
@@ -764,7 +792,7 @@ function bindControls() {
   }
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !el.card.hidden) hideCard();
+    if (e.key === "Escape" && !el.card.hidden) closeCardByStudent();
   });
 }
 

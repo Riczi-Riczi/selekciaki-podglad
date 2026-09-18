@@ -1,4 +1,4 @@
-Na podstawie udostępnionych dokumentów Związku Międzygminnego „Centrum Zagospodarowania Odpadów - SELEKT” (regulaminu oraz ulotki informacyjnej), poniżej znajduje się szczegółowe zestawienie odpadów, które są przyjmowane w Punktach Selektywnego Zbierania Odpadów Komunalnych (PSZOK), oraz tych, których oddawać tam nie wolno.
+Na podstawie udostępnionych dokumentów Związku Międzygminnego „Centrum Zagospodarowania Odpadów – SELEKT” (regulaminu oraz ulotki informacyjnej), poniżej znajduje się szczegółowe zestawienie odpadów, które są przyjmowane w Punktach Selektywnego Zbierania Odpadów Komunalnych (PSZOK), oraz tych, których oddawać tam nie wolno.
 
 Do PSZOK można oddać wyłącznie odpady pochodzące z nieruchomości zamieszkałych oraz z domków letniskowych.
 

@@ -82,12 +82,17 @@ const SAY = {
      i „znajdź krótszą trasę" mówiły coś odwrotnego. Nowe brzmienia
      podpowiadają, co zrobić, zamiast oceniać, jak uczeń szuka.
      UWAGA: plansze w dymkach mają STARY tekst wpalony w grafikę
-     (assets/images/hydraulik/*.webp) — do wymiany przez użytkownika. */
-  loop:    { plate: "chcesz-sie-krecic", zaslonDymek: true, text: "Tu woda już była. Spróbuj innej drogi.",                voice: "dlugo-krecic" },
+     (assets/images/hydraulik/*.webp) — do wymiany przez użytkownika.
+     ETAP K (uwaga 5): trzy nagrania nadal mówią starym tekstem — „znajdź
+     krótszą trasę", „kręcić się w kółko", „nie mamy na to całego dnia".
+     Do czasu nowych nagrań te komunikaty są WYCISZONE (voice: null —
+     say() nie sięga po plik), podpis tekstowy na karcie zostaje. Pliki
+     leżą dalej w assets/audio; po nagraniu wystarczy przywrócić nazwę. */
+  loop:    { plate: "chcesz-sie-krecic", zaslonDymek: true, text: "Tu woda już była. Spróbuj innej drogi.",                voice: null /* dlugo-krecic — do nagrania */ },
   /* eskalacja: pięć złych ruchów z rzędu */
-  tooLong: { plate: "nie-mamy-dnia",     zaslonDymek: true, text: "Spokojnie, nie ma czasu ani przegranej. Szukaj dalej.", voice: "dlugo-nie-mamy-dnia" },
+  tooLong: { plate: "nie-mamy-dnia",     zaslonDymek: true, text: "Spokojnie, nie ma czasu ani przegranej. Szukaj dalej.", voice: null /* dlugo-nie-mamy-dnia — do nagrania */ },
   /* dwa ruchy od zatoru */
-  near:    { plate: "prawie-na-miejscu", zaslonDymek: true, text: "Jesteś blisko zatoru. Sprawdź, które połączenie prowadzi dalej.", voice: "blisko-prawie" },
+  near:    { plate: "prawie-na-miejscu", zaslonDymek: true, text: "Jesteś blisko zatoru. Sprawdź, które połączenie prowadzi dalej.", voice: null /* blisko-prawie — do nagrania */ },
   /* finał */
   win:     { plate: "swietna-robota",    text: "Świetna robota! Znalazłeś zator.",                      voice: "final-gratulacje" },
 };
@@ -1067,7 +1072,8 @@ function initDevHooks() {
       const wgPlanszy = new Map();
       SAY_ALL.forEach((t, i) => {
         if (!t.text) bledy.push("trójka " + i + ": brak podpisu");
-        if (!t.voice) bledy.push("trójka " + i + ": brak nagrania");
+        /* `voice: null` = świadomie wyciszone do nowego nagrania (etap K) */
+        if (t.voice === undefined || t.voice === "") bledy.push("trójka " + i + ": brak nagrania");
         if (!t.plate) { bledy.push("trójka " + i + " (" + t.text + "): brak planszy"); return; }
         const prev = wgPlanszy.get(t.plate);
         if (!prev) { wgPlanszy.set(t.plate, t); return; }
@@ -1114,7 +1120,23 @@ function measure() {
 
 /* ══════════════ 16. START ══════════════ */
 
+/* Etap K (uwaga 4): puls i strzałka przy „Schodzimy pod ziemię" znikają po
+   pierwszym kliknięciu i nie wracają przy ponownym wejściu na ekran startowy
+   w tej sesji (np. po „Zagraj jeszcze raz"). */
+const PULS_KLUCZ = "k04_start_kliknity";
+function zdejmijPuls() {
+  document.querySelectorAll(".js-start.is-puls").forEach((b) => b.classList.remove("is-puls"));
+}
+try {
+  if (sessionStorage.getItem(PULS_KLUCZ)) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", zdejmijPuls);
+    else zdejmijPuls();
+  }
+} catch (e) {}
+
 function startGame() {
+  zdejmijPuls();
+  try { sessionStorage.setItem(PULS_KLUCZ, "1"); } catch (e) {}
   el.screenIntro.classList.add("is-hidden");
   el.game.dataset.state = "play";
   state.mode = "play";
@@ -1147,6 +1169,13 @@ function init() {
      zawsze dokładnie jeden — decyduje o tym media query w CSS. */
   document.querySelectorAll(".js-final").forEach((b) =>
     b.addEventListener("click", emitContinue));
+  /* Etap K (uwaga 9): „Zagraj jeszcze raz" — także dla ucznia, który wraca
+     z już zdobytą literą. Przeładowanie dokumentu gry: stan zaczyna się od
+     zera, a lekcja podpina się pod ramkę na nowo przy jej zdarzeniu `load`.
+     Powtórna wygrana wysyła te same zdarzenia co pierwsza; lekcja zalicza
+     klocek i literę tylko raz (completeInteraction / awardLetter). */
+  document.querySelectorAll(".js-replay").forEach((b) =>
+    b.addEventListener("click", () => { location.reload(); }));
 
   document.addEventListener("keydown", onKeyDown);
   window.addEventListener("resize", onResize);

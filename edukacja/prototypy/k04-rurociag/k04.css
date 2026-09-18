@@ -623,10 +623,11 @@ body {
 
    Domyślnie (zanim skrypt policzy) widać kartę HTML — bezpieczniejszy wybór
    niż nieczytelna grafika. */
-.board, .board-note, .sr-board { display: none; }
+.board, .board-note, .board-replay, .sr-board { display: none; }
 
 .overlay[data-form="graf"] .board,
 .overlay[data-form="graf"] .board-note,
+.overlay[data-form="graf"] .board-replay,
 .overlay[data-form="graf"] .sr-board { display: block; }
 
 .overlay[data-form="graf"] .panel--small { display: none; }
@@ -894,3 +895,58 @@ body {
     line-height: 1.3;
   }
 }
+
+/* ══════════ START: PULS I STRZAŁKA (etap K, uwaga 4) ══════════
+   Klient nie wiedział, gdzie kliknąć na ekranie startowym. Przycisk
+   „Schodzimy pod ziemię" oddycha łagodną poświatą co 1,5 s, a obok stoi
+   mała strzałka. Oba znikają po pierwszym kliknięciu (klasa `is-puls`
+   zdejmowana w startGame) i nie wracają przy kolejnym wejściu na ekran
+   startowy w tej sesji. Tablica graficzna: strzałka z lewej, poziomo —
+   po lewej stronie pigułki są tylko rury. Karta HTML: strzałka WEWNĄTRZ
+   przycisku, przy lewej krawędzi — na wąskim ekranie przycisk zajmuje
+   prawie całą szerokość karty, a strzałka nad nim wchodziła w tekst
+   ramki z instrukcją (zrzut 390 px). */
+@keyframes k04-puls {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 214, 102, 0); }
+  50%      { box-shadow: 0 0 0.9em 0.35em rgba(255, 214, 102, 0.85); }
+}
+@keyframes k04-strzalka-bok {
+  0%, 100% { transform: translate(0, -50%); }
+  50%      { transform: translate(0.35em, -50%); }
+}
+.js-start.is-puls { animation: k04-puls 1.5s ease-in-out infinite; }
+.js-start.is-puls::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'%3E%3Cpath d='M2 12h20M15 4l9 8-9 8' fill='none' stroke='%23231a10' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2 12h20M15 4l9 8-9 8' fill='none' stroke='%23ffd666' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.board--start .js-start.is-puls::after {
+  right: 100%; top: 50%;
+  width: 34px; height: 26px;
+  margin-right: 8px;
+  animation: k04-strzalka-bok 1.5s ease-in-out infinite;
+}
+.panel--small .js-start.is-puls { position: relative; }
+.panel--small .js-start.is-puls::after {
+  left: 14px; top: 50%;
+  width: 28px; height: 22px;
+  animation: k04-strzalka-bok 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .js-start.is-puls { animation: none; box-shadow: 0 0 0.6em 0.2em rgba(255, 214, 102, 0.7); }
+  .js-start.is-puls::after { animation: none; }
+  .board--start .js-start.is-puls::after { transform: translate(0, -50%); }
+  .panel--small .js-start.is-puls::after { transform: translate(0, -50%); }
+}
+
+/* ══════════ POWTÓRKA (etap K, uwaga 9) ══════════ */
+.panel-akcje { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.btn--wtorny {
+  color: #f2e4cf;
+  background: rgba(0, 0, 0, 0.28);
+  border: 2px solid rgba(242, 228, 207, 0.7);
+}
+.btn--wtorny:hover { background: rgba(0, 0, 0, 0.45); border-color: #f2e4cf; }
+.panel--small .btn--wtorny { color: var(--tb-zloto-1, #f6d98a); }
+.board-replay { width: var(--board-final, 640px); margin-top: 10px; text-align: center; }

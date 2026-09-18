@@ -1010,6 +1010,14 @@ function bindControls() {
 
   el.btnResume.addEventListener("click", resumeGame);
 
+  /* Etap K (uwaga 9): „Zagraj jeszcze raz" — także dla ucznia, który wraca
+     z już zdobytą literą. Przeładowanie dokumentu gry: stan zaczyna się od
+     zera, a lekcja podpina się pod ramkę na nowo przy jej zdarzeniu `load`.
+     Powtórna wygrana wysyła te same zdarzenia co pierwsza; lekcja zalicza
+     klocek i literę tylko raz (completeInteraction / awardLetter). */
+  const btnReplay = document.getElementById("btnReplay");
+  if (btnReplay) btnReplay.addEventListener("click", () => { location.reload(); });
+
   /* „LITERA I GOTOWA" mówi lekcji, że uczeń chce iść dalej — ten sam
      kontrakt, co `k04:continue` w Rurociągu i `k06:continue` w kuchni
      (Etap S1.A.1). Zdarzenie na `window`, z `bubbles`, DOKŁADNIE RAZ;

@@ -16,7 +16,7 @@
       }
     } catch (e) { /* brak URLSearchParams nie może wywrócić gry */ }
   </script>
-  <link rel="stylesheet" href="k04.css?v=11">
+  <link rel="stylesheet" href="k04.css?v=14">
 </head>
 <body>
 
@@ -109,7 +109,7 @@
     <!-- ——— tablica graficzna ——— -->
     <div class="board board--start">
       <img src="assets/images/tablica-poczatkowa.webp" width="1200" height="1262" alt="">
-      <button class="board-go js-start" type="button">Schodzimy pod ziemię</button>
+      <button class="board-go js-start is-puls" type="button">Schodzimy pod ziemię</button>
     </div>
 
     <!-- Treść wpalona w grafikę, powtórzona dla czytnika ekranu. Znika
@@ -152,7 +152,7 @@
           wodę</strong>&nbsp;— zawsze możesz wrócić. Nie ma czasu ani
           przegranej.</span></p>
       </div>
-      <button class="btn btn--primary js-start" type="button">SCHODZIMY POD ZIEMIĘ</button>
+      <button class="btn btn--primary js-start is-puls" type="button">SCHODZIMY POD ZIEMIĘ</button>
       <p class="panel-hint">Hydraulik mówi na głos — dźwięk wyciszysz przyciskiem w&nbsp;rogu.</p>
     </div>
   </section>
@@ -196,6 +196,9 @@
       Tłuszcz z&nbsp;jednego zlewu potrafi zatkać rurę całej ulicy&nbsp;— dlatego zużyty
       olej trafia do&nbsp;butelki i&nbsp;Olejomatu, nie do&nbsp;kanalizacji.
     </p>
+    <!-- Etap K (uwaga 9): powtórka. „Kontynuuj lekcję" jest wpalone w tablicę,
+         więc drugi przycisk stoi zaraz pod nią. -->
+    <p class="board-replay"><button class="btn btn--wtorny js-replay" type="button">Zagraj jeszcze raz</button></p>
 
     <!-- ——— karta HTML: małe ekrany ——— -->
     <div class="panel panel--small">
@@ -219,13 +222,16 @@
       <p class="panel-text">Litera <strong>O</strong> została zapisana w&nbsp;pasku
         postępu u&nbsp;góry.</p>
       <p class="panel-score" id="finalScore"></p>
-      <button class="btn btn--primary js-final" type="button">Kontynuuj lekcję</button>
+      <p class="panel-akcje">
+        <button class="btn btn--primary js-final" type="button">Kontynuuj lekcję</button>
+        <button class="btn btn--wtorny js-replay" type="button">Zagraj jeszcze raz</button>
+      </p>
     </div>
   </section>
 
 </div>
 
 <script src="k04-mapa.js?v=1"></script>
-<script src="k04.js?v=5"></script>
+<script src="k04.js?v=7"></script>
 </body>
 </html>

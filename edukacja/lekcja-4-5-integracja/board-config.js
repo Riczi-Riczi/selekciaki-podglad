@@ -115,7 +115,7 @@
           { id: "inne-sposoby",       wycinek: 5, x: 8.67,  y: 76.16, rgb: "248,227,187", barwa: "żółty",        label: "Inne sposoby",                         alt: "Inne sposoby", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-inne-sposoby.mp3",
             znak: "rozne", ocena: "Różnie. Liczy się jedno: olej ma trafić do zbiórki, nie do zlewu." },
           { id: "olej-do-pszok",      wycinek: 4, x: 29.24, y: 91.4,  rgb: "198,201,209", barwa: "błękitny",     label: "Oddaje olej do PSZOK",                 alt: "Oddaje olej do PSZOK", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-olej-PSZOK.mp3",
-            znak: "rozne", ocena: "W niektórych gminach tak. W SELEKT olej ma własną drogę: Olejomat." },
+            znak: "rozne", ocena: "Związek SELEKT ma własną drogę – Olejomaty." },
           { id: "nie-wiem",           wycinek: 3, x: 86.87, y: 83.99, rgb: "201,205,194", barwa: "szałwiowy",    label: "Nie wiem",                             alt: "Nie wiem", glos: "../assets/audio/lekcja45/03-punkt-kontrolny/diagram-karty/03-nie-wiem.mp3",
             znak: "rozne", ocena: "Ty już wiesz: do butelki i do Olejomatu." },
         ],

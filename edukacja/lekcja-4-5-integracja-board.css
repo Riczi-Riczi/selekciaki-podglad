@@ -306,6 +306,10 @@ body.bd-chapter .bd-boardbar{ display:none !important; }
 .bd-btn--cichy{ background:rgba(13,21,18,.42); border-color:rgba(248,252,246,.34);
   color:rgba(248,252,246,.86); font-weight:600; }
 .bd-btn--cichy:hover{ background:rgba(13,21,18,.66); border-color:#f8fcf6; color:#f8fcf6; }
+/* Etap K (uwaga 1): „Zacznij od nowa" pełnym kontrastem, z czerwonym akcentem
+   zapowiadającym kasowanie — wyblakła wersja „cichy" ginęła na tablicy. */
+.bd-btn--odnowa{ background:rgba(13,21,18,.78); border-color:#f3b4a8; color:#fff6f0; font-weight:700; }
+.bd-btn--odnowa:hover{ background:#8f1a15; border-color:#8f1a15; color:#fff6f0; }
 .bd-btn--alarm{ background:#b4231d; border-color:#b4231d; color:#fff6f0; }
 .bd-btn--alarm:hover{ background:#8f1a15; border-color:#8f1a15; }
 .bd-boardbar__pomoc{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;
@@ -1972,6 +1976,55 @@ body.bd-on .k09__feedback{
   font-size:clamp(15px,1.2vw,17px);
 }
 
+/* ── ETAP K (uwaga 10): karta informacji zwrotnej po decyzji ──
+   Stoi na środku sceny K09, nad produktem. Komunikat w żywym regionie pod
+   przyciskami zostaje (czyta go czytnik ekranu), ale na ekranie jest
+   przezroczysty — ten sam tekst nie stoi dwa razy. */
+body.bd-on .k09__feedback.is-karta{ color:transparent; }
+.k09k{
+  position:absolute; z-index:20;
+  left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(460px, calc(100% - 24px));
+  max-height:calc(100% - 24px); overflow-y:auto;
+  padding:22px 22px 18px;
+  background:var(--bd-paper); color:var(--bd-ink);
+  border:3px solid rgba(62,96,52,.55); border-radius:20px;
+  box-shadow:0 18px 44px rgba(10,20,14,.35);
+  text-align:center;
+}
+.k09k[hidden]{ display:none !important; }
+.k09k.is-ok{ border-color:#3e7a3a; }
+.k09k.is-err{ border-color:#b4231d; }
+.k09k__x{
+  position:absolute; top:8px; right:8px;
+  width:44px; height:44px; display:grid; place-items:center;
+  border:0; border-radius:50%; background:transparent; color:var(--bd-ink);
+  cursor:pointer;
+}
+.k09k__x svg{ width:22px; height:22px; stroke:currentColor; stroke-width:2.6; stroke-linecap:round; fill:none; }
+.k09k__x:hover{ background:rgba(26,31,26,.08); }
+.k09k__x:focus-visible, .k09k__dalej:focus-visible{ outline:3px solid #f2b23a; outline-offset:2px; }
+.k09k__tytul{
+  font-family:'Cabinet Grotesk', system-ui, sans-serif; font-weight:800;
+  font-size:clamp(20px,2vw,24px); margin:0 40px 8px;
+}
+.k09k.is-ok .k09k__tytul{ color:#2f6a2c; }
+.k09k.is-err .k09k__tytul{ color:#a11f1a; }
+.k09k__txt{ font-size:clamp(16px,1.3vw,18px); line-height:1.5; margin:0; }
+.k09k__wiecej{
+  margin:12px 0 0; padding:10px 12px; font-size:15px; line-height:1.5;
+  background:rgba(255,248,228,.92); border:2px solid rgba(242,178,58,.55); border-radius:12px;
+}
+.k09k__wiecej[hidden]{ display:none !important; }
+.k09k__akcje{ margin:16px 0 0; }
+body.bd-on .k09k__dalej{
+  min-height:48px; min-width:140px; padding:10px 28px; font-size:16px;
+}
+@media (max-width:640px){
+  .k09k{ padding:18px 16px 14px; }
+  .k09k__txt{ font-size:15px; }
+}
+
 /* ── rozwinięcie: bezpieczne postępowanie z tłuszczami stałymi ── */
 .k09__wiecej{
   max-width:760px; margin:12px auto 0; padding:14px 18px;
@@ -2805,6 +2858,14 @@ body.bd-on .bd-chscene--k12 .bd-chscene__in{ position:relative; z-index:1; }
 body.bd-on .bd-dalej{ opacity:0; pointer-events:none;
   transition:opacity .45s ease, transform .2s ease, box-shadow .2s ease; }
 body.bd-on #k11-seq.is-policzone .bd-dalej{ opacity:1; pointer-events:auto; }
+/* Etap K (uwaga 13): klient nie mógł kliknąć skrótu. Pomiar siatką 9×5
+   (elementFromPoint): trafiało 1/45 punktów na 1440 i 1366 px, 2/45 na
+   390 px — resztę przejmowały napisy kroków animacji `.seq__step`, które
+   po fazie stadionu są przezroczyste, ale nadal leżą nad przyciskiem.
+   Napisy są tylko do czytania, więc nie łapią wskaźnika, a skrót dostaje
+   własną warstwę nad nimi. */
+body.bd-on #k11-seq .seq__step{ pointer-events:none; }
+body.bd-on #k11-seq .bd-dalej{ position:relative; z-index:6; }
 
 /* ── Korekta 3C.3.1: skrót „przejdź niżej" pod sceną stadionu ── */
 body.bd-on .bd-dalej{
@@ -3494,6 +3555,10 @@ body.bd-on #rail-pszok.bd-pj .pj__note{
   position:absolute; left:0; right:0; bottom:clamp(6px,1.4vh,14px);
   margin:0; text-align:center; font-size:clamp(11px,1.1vw,13px);
   opacity:.72; padding-inline:max(16px,3vw);
+  /* Etap K (uwaga 17): arkusz lekcji dokłada notce `left:50%`
+     z `translateX(-50%)` i stałą szerokością — przy left:0/right:0 z tablicy
+     przesunięcie zostawało i notka stała w lewej części kadru. */
+  transform:none; width:auto; max-width:none;
 }
 
 /* ── telefon: ten sam układ pionowy, mniejsza typografia ── */
@@ -4334,4 +4399,113 @@ body.bd-on .ob-stage{
    przy skokach programowych, żeby scena nie chowała się pod belkę. */
 body.bd-on .bd-chapterlay--p08 .bd-chscene--k16{
   scroll-margin-top: var(--bd-bar-h, 64px);
+}
+
+/* ═══ ETAP K (uwaga 15): CIĘŻARÓWKI W LESIE — PRZEJAZD PRZEZ CAŁY ARKUSZ ═══
+   Pas pojazdów ma szerokość JASNEGO ARKUSZA (`--k12-arkusz`, mierzona
+   w modules.js), a nie kolumny finału — pojazd wyłania się zza lewej
+   krawędzi arkusza i znika za prawą. Pozycja 0…1: `left` przesuwa
+   pojazd przez szerokość pasa, `translateX` chowa go własną szerokością
+   na starcie i odsłania na mecie. Postoju nie ma. */
+body.bd-on #k12-scene .k12__tiry{
+  aspect-ratio:auto;
+  width:var(--k12-arkusz, 100%);
+  margin-inline:calc((100% - var(--k12-arkusz, 100%)) / 2);
+  height:clamp(96px, 17svh, 168px);
+  transition:opacity .3s ease, height .45s ease;
+}
+body.bd-on #k12-scene .k12__tiry img.k12__tir{
+  width:auto; height:100%;
+  transform:translateX(calc((var(--p, 0) - 1) * 100%));
+}
+body.bd-on #k12-scene .k12__tiry img.k12__tir--1{ --p:var(--tir1, 0); left:calc(var(--tir1, 0) * 100%); }
+body.bd-on #k12-scene .k12__tiry img.k12__tir--2{ --p:var(--tir2, 0); left:calc(var(--tir2, 0) * 100%); }
+@media (max-width: 640px){
+  /* telefon: dwie ciężarówki na 367 px arkusza — niższy pas, żeby pojazdy
+     nie zasłaniały sobie ładunków i zostawiły miejsce podpisowi */
+  body.bd-on #k12-scene .k12__tiry{ height:clamp(64px, 11svh, 104px); }
+}
+/* po przejeździe pas się zwija — w jego miejsce wchodzi pytanie i zdanie */
+body.bd-on #k12-scene.is-po-tirach .k12__tiry{ height:0; opacity:0; }
+
+/* napis i podpis: wyśrodkowane, większe */
+body.bd-on #k12-scene .k12__fakt{ text-align:center; margin-inline:auto; }
+body.bd-on #k12-scene .k12__fakt-naglowek{ font-size:clamp(28px,4.6vw,60px); }
+body.bd-on #k12-scene .k12__fakt-podpis{
+  max-width:52ch; margin-inline:auto; text-align:center;
+  font-size:clamp(16px,1.9vw,22px); line-height:1.45; color:#26311f;
+}
+/* diorama w finale oddaje jeszcze trochę pionu tekstom */
+body.bd-on #k12-scene.is-final .k12__images{ height:22svh; }
+
+@media (prefers-reduced-motion: reduce){
+  /* bez ruchu: obie ciężarówki stoją w pasie obok siebie */
+  body.bd-on #k12-scene .k12__tiry{ height:clamp(96px, 17svh, 168px); opacity:1; }
+  body.bd-on #k12-scene .k12__tiry img.k12__tir{ transform:none; }
+  body.bd-on #k12-scene .k12__tiry img.k12__tir--1{ left:52%; }
+  body.bd-on #k12-scene .k12__tiry img.k12__tir--2{ left:18%; }
+}
+
+/* ═══ ETAP K (uwagi 12 i 15): WSKAZÓWKA „SCROLLUJ" ═══
+   Jeden element na stronę (modules.js). Stoi przy dolnej krawędzi okna,
+   nad treścią, nie przyjmuje kliknięć. Na ekranach dotykowych zamiast
+   myszki — strzałka w dół. */
+.bd-scrollhint{
+  /* Warstwa tablicy (`.bd-root`) jest `position:fixed` z własnym
+     `z-index`, więc wskazówka doklejona do <body> chowała się pod nią
+     (zmierzone: klasa `is-on`, a na zrzucie nic). Stąd warstwa wyższa
+     niż cała tablica. */
+  /* Prawy dolny róg, nie środek: na zrzucie 1440 wskazówka nakrywała podpis
+     pod stadionem. Z boku nie wchodzi na treść w żadnej ze scen. */
+  position:fixed; z-index:2147483000;
+  right:max(16px, calc(env(safe-area-inset-right) + 8px));
+  bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px));
+  transform:translateY(8px);
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:10px 16px 8px; border-radius:18px;
+  background:rgba(18,33,27,.82); color:#fdfdfb;
+  box-shadow:0 8px 22px rgba(10,20,14,.28);
+  pointer-events:none; opacity:0; visibility:hidden;
+  transition:opacity .35s ease, transform .35s ease, visibility 0s linear .35s;
+}
+.bd-scrollhint.is-on{
+  opacity:1; visibility:visible; transform:translateY(0);
+  transition:opacity .35s ease, transform .35s ease, visibility 0s;
+  animation:bd-scrollhint-puls 1.5s ease-in-out infinite;
+}
+.bd-scrollhint__txt{
+  font-family:'Cabinet Grotesk', system-ui, sans-serif; font-weight:800;
+  font-size:12px; letter-spacing:.18em;
+}
+.bd-scrollhint__mysz{
+  position:relative; width:20px; height:30px;
+  border:2px solid currentColor; border-radius:11px;
+}
+.bd-scrollhint__kolko{
+  position:absolute; left:50%; top:5px; width:4px; height:6px; margin-left:-2px;
+  border-radius:2px; background:currentColor;
+  animation:bd-scrollhint-kolko 1.5s ease-in-out infinite;
+}
+.bd-scrollhint__strzalka{
+  display:none; width:14px; height:14px; margin-top:-4px;
+  border-right:3px solid currentColor; border-bottom:3px solid currentColor;
+  transform:rotate(45deg);
+}
+@media (hover:none) and (pointer:coarse){
+  .bd-scrollhint__mysz{ display:none; }
+  .bd-scrollhint__strzalka{ display:block; }
+}
+@keyframes bd-scrollhint-puls{
+  0%, 100%{ box-shadow:0 8px 22px rgba(10,20,14,.28), 0 0 0 0 rgba(242,178,58,0); }
+  50%{ box-shadow:0 8px 22px rgba(10,20,14,.28), 0 0 0 7px rgba(242,178,58,.45); }
+}
+@keyframes bd-scrollhint-kolko{
+  0%{ transform:translateY(0); opacity:1; }
+  70%{ transform:translateY(9px); opacity:0; }
+  100%{ transform:translateY(0); opacity:0; }
+}
+@media (prefers-reduced-motion: reduce){
+  .bd-scrollhint, .bd-scrollhint.is-on{ transition:none; }
+  .bd-scrollhint.is-on{ animation:none; }
+  .bd-scrollhint__kolko{ animation:none; }
 }

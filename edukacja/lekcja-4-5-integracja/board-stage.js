@@ -282,7 +282,9 @@
                do 109 px i weszły w róg Tropu 3 (pomiar na 320 i 360 px). -->
           <div class="bd-boardbar__pomoc">
             <button type="button" class="bd-btn bd-btn--ghost bd-btn--sm" id="bd-replay">Odtwórz intro ponownie</button>
-            <button type="button" class="bd-btn bd-btn--ghost bd-btn--sm bd-btn--cichy" id="bd-odnowa" hidden>Zacznij od nowa</button>
+            <!-- Etap K (uwaga 1): bez stylu „cichy" — po spotkaniu 17.09 klient
+                 po przejściu całości nie znalazł tego przycisku na tablicy. -->
+            <button type="button" class="bd-btn bd-btn--ghost bd-btn--sm bd-btn--odnowa" id="bd-odnowa" hidden>Zacznij od nowa</button>
           </div>
         </div>
       </div>
@@ -294,8 +296,9 @@
               aria-labelledby="bd-odnowa-tytul">
         <div class="bd-potwierdz">
           <h2 class="bd-potwierdz__title" id="bd-odnowa-tytul">Zacząć śledztwo od nowa?</h2>
-          <p class="bd-potwierdz__txt">Znikną wszystkie zdobyte litery, ukończone
-            zadania i&nbsp;otwarte tropy. Tej zmiany nie da się cofnąć.</p>
+          <p class="bd-potwierdz__txt">Skasujemy wszystkie zapisane litery, zadania
+            i&nbsp;postęp w&nbsp;tropach. Lekcja zacznie się od początku, jak dla
+            nowego ucznia. Tej zmiany nie da się cofnąć.</p>
           <p class="bd-potwierdz__akcje">
             <button type="button" class="bd-btn bd-btn--ghost" id="bd-odnowa-nie">Nie, wracam</button>
             <button type="button" class="bd-btn bd-btn--alarm" id="bd-odnowa-tak">Tak, zacznij od nowa</button>
@@ -493,6 +496,19 @@
     return s.visitedBlocks.length > 0 || s.completedInteractions.length > 0 ||
       CFG.chapters.some((c) => c.state === "completed");
   }
+  /** Etap K (uwaga 1): czy jest JAKIKOLWIEK zapis do skasowania. Szersze niż
+      `jestPostep`: sama litera, odblokowany finał albo stempel też są zapisem —
+      nauczycielka z kolejną klasą przy tym samym komputerze musi znaleźć
+      „Zacznij od nowa" także po zamkniętej sprawie. */
+  function jestZapis() {
+    const S = NS.state;
+    if (!S || !S.get) return false;
+    const s = S.get();
+    const litery = s.checkpointLetters || {};
+    return jestPostep() || !!s.caseClosed || !!s.finalUnlocked ||
+      (s.lettersReady || []).length > 0 ||
+      Object.keys(litery).some((k) => litery[k]);
+  }
 
   /** Widok obu kontrolek postępu. Wołane po każdej zmianie stanu lekcji
       oraz przy wejściu na tablicę. */
@@ -509,7 +525,7 @@
         `Kontynuuj śledztwo: trop ${i + 1} z 9, ${c.title}`);
       el.kontynuuj.dataset.trop = c.id;
     }
-    if (el.odnowa) el.odnowa.hidden = !postep;
+    if (el.odnowa) el.odnowa.hidden = !jestZapis();
   }
 
   /** Etap P (A02): kasowanie postępu. Po wyczyszczeniu stanu przeładowujemy
@@ -2470,8 +2486,14 @@
       { poz: "prawo", etykieta: "Oddana osobno",
         src: IMG14 + "kontenery/webp/kontener-klapowy-zolty.webp",
         alt: "Żółty kontener na tworzywa i metale" },
+      /* Etap K (uwaga 22): koło obiegu ma WŁASNY plik przystanku „Surowiec" —
+         docelowo granulat z przetworzonych tworzyw. Strefa 6 spaceru zostaje
+         przy swojej grafice z butelkami i puszkami, więc jeden podmieniony
+         plik nie zmienia dwóch miejsc naraz. Do czasu dostarczenia grafiki
+         pod nową nazwą leży kopia dotychczasowej (opis alternatywny zmieni
+         się razem z obrazem). */
       { poz: "dol", etykieta: "Surowiec",
-        src: IMG14 + "odpady/webp/frakcja-06-tworzywa-folie-metale-kolorowe.webp",
+        src: IMG16 + "obieg-surowiec-granulat.webp",
         alt: "Zebrane razem tworzywa gotowe do przetworzenia" },
       { poz: "lewo", etykieta: "Nowa rzecz",
         src: IMG16 + "wyjscie-bluza-polarowa.webp",
@@ -2656,8 +2678,10 @@
                 żeby materiały można było wykorzystać ponownie. Tak pomagasz utrzymać
                 je w&nbsp;obiegu!</p>
             </div>
-            <p class="bd-scene__text bd-werdykt__zdanie">Znasz drogę odpadów od zlewu
-              po nową rzecz. Taka wiedza zasługuje na dokument.</p>
+            <!-- Etap K (uwaga 24): brzmienie od użytkownika. -->
+            <p class="bd-scene__text bd-werdykt__zdanie">Znasz już całą drogę odpadów:
+              od momentu ich powstania, przez recykling, aż po stworzenie nowej rzeczy.
+              Taka wiedza zasługuje na dyplom!</p>
           </div>
         </section>
 
@@ -3193,6 +3217,13 @@
     chapterCleanup.push(() => {
       view.removeEventListener("scroll", most);
       if (raf) cancelAnimationFrame(raf);
+    });
+    /* etap K (uwaga 12): stadion napełnia się dopiero z przewijaniem.
+       Ciężarówki w lesie (uwaga 15) mają własną wskazówkę w modules.js —
+       tu tylko sprzątamy ją przy wyjściu z tropu. */
+    wskazowkaScrollu(view, "k11", blok);
+    chapterCleanup.push(() => {
+      if (NS.scrollHint) { NS.scrollHint.ukryj("k12-brama"); NS.scrollHint.ukryj("k12-tiry"); }
     });
 
     /* Fazy w JEDNEJ przestrzeni kadru: po plateau na pełnym stadionie
@@ -4388,6 +4419,31 @@
     fazy();
   }
 
+/** ETAP K (uwaga 12): wskazówka „SCROLLUJ" dla sceny sterowanej przewijaniem.
+      Postęp liczony w PIKSELACH wjechania w sekcję (0 = górna krawędź sekcji
+      przy górnej krawędzi kadru rozdziału). Pokazuje się, gdy uczeń stoi
+      u progu sceny, i gaśnie na zawsze po pierwszym przewinięciu. Logikę
+      pokazywania trzyma modules.js (`sledzWskazowke`), tu tylko geometria. */
+  function wskazowkaScrollu(view, id, sekcja) {
+    if (!NS.sledzWskazowke || !NS.scrollHint || reduceMotion || !sekcja) return;
+    const postep = () => {
+      if (!sekcja.isConnected || !sekcja.getClientRects().length) return null;
+      const r = sekcja.getBoundingClientRect();
+      const vr = view.getBoundingClientRect();
+      return vr.top - r.top;
+    };
+    const tick = NS.sledzWskazowke({ id, postep,
+      od: -view.clientHeight * 0.35, do: 80, koniec: 180, tol: 30 });
+    view.addEventListener("scroll", tick, { passive: true });
+    const start = setTimeout(tick, 900);
+    chapterCleanup.push(() => {
+      view.removeEventListener("scroll", tick);
+      clearTimeout(start);
+      NS.scrollHint.ukryj(id);
+    });
+    return tick;
+  }
+
   /** Okablowanie K10 (Etap 2E): przeniesienie bloku #k10-seq i mostek
       scrolla. Logika sekwencji mieszka w modules.js (`frameSequence`) —
       wspólna z ?legacy=1; silnik nasłuchuje scrolla OKNA, a rozdział
@@ -4421,6 +4477,8 @@
       view.removeEventListener("scroll", most);
       if (raf) cancelAnimationFrame(raf);
     });
+    /* etap K (uwaga 12): droga oleju rusza dopiero z przewijaniem */
+    wskazowkaScrollu(view, "k10", blok);
 
     /* 2E.1/1: rozgrzanie pierwszych klatek. Preload silnika rusza dopiero
        marginesem nasłuchu (800 px przed sceną) — na zimnej sieci pierwszy
@@ -5017,7 +5075,7 @@
         pierwszy.innerHTML =
           "W nagraniu chłopiec podszedł do zlewu z patelnią, ale kamera nie " +
           "pokazała, co zrobił dalej. Przeszukaj kuchnię, znajdź pięć poszlak " +
-          "i sprawdź, co domownicy robią ze zużytym olejem.";
+          "i sprawdź, jak mieszkańcy traktują odpady, w tym zużyty olej.";   /* etap K, uwaga 7 */
       }
     }
 

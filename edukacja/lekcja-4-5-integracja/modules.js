@@ -28,6 +28,77 @@
      wybór drogi zamykamy w jednym miejscu.
      ═══════════════════════════════════════════════════════════ */
   const wTablicy = () => document.body.classList.contains("bd-on");
+  /* Etap K: tryb tablicy ZNANY JUŻ PRZY STARCIE MODUŁÓW. `modules.init()`
+     rusza przed silnikiem tablicy (ten wczytuje się po DOMContentLoaded),
+     więc `bd-on` jeszcze nie istnieje. Blokada z <head> stawia `bd-booting`
+     wyłącznie poza ?legacy=1 — to ona rozstrzyga wybór wariantu przy starcie. */
+  const trybTablicy = () => wTablicy() ||
+    document.documentElement.classList.contains("bd-booting");
+
+  /* ═══ ETAP K (uwagi 12 i 15): WSKAZÓWKA „SCROLLUJ" ═══
+     Klient nie wiedział, że sceny sterowane przewijaniem (droga oleju,
+     stadion, ciężarówki w lesie) ruszają dopiero, gdy się przewija.
+     Jeden element na całą stronę: minimalistyczna myszka (na dotyku —
+     strzałka) z napisem SCROLLUJ, przy dolnej krawędzi okna.
+     `sledzWskazowke` pokazuje ją, gdy uczeń ZATRZYMAŁ się w oknie sceny
+     (postój 700 ms), i gasi NA ZAWSZE przy pierwszym przewinięciu po
+     pokazaniu albo po minięciu progu końca. Dekoracja: aria-hidden,
+     bez fokusu; przy ograniczonym ruchu stoi bez pulsu (CSS). Tylko tablica. */
+  const scrollHint = (() => {
+    let el = null, czyj = null;
+    const zrob = () => {
+      if (el) return el;
+      el = document.createElement("div");
+      el.className = "bd-scrollhint";
+      el.setAttribute("aria-hidden", "true");
+      el.innerHTML = '<span class="bd-scrollhint__mysz"><span class="bd-scrollhint__kolko"></span></span>' +
+        '<span class="bd-scrollhint__strzalka"></span><span class="bd-scrollhint__txt">SCROLLUJ</span>';
+      document.body.appendChild(el);
+      return el;
+    };
+    return {
+      pokaz(kto) { zrob(); czyj = kto; el.classList.add("is-on"); },
+      ukryj(kto) {
+        if (!el || (kto && czyj !== kto)) return;
+        el.classList.remove("is-on"); czyj = null;
+      },
+      czyj() { return czyj; },
+    };
+  })();
+  /** o = { id, postep: () => liczba|null, od, do, koniec, tol, warunek? }
+      Zwraca `tick` — wołany przy każdym przewinięciu i zmianie stanu sceny. */
+  function sledzWskazowke(o) {
+    let zakonczona = false, timer = 0, pPokazu = null;
+    const zakoncz = () => {
+      zakonczona = true; clearTimeout(timer); timer = 0; scrollHint.ukryj(o.id);
+    };
+    const tick = () => {
+      if (zakonczona) return;
+      const p = o.postep();
+      if (p == null || !wTablicy()) { clearTimeout(timer); timer = 0; scrollHint.ukryj(o.id); return; }
+      if (p > o.koniec) { zakoncz(); return; }
+      if (pPokazu !== null) {                 /* już widać — pierwsze przewinięcie ją gasi */
+        if (Math.abs(p - pPokazu) > o.tol) zakoncz();
+        return;
+      }
+      const wOknie = p >= o.od && p <= o.do && (!o.warunek || o.warunek());
+      clearTimeout(timer); timer = 0;
+      if (!wOknie) return;
+      timer = setTimeout(() => {
+        timer = 0;
+        const teraz = o.postep();
+        if (zakonczona || teraz == null || teraz < o.od || teraz > o.do ||
+            (o.warunek && !o.warunek())) return;
+        pPokazu = teraz;
+        scrollHint.pokaz(o.id);
+      }, 700);
+    };
+    tick.zakoncz = zakoncz;
+    return tick;
+  }
+  NS.scrollHint = scrollHint;
+  NS.sledzWskazowke = sledzWskazowke;
+
   function przyznajLitere(letter) {
     if (!letter) return;
     if (wTablicy() && S.awardLetter) S.awardLetter(letter);
@@ -650,7 +721,7 @@
       yes:"Tak — przeterminowany olej nadaje się do zbiórki. Nie musi być świeży, musi być spożywczy." },
     { file:"paliwo.webp",                         name:"Paliwo", ok:false,
       why:"Paliwo jest łatwopalne i niebezpieczne. Nie trafia do butelki Olejomatu." },
-    { file:"zjelczale-maslo-inne-tluszcze.webp",  name:"Masło, smalec lub margaryna", ok:true, fat:true,
+    { file:"zjelczale-maslo-inne-tluszcze.webp",  name:"Masło lub margaryna", ok:true, fat:true,   /* etap K (uwaga 11): smalcu NIE oddajemy do Olejomatu */
       yes:"Tak — to tłuszcz spożywczy. Roztop go z pomocą osoby dorosłej, przestudź i przelej do butelki, gdy jest jeszcze płynny, ale nie gorący." },
     { file:"smar-do-lanczucha.webp",              name:"Smar do łańcucha", ok:false,
       why:"To smar techniczny, a nie tłuszcz spożywczy." },
@@ -699,6 +770,84 @@
     let plateau = false;         // okno czytania po trafnej decyzji — decyzje wstrzymane
     let finished = false;
     const rm = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    /* ═══ ETAP K (uwaga 10): KARTA INFORMACJI ZWROTNEJ (tylko tablica) ═══
+       Klient nie nadążał czytać komunikatu po decyzji — plateau 1,8 s było
+       za krótkie, a każde dłuższe byłoby za długie dla kogoś innego. W tablicy
+       po decyzji na środku sceny staje karta z komunikatem, przyciskiem X
+       w prawym górnym rogu i „Dalej". Następny produkt wjeżdża DOPIERO po
+       zamknięciu karty (X, „Dalej", Escape albo Enter), więc tempo należy do
+       ucznia i zegar K09_PLATEAU_MS w tym wariancie nie działa. Stara lekcja
+       (?legacy=1) zostaje bez zmian: komunikat pod przyciskami i plateau. */
+    const wKarcie = trybTablicy();
+    let karta = null, kartaTytul = null, kartaTxt = null, kartaWiecej = null,
+        kartaDalej = null, poKarcie = null;
+    const kartaOtwarta = () => !!karta && !karta.hidden;
+    if (wKarcie) {
+      karta = document.createElement("div");
+      karta.className = "k09k";
+      karta.hidden = true;
+      karta.setAttribute("role", "dialog");
+      karta.setAttribute("aria-labelledby", "k09k-tytul");
+      karta.setAttribute("aria-describedby", "k09k-txt");
+      karta.innerHTML =
+        '<button type="button" class="k09k__x" aria-label="Zamknij informację">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+        '<p class="k09k__tytul" id="k09k-tytul"></p>' +
+        '<p class="k09k__txt" id="k09k-txt"></p>' +
+        '<p class="k09k__wiecej" hidden></p>' +
+        '<p class="k09k__akcje"><button type="button" class="btn k09k__dalej">Dalej</button></p>';
+      root.appendChild(karta);
+      kartaTytul = karta.querySelector(".k09k__tytul");
+      kartaTxt = karta.querySelector(".k09k__txt");
+      kartaWiecej = karta.querySelector(".k09k__wiecej");
+      kartaDalej = karta.querySelector(".k09k__dalej");
+      karta.querySelector(".k09k__x").addEventListener("click", () => zamknijKarte());
+      kartaDalej.addEventListener("click", () => zamknijKarte());
+      karta.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" || e.key === "Enter") {
+          e.preventDefault();       /* Enter nie „klika" już przycisku — jedno zamknięcie */
+          e.stopPropagation();
+          zamknijKarte();
+        }
+      });
+    }
+
+    /* Komunikat po decyzji. W tablicy: karta, a `potem` rusza po jej
+       zamknięciu. W starej lekcji: napis pod przyciskami, `potem` od razu. */
+    function komunikat(msg, kind, it, potem) {
+      if (!wKarcie) {
+        feedback(msg, kind);
+        if (it && it.fat && kind === "ok" && wiecej) wiecej.hidden = false;
+        if (potem) potem();
+        return;
+      }
+      poKarcie = potem || null;
+      karta.classList.toggle("is-ok", kind === "ok");
+      karta.classList.toggle("is-err", kind === "err");
+      kartaTytul.textContent = kind === "ok" ? "Dobrze!" : "Nie tym razem";
+      kartaTxt.textContent = msg.replace(/^[✓✕]\s*/, "");
+      const txtWiecej = it && it.fat && kind === "ok" && wiecej
+        ? (wiecej.querySelector(".k09__wiecej-txt") || {}).textContent : "";
+      kartaWiecej.textContent = (txtWiecej || "").replace(/\s+/g, " ").trim();
+      kartaWiecej.hidden = !kartaWiecej.textContent;
+      /* ten sam tekst trafia do żywego regionu — czytnik ekranu go przeczyta,
+         ale na ekranie stoi tylko w karcie */
+      fbEl.textContent = msg;
+      fbEl.className = "k09__feedback is-karta" + (kind ? " is-" + kind : "");
+      karta.hidden = false;
+      try { kartaDalej.focus({ preventScroll: true }); } catch (e) { /* fokus pomocniczy */ }
+    }
+
+    function zamknijKarte() {
+      if (!kartaOtwarta()) return;
+      karta.hidden = true;
+      const potem = poKarcie;
+      poKarcie = null;
+      /* fokus wraca na scenę — klawiatura może od razu oceniać dalej */
+      try { root.querySelector(".k09__stagearea").focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+      if (potem) potem();
+    }
 
     function current() { return queue[idx]; }
 
@@ -875,6 +1024,8 @@
          a zaliczenie w finish() jest natychmiastowe. */
       if (resolved >= K09_ITEMS.length) { finish(); return; }
       idx++;
+      /* Etap K: w tablicy karta już zatrzymała ucznia — kolejny produkt od razu */
+      if (wKarcie) { render(); return; }
       /* Plateau (Aneks A raportu 52): wyjaśnienie trafnej decyzji zostaje
          na scenie K09_PLATEAU_MS, dopiero potem render czyści komunikat
          (kontrakt K4.1 bez zmian) i wpuszcza kolejny produkt. W oknie
@@ -923,12 +1074,15 @@
          Enter, swipe) oceniłoby obiekt, którego uczeń nie widzi. Ignorujemy
          wejście do chwili renderu; komunikat na scenie zostaje nietknięty. */
       if (plateau) return;
+      /* Etap K: otwarta karta wstrzymuje decyzje — ocena dotyczyłaby produktu,
+         o którym uczeń jeszcze czyta */
+      if (kartaOtwarta()) return;
       const it = current();
       if (!it) return;
 
       if (target === "bottle") {
         if (mustReject) {
-          feedback("Już wiemy, że ten produkt nie trafia do butelki. Skieruj go do strefy „Nie do butelki”.", "err");
+          komunikat("Już wiemy, że ten produkt nie trafia do butelki. Skieruj go do strefy „Nie do butelki”.", "err", it);
           return;
         }
         if (it.ok) {
@@ -937,16 +1091,15 @@
           zebrane++;
           poziomButelki();
           blysk("ok");
-          feedback(it.yes || `✓ ${it.name} — trafia do butelki.`, "ok");
-          /* tłuszcze stałe: pełna informacja o bezpiecznym postępowaniu */
-          if (it.fat && wiecej) wiecej.hidden = false;
-          advance();
+          /* tłuszcze stałe: pełna informacja o bezpiecznym postępowaniu
+             (w starej lekcji rozwinięcie pod sceną, w tablicy w karcie) */
+          komunikat(it.yes || `✓ ${it.name} — trafia do butelki.`, "ok", it, advance);
         } else {
           mustReject = true;
           stage.classList.add("is-rejected");
           setTimeout(() => stage.classList.remove("is-rejected"), 520);
           blysk("err");
-          feedback(`✕ ${it.why} Skieruj produkt do strefy „Nie do butelki”.`, "err");
+          komunikat(`✕ ${it.why} Skieruj produkt do strefy „Nie do butelki”.`, "err", it);
         }
         return;
       }
@@ -954,11 +1107,10 @@
       /* target === 'reject' */
       if (!it.ok) {
         blysk("ok");
-        feedback(`✓ ${it.why || it.name + " nie trafia do butelki."}`, "ok");
-        advance();
+        komunikat(`✓ ${it.why || it.name + " nie trafia do butelki."}`, "ok", it, advance);
       } else {
         blysk("err");
-        feedback(`✕ ${it.name} to tłuszcz spożywczy — właśnie taki zbieramy do zielonej butelki.`, "err");
+        komunikat(`✕ ${it.name} to tłuszcz spożywczy — właśnie taki zbieramy do zielonej butelki.`, "err", it);
       }
     }
 
@@ -979,7 +1131,7 @@
     /* przeciąganie i swipe (pointer) — równorzędna, nieobowiązkowa ścieżka */
     let dragging = false, startX = 0, dx = 0;
     area.addEventListener("pointerdown", (e) => {
-      if (finished) return;
+      if (finished || kartaOtwarta()) return;
       dragging = true; startX = e.clientX; dx = 0;
       area.setPointerCapture(e.pointerId);
       stage.classList.add("is-dragging");
@@ -1573,11 +1725,12 @@
          Bez nazywania miejsca odbioru: to odpowiedź Tropu 7. */
       const OBIEKTY = [
         { nazwa: "Fotel",
-          tekst: "Porzucony w lesie zajmuje dużo miejsca i niszczy rośliny pod sobą." },
+          /* etap K (uwaga 14): nowe brzmienia fotela, beczki i worków */
+          tekst: "Porzucony w lesie rozkłada się przez dziesiątki lat. Pianka i tkaniny uwalniają do gleby szkodliwe substancje, które mogą zatruć rośliny i zwierzęta." },
         { nazwa: "Gruz",
           tekst: "Przysypuje leśną ściółkę i utrudnia roślinom wzrost." },
         { nazwa: "Beczka z chemikaliami",
-          tekst: "Jej zawartość może wsiąknąć w ziemię i pozostać tam przez lata." },
+          tekst: "Jej zawartość może wsiąknąć w ziemię i pozostać tam przez lata, zatruwając środowisko." },
         { nazwa: "Puszka po farbie",
           tekst: "Resztki farby mogą zanieczyścić glebę i wodę." },
         /* Korekta 3C.2.1: „elektroodpad" wypadł — lupa celowała w pustak,
@@ -1587,7 +1740,7 @@
            zawsze „odpady". Nazwa musi się zgadzać z kartą, listą statyczną
            i etykietą pineski, bo uczeń widzi wszystkie trzy. */
         { nazwa: "Worki pełne odpadów",
-          tekst: "Rozdarte przez zwierzęta rozsypują się po całym lesie." },
+          tekst: "Rozdarte przez zwierzęta rozsypują się po lesie. Zwierzęta szukające w nich jedzenia mogą się zatruć albo zaplątać i zrobić sobie krzywdę." },
       ];
 
       const piny      = Array.from(k12.querySelectorAll(".k12__pin"));
@@ -1709,6 +1862,29 @@
         podpis: 0.74, pytPig: 0.79, fakt2: 0.82, pytanie: 0.86,
         zanik: 0.89, panel: 0.91,    /* las gaśnie, panel wchodzi wierszami */
       };
+      /* ETAP K (uwaga 15) — TABLICA: ciężarówki bez postoju. Wjeżdżają zza
+         lewej krawędzi jasnego arkusza, przejeżdżają całą jego szerokość
+         i znikają za prawą. Nagłówek „Ponad 2 ciężarówki dziennie" i podpis
+         wchodzą razem zaraz po sprzątaniu i STOJĄ do przejścia w panel
+         domknięcia; pytanie i zdanie o wysypiskach zajmują miejsce po
+         odjechanych pojazdach, więc nic nie wypycha podpisu z kadru.
+         Stara lekcja zachowuje przejazd trójfazowy. */
+      const TIRY_TABLICA = trybTablicy();
+      if (TIRY_TABLICA) {
+        Object.assign(FAZA, { tir1: 0.67, tir2: 0.70, tirJazda: 0.15,
+          poTirach: 0.845, podpis: FAZA.sprzatDo, pytPig: 0.845, fakt2: 0.86, pytanie: 0.875 });
+      }
+      let ostatniP = 0;
+      const k12Komplet = () => k12.classList.contains("is-komplet");
+      const wskazowkiK12 = [
+        /* po piątym śladzie: dalej prowadzi już tylko przewijanie */
+        sledzWskazowke({ id: "k12-brama", postep: () => ostatniP, od: 0.38, do: FAZA.sprzatOd,
+          koniec: FAZA.sprzatOd + 0.01, tol: 0.006, warunek: k12Komplet }),
+        /* las czysty, nagłówek stoi — ciężarówki ruszą dopiero z przewijaniem */
+        sledzWskazowke({ id: "k12-tiry", postep: () => ostatniP, od: FAZA.sprzatDo - 0.005,
+          do: FAZA.tir1 + 0.01, koniec: FAZA.tir1 + 0.03, tol: 0.006, warunek: k12Komplet }),
+      ];
+      const tickWskazowek = () => { if (TIRY_TABLICA && !reduceMotion) wskazowkiK12.forEach((t) => t()); };
       const jazda = (p, od, dlugosc) => clamp((p - od) / dlugosc, 0, 1);
 
       /* Korekta 3C.3.2 — PRZEJAZD TRÓJFAZOWY.
@@ -1757,6 +1933,7 @@
         /* jeśli podpowiedź już wisi, ma liczyć to, co realnie zostało */
         if (k12.classList.contains("is-braknie")) podpowiedz();
         sprawdzBrame();
+        tickWskazowek();          /* etap K: piąty ślad otwiera bramkę bez przewijania */
       }
 
       /* BRAMKA: finał odsłania się po piątym odkrytym śladzie — i zostaje
@@ -1815,6 +1992,8 @@
       const linia = (el, p, prog) => { if (el) el.classList.toggle("is-on", p > prog); };
 
       const fazy = (p) => {
+        ostatniP = p;
+        tickWskazowek();
         /* Korekta 3C.3.2: pinezki wchodzą DOPIERO po domknięciu przemiany.
            Znikają też z kolejności Tab — inaczej dałoby się domknąć bramkę,
            zanim las w ogóle się zaśmieci. */
@@ -1865,7 +2044,25 @@
         linia(fakt2,  p, FAZA.fakt2);
         linia(q,      p, FAZA.pytanie);
 
-        if (tiry) {
+        if (tiry && TIRY_TABLICA) {
+          /* etap K: jeden ciągły przejazd przez całą szerokość arkusza */
+          const arkusz = k12.closest(".bd-page");
+          if (arkusz) tiry.style.setProperty("--k12-arkusz", arkusz.clientWidth + "px");
+          /* Odstęp między pojazdami liczony w PIKSELACH, nie w ułamku postępu:
+             na telefonie ciężarówka zajmuje prawie połowę pasa i stały odstęp
+             fazowy zlewał oba pojazdy w jeden (zmierzone na 390 px). Druga
+             jedzie o własną długość plus 24 px za pierwszą — na każdym ekranie
+             tak samo. */
+          const wozek = tiry.querySelector(".k12__tir--1");
+          const pas = tiry.clientWidth || 1;
+          const szer = (wozek && wozek.offsetWidth) || pas * 0.25;
+          const odstep = Math.min(0.9, (szer + 24) / (pas + szer));
+          const bieg = jazda(p, FAZA.tir1, FAZA.tirJazda) * (1 + odstep);
+          tiry.style.setProperty("--tir1", clamp(bieg, 0, 1).toFixed(4));
+          tiry.style.setProperty("--tir2", clamp(bieg - odstep, 0, 1).toFixed(4));
+          tiry.classList.toggle("is-on", p > FAZA.tir1);
+          k12.classList.toggle("is-po-tirach", p >= FAZA.poTirach);
+        } else if (tiry) {
           /* meta postoju: pierwsza dalej w prawo, druga tuż za nią */
           tiry.style.setProperty("--tir1",
             przejazd(p, FAZA.tir1, FAZA.postoj, FAZA.wyjazd, 0.62).toFixed(4));

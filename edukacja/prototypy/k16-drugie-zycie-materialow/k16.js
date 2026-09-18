@@ -516,6 +516,7 @@
       if (solved >= ROUNDS.length) {
         feedback.innerHTML += '<br>Materiały dopasowane. Zostaje ostatnia litera hasła: G.';
         btnSave.hidden = false;
+        if (btnReplay) btnReplay.hidden = false;
         btnSave.focus();
       } else {
         btnNext.hidden = false;
@@ -525,6 +526,13 @@
   }
 
   /* ── sterowanie ── */
+  /* Etap K (uwaga 9): „Zagraj jeszcze raz" — także dla ucznia, który wraca
+     z już zdobytą literą. Przeładowanie dokumentu gry: stan zaczyna się od
+     zera, a lekcja podpina się pod ramkę na nowo przy jej zdarzeniu `load`.
+     Powtórna wygrana wysyła te same zdarzenia co pierwsza; lekcja zalicza
+     klocek i literę tylko raz (completeInteraction / awardLetter). */
+  const btnReplay = document.getElementById('k16-replay');
+  if (btnReplay) btnReplay.addEventListener('click', () => { location.reload(); });
   btnNext.addEventListener('click', () => {
     if (idx < ROUNDS.length - 1) { idx++; startRound(); }
   });

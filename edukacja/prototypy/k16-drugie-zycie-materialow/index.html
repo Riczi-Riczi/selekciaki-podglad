@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Signika:wght@600;700&family=Imprima&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="k16.css?v=8">
+<link rel="stylesheet" href="k16.css?v=9">
 <script>
 /* Tryb osadzenia w rozdziale tablicy (?embed=board) — wzorzec z K07.
    Klasa musi być na <html> PRZED pierwszym malowaniem, żeby notka
@@ -32,7 +32,7 @@ if (new URLSearchParams(location.search).get("embed") === "board") {
     <p class="k16-kicker">Klocek 16</p>
     <h1 class="k16-title">Drugie życie materiałów</h1>
     <p class="k16-lead">
-      Wrzuć odpad do maszyny i wskaż, co może z niego powstać.
+      Odpad wjeżdża do maszyny. Wskaż, co może z niego powstać.
       Wybierz jeden z trzech produktów.
     </p>
     <p class="k16-progress">
@@ -117,6 +117,10 @@ if (new URLSearchParams(location.search).get("embed") === "board") {
     <button type="button" class="k16-btn k16-btn--save" id="k16-save" hidden>
       Kontynuuj lekcję
     </button>
+    <!-- Etap K (uwaga 9): powtórka obok „Kontynuuj lekcję". -->
+    <button type="button" class="k16-btn k16-btn--wtorny" id="k16-replay" hidden>
+      Zagraj jeszcze raz
+    </button>
   </div>
 
   <p class="k16-model">
@@ -128,6 +132,6 @@ if (new URLSearchParams(location.search).get("embed") === "board") {
 
 </main>
 
-<script src="k16.js?v=10"></script>
+<script src="k16.js?v=11"></script>
 </body>
 </html>
